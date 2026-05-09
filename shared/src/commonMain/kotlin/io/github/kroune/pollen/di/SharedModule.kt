@@ -1,0 +1,55 @@
+package io.github.kroune.pollen.di
+
+import io.github.kroune.pollen.data.repository.FeedRepositoryImpl
+import io.github.kroune.pollen.data.repository.FriendsRepositoryImpl
+import io.github.kroune.pollen.data.repository.HealthRepositoryImpl
+import io.github.kroune.pollen.data.repository.LocaleProviderImpl
+import io.github.kroune.pollen.data.repository.LocationRepositoryImpl
+import io.github.kroune.pollen.data.repository.MapRepositoryImpl
+import io.github.kroune.pollen.data.repository.MedicationRepositoryImpl
+import io.github.kroune.pollen.data.repository.PhenologyRepositoryImpl
+import io.github.kroune.pollen.data.repository.PollenRepositoryImpl
+import io.github.kroune.pollen.data.repository.SettingsRepositoryImpl
+import io.github.kroune.pollen.data.repository.StatisticsRepositoryImpl
+import io.github.kroune.pollen.data.repository.UserForecastRepositoryImpl
+import io.github.kroune.pollen.data.repository.UserRepositoryImpl
+import io.github.kroune.pollen.data.repository.PersonalIndexRepositoryImpl
+import io.github.kroune.pollen.data.repository.SensitivityRepositoryImpl
+import io.github.kroune.pollen.data.repository.WeatherRepositoryImpl
+import io.github.kroune.pollen.domain.model.LocaleProvider
+import io.github.kroune.pollen.domain.repository.FeedRepository
+import io.github.kroune.pollen.domain.repository.FriendsRepository
+import io.github.kroune.pollen.domain.repository.HealthRepository
+import io.github.kroune.pollen.domain.repository.LocationRepository
+import io.github.kroune.pollen.domain.repository.MapRepository
+import io.github.kroune.pollen.domain.repository.MedicationRepository
+import io.github.kroune.pollen.domain.repository.PhenologyRepository
+import io.github.kroune.pollen.domain.repository.PollenRepository
+import io.github.kroune.pollen.domain.repository.SettingsRepository
+import io.github.kroune.pollen.domain.repository.StatisticsRepository
+import io.github.kroune.pollen.domain.repository.UserForecastRepository
+import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
+import io.github.kroune.pollen.domain.repository.SensitivityRepository
+import io.github.kroune.pollen.domain.repository.WeatherRepository
+import org.koin.dsl.module
+
+val sharedModule = module {
+    single<LocaleProvider> { LocaleProviderImpl(get()) }
+
+    single<UserRepository> { UserRepositoryImpl(get(), get()) }
+    single<PollenRepository> { PollenRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<LocationRepository> { LocationRepositoryImpl(get(), get(), get()) }
+    single<HealthRepository> { HealthRepositoryImpl(get(), get()) }
+    single<StatisticsRepository> { StatisticsRepositoryImpl(get(), get(), get()) }
+    single<FeedRepository> { FeedRepositoryImpl(get(), get()) }
+    single<MapRepository> { MapRepositoryImpl(get(), get()) }
+    single<FriendsRepository> { FriendsRepositoryImpl(get(), get()) }
+    single<MedicationRepository> { MedicationRepositoryImpl(get(), get(), get(), get()) }
+    single<PhenologyRepository> { PhenologyRepositoryImpl(get(), get()) }
+    single<WeatherRepository> { WeatherRepositoryImpl(get()) }
+    single<SettingsRepository> { SettingsRepositoryImpl(get()) }
+    single<UserForecastRepository> { UserForecastRepositoryImpl(get(), get()) }
+    single<SensitivityRepository> { SensitivityRepositoryImpl(get()) }
+    single<PersonalIndexRepository> { PersonalIndexRepositoryImpl(get()) }
+}

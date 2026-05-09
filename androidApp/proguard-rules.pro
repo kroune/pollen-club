@@ -1,0 +1,1 @@
+# Pollen Club ProGuard rules

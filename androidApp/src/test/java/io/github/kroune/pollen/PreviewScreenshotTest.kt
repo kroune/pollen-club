@@ -1,0 +1,60 @@
+package io.github.kroune.pollen
+
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onRoot
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.captureRoboImage
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import sergio.sastre.composable.preview.scanner.android.AndroidComposablePreviewScanner
+import sergio.sastre.composable.preview.scanner.android.AndroidPreviewInfo
+import sergio.sastre.composable.preview.scanner.android.screenshotid.AndroidPreviewScreenshotIdBuilder
+import sergio.sastre.composable.preview.scanner.core.preview.ComposablePreview
+
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [31], application = TestApplication::class, qualifiers = "w411dp-h891dp-560dpi")
+class PreviewScreenshotTest(
+    private val preview: ComposablePreview<AndroidPreviewInfo>,
+) {
+    companion object {
+        private const val SCREENSHOT_DIR = "screenshots"
+
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun previews(): List<ComposablePreview<AndroidPreviewInfo>> =
+            AndroidComposablePreviewScanner()
+                .scanPackageTrees("io.github.kroune.pollen")
+                .includePrivatePreviews()
+                .getPreviews()
+    }
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun capturePreview() {
+        val screenshotId = AndroidPreviewScreenshotIdBuilder(preview).build()
+
+        composeTestRule.apply {
+            mainClock.autoAdvance = false
+            setContent { preview() }
+            mainClock.advanceTimeBy(5_000)
+            onRoot().captureRoboImage(
+                filePath = "$SCREENSHOT_DIR/$screenshotId.png",
+                roborazziOptions = RoborazziOptions(
+                    recordOptions = RoborazziOptions.RecordOptions(
+                        resizeScale = 0.4,
+                    ),
+                ),
+            )
+            mainClock.autoAdvance = true
+        }
+    }
+}
