@@ -41,6 +41,11 @@ class PollenRepositoryImpl(
             }
         }
 
+    override fun observeEnglishNames(): Flow<Map<Int, String>> =
+        pollenDao.observeAll().map { entities ->
+            entities.associate { it.id to it.descEng }
+        }
+
     override suspend fun syncPollens(): ApiResult<Unit> = safeApiCall {
         val response = api.getPollens()
         val pollenEntities = response.pollens.map { it.toEntity() }

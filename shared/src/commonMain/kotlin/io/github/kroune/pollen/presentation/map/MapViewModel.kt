@@ -9,6 +9,7 @@ import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.MapPinDomain
+import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.model.MapPolygonDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import co.touchlab.kermit.Logger
@@ -67,10 +68,17 @@ class MapViewModel(
         combine(_selectedAllergenIndex, _activeHashtagIndices, _showAllergenDropdown) { idx, hash, show ->
             Triple(idx, hash, show)
         },
-    ) { pollens, pins, polygons, hashtags, (idx, hashIndices, showDropdown) ->
+    ) { pollens, allPins, polygons, hashtags, (idx, hashIndices, showDropdown) ->
+        val selectedPollenId = pollens.dataOrNull?.getOrNull(idx)?.id
+        val activeHashtags = hashIndices.mapNotNullTo(mutableSetOf()) {
+            hashtags.dataOrNull?.getOrNull(it)?.value
+        }
+        val filteredPins = allPins.dataOrNull?.let { pins ->
+            LoadState.Loaded(filterPins(pins, selectedPollenId, activeHashtags).toImmutableList())
+        } ?: allPins
         MapUiState(
             pollens = pollens,
-            pins = pins,
+            pins = filteredPins,
             polygons = polygons,
             hashtags = hashtags,
             selectedAllergenIndex = idx,
@@ -87,6 +95,8 @@ class MapViewModel(
         _pins.value = LoadState.Loading
         _hashtags.value = LoadState.Loading
         _polygons.value = LoadState.Loading
+        _selectedAllergenIndex.value = 0
+        _activeHashtagIndices.value = emptySet()
         viewModelScope.launch {
             val user = userRepository.getLocalUser()
             val userId = user?.serverId ?: 0L
@@ -159,10 +169,10 @@ class MapViewModel(
             _polygons.value = LoadState.Loaded(emptyList<MapPolygonDomain>().toImmutableList())
             return
         }
-        val pollenName = pollens[idx].nameRus
+        val pollenId = pollens[idx].id
 
         try {
-            when (val result = mapRepository.getPolygonForecast(pollenName)) {
+            when (val result = mapRepository.getPolygonForecast(pollenId)) {
                 is ApiResult.Success -> _polygons.value = LoadState.Loaded(result.data.toImmutableList())
                 is ApiResult.Error -> {
                     _polygons.value = LoadState.Failed
@@ -177,4 +187,13 @@ class MapViewModel(
             _events.send(UiEvent.ShowError(MR.strings.error_load_pollen_forecast.desc()))
         }
     }
+}
+
+private fun filterPins(
+    pins: List<MapPinDomain>,
+    pollenId: Int?,
+    activeHashtags: Set<String>,
+): List<MapPinDomain> = pins.filter { pin ->
+    (pollenId == null || pin.pollenType == pollenId) &&
+        (activeHashtags.isEmpty() || pin.tags.splitToSequence(' ').any { it.isNotEmpty() && it in activeHashtags })
 }

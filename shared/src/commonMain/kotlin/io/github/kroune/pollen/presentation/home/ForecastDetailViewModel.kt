@@ -16,6 +16,7 @@ import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.detail.DetailStatsUi
+import org.jetbrains.compose.resources.DrawableResource
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -47,6 +48,7 @@ data class ForecastDetailUiState(
     val severityLabel: String = "",
     val stats: DetailStatsUi? = null,
     val aboutText: String = "",
+    val pollenIconRes: DrawableResource? = null,
     val showFeelingLine: Boolean = true,
     val feelingValues: ImmutableList<Int?> = persistentListOf(),
 )
@@ -82,6 +84,7 @@ class ForecastDetailViewModel(
                 _state.value = _state.value.copy(
                     pollen = LoadState.Loaded(pollen),
                     aboutText = pollen.description,
+                    pollenIconRes = PollenIconRegistry.iconFor(pollen.id),
                 )
 
                 val user = userRepository.getLocalUser()

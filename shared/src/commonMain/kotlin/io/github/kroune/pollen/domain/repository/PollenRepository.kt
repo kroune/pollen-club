@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface PollenRepository {
     fun observePollens(): Flow<List<PollenDomain>>
+    fun observeEnglishNames(): Flow<Map<Int, String>>
     suspend fun syncPollens(): ApiResult<Unit>
     suspend fun getLevelsForLocation(locationId: Int, date: String): List<LevelDomain>
     fun observeLevelsForLocation(locationId: Int): Flow<List<LevelDomain>>

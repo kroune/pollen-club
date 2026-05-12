@@ -56,6 +56,7 @@ class ReferenceViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<ReferenceUiState> = combine(
         pollenRepository.observePollens(),
+        pollenRepository.observeEnglishNames(),
         userRepository.observeUser().flatMapLatest { user ->
             val locationId = user?.location?.takeIf { it > 0 }
             if (locationId != null) {
@@ -74,9 +75,10 @@ class ReferenceViewModel(
             }
         },
         _searchQuery,
-    ) { pollens, levelMap, query ->
+    ) { pollens, engNames, levelMap, query ->
         val allergens = pollens.map { pollen ->
             val currentLevel = levelMap[pollen.id]?.value ?: 0
+            val engName = engNames[pollen.id] ?: ""
             val label: StringDesc = if (currentLevel > 0) {
                 pollen.levels.firstOrNull { it.level == currentLevel }?.name
                     ?.let { StringDesc.Raw(it) }
@@ -87,9 +89,9 @@ class ReferenceViewModel(
             ReferenceAllergenUi(
                 pollenId = pollen.id,
                 name = pollen.name,
-                nameEng = pollen.nameEng,
+                nameEng = engName,
                 description = pollen.description,
-                iconRes = PollenIconRegistry.iconFor(pollen),
+                iconRes = PollenIconRegistry.iconFor(pollen.id),
                 severityLevel = currentLevel,
                 severityLabel = label,
             )

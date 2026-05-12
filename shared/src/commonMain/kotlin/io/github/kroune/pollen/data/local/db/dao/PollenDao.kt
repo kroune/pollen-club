@@ -22,6 +22,9 @@ interface PollenDao {
     @Query("SELECT * FROM pollens ORDER BY id")
     suspend fun getAll(): List<PollenEntity>
 
+    @Query("SELECT * FROM pollens WHERE id = :id")
+    suspend fun getById(id: Int): PollenEntity?
+
     @Query("SELECT * FROM pollen_level_info WHERE pollen_id = :pollenId ORDER BY level")
     suspend fun getLevelInfos(pollenId: Int): List<PollenLevelInfoEntity>
 

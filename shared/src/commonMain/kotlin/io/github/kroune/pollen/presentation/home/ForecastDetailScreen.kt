@@ -122,7 +122,7 @@ fun ForecastDetailScreen(
                 DetailContent(
                     state = state,
                     pollenName = pollenState.data.name,
-                    pollenIcon = PollenIconRegistry.iconFor(pollenState.data),
+                    pollenIcon = state.pollenIconRes,
                     onBack = onBack,
                     onToggleFeeling = viewModel::toggleFeelingLine,
                     onRetry = viewModel::loadData,

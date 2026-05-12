@@ -49,6 +49,10 @@ private fun GeoPoint.toLatLng(): LatLng = LatLng(latitude, longitude)
 
 private fun GeoRing.toLatLngs(): List<LatLng> = map { it.toLatLng() }
 
+private val MOSCOW = LatLng(55.7558, 37.6173)
+private const val DEFAULT_ZOOM = 8f
+private const val MAX_FILL_OPACITY = 0.15f
+
 @Composable
 actual fun PlatformMapView(
     pins: List<MapPinDomain>,
@@ -62,11 +66,11 @@ actual fun PlatformMapView(
     val defaultPosition = if (pins.isNotEmpty()) {
         LatLng(pins.first().latitude, pins.first().longitude)
     } else {
-        LatLng(55.7558, 37.6173)
+        MOSCOW
     }
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(defaultPosition, 8f)
+        position = CameraPosition.fromLatLngZoom(defaultPosition, DEFAULT_ZOOM)
     }
 
     val clusterItems = remember(pins) { pins.map { PinClusterItem(it) } }
@@ -123,7 +127,7 @@ actual fun PlatformMapView(
 
         polygons.forEach { domainPolygon ->
             val strokeColor = parseHexColor(domainPolygon.color, domainPolygon.opacity)
-            val fillColor = parseHexColor(domainPolygon.fillColor, domainPolygon.fillOpacity.coerceAtMost(0.15f))
+            val fillColor = parseHexColor(domainPolygon.fillColor, domainPolygon.fillOpacity.coerceAtMost(MAX_FILL_OPACITY))
 
             domainPolygon.polygons.forEach { group ->
                 group.forEach { ring ->

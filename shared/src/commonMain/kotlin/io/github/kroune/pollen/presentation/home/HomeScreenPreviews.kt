@@ -25,8 +25,6 @@ import kotlinx.collections.immutable.toImmutableList
 private val previewPollen = PollenDomain(
     id = 1,
     name = "Берёза",
-    nameRus = "Берёза",
-    nameEng = "Birch",
     description = "Common allergen in spring",
     maxLevel = 4,
     levels = listOf(

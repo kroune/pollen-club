@@ -1,6 +1,7 @@
 package io.github.kroune.pollen.data.repository
 
 import co.touchlab.kermit.Logger
+import io.github.kroune.pollen.data.local.db.dao.PollenDao
 import io.github.kroune.pollen.data.mapper.toDomain
 import io.github.kroune.pollen.data.remote.api.PollenApiService
 import io.github.kroune.pollen.data.remote.api.PollenForecastApiService
@@ -19,6 +20,7 @@ private val logger = Logger.withTag("MapRepository")
 class MapRepositoryImpl(
     private val api: PollenApiService,
     private val forecastApi: PollenForecastApiService,
+    private val pollenDao: PollenDao,
 ) : MapRepository {
 
     override suspend fun getPins(userId: Long): ApiResult<List<MapPinDomain>> =
@@ -29,9 +31,10 @@ class MapRepositoryImpl(
         }
 
     override suspend fun getPolygonForecast(
-        pollenName: String,
+        pollenId: Int,
     ): ApiResult<List<MapPolygonDomain>> {
-        val allergen = pollenName.replace('ё', 'е').replace('Ё', 'Е')
+        val russianName = pollenDao.getById(pollenId)?.descRu ?: return ApiResult.Success(emptyList())
+        val allergen = russianName.replace('ё', 'е').replace('Ё', 'Е')
         if (allergen !in FORECAST_ALLERGENS) {
             return ApiResult.Success(emptyList())
         }
