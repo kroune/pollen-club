@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.repository.SettingsRepository
+import io.github.kroune.pollen.util.applyMokoLocale
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -17,6 +18,9 @@ class SettingsLanguageViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppLocale.RU)
 
     fun setLocale(locale: AppLocale) {
-        viewModelScope.launch { settingsRepository.setLocale(locale) }
+        viewModelScope.launch {
+            settingsRepository.setLocale(locale)
+            applyMokoLocale(locale)
+        }
     }
 }

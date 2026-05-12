@@ -1,5 +1,6 @@
 package io.github.kroune.pollen.presentation.home
 
+import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.DayForecastSummaryDomain
 import io.github.kroune.pollen.domain.model.LevelDomain
@@ -11,9 +12,9 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 
-fun PersonalPollenIndexDomain.toUi(severityLabels: List<String>): HomePersonalIndexUi {
+fun PersonalPollenIndexDomain.toUi(severityLabels: List<StringDesc>): HomePersonalIndexUi {
     val level = ((value / maxPossible) * 5).toInt().coerceIn(0, 5)
-    val label = severityLabels.getOrElse(level) { "" }
+    val label = severityLabels.getOrElse(level) { severityLabels.first() }
     val wholepart = value.toInt()
     val fractpart = ((value - wholepart) * 10).toInt()
     val scoreFormatted = "$wholepart,$fractpart"
@@ -25,13 +26,13 @@ fun PersonalPollenIndexDomain.toUi(severityLabels: List<String>): HomePersonalIn
 }
 
 fun List<DayForecastSummaryDomain>.toUi(
-    dayOfWeekNames: List<String>,
+    dayOfWeekNames: List<StringDesc>,
 ): ImmutableList<HomeDayForecastUi> = map { summary ->
     val date = LocalDate.parse(summary.date)
     val dowIndex = date.dayOfWeek.ordinal
     HomeDayForecastUi(
         dayOfMonth = date.dayOfMonth,
-        dayOfWeek = dayOfWeekNames.getOrElse(dowIndex) { "" },
+        dayOfWeek = dayOfWeekNames.getOrElse(dowIndex) { dayOfWeekNames.first() },
         severity = summary.maxSeverity,
         date = summary.date,
     )

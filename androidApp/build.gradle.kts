@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
+    implementation(libs.koin.core)
 
     debugImplementation(libs.compose.ui.test.manifest)
 

@@ -10,6 +10,7 @@ import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 class LocationRepositoryImpl(
@@ -19,8 +20,7 @@ class LocationRepositoryImpl(
 ) : LocationRepository {
 
     override fun observeLocations(): Flow<List<LocationDomain>> =
-        locationDao.observeAll().map { entities ->
-            val locale = localeProvider.current()
+        combine(locationDao.observeAll(), localeProvider.currentLocale) { entities, locale ->
             entities.map { it.toDomain(locale) }
         }
 

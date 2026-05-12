@@ -24,16 +24,32 @@ class MedicationRepositoryImpl(
     private val localeProvider: LocaleProvider,
 ) : MedicationRepository {
 
-    override suspend fun getCureCatalog(): ApiResult<CureCatalog> = safeApiCall {
-        val locale = localeProvider.current()
-        val response = api.getCures()
-        CureCatalog(
-            actionTypes = response.actionTypes.map { it.toDomain(locale) },
-            cures = response.cures.map { it.toDomain(locale) },
-            forms = response.forms.map { it.toDomain(locale) },
-            doses = response.doses.map { it.toDomain(locale) },
-            frequencies = response.frequency.map { it.toDomain(locale) },
-        )
+    private var cachedCatalog: CureCatalog? = null
+    private var cacheTimestamp: Long = 0L
+
+    override suspend fun getCureCatalog(): ApiResult<CureCatalog> {
+        val now = kotlin.time.Clock.System.now().epochSeconds
+        cachedCatalog?.let { cached ->
+            if (now - cacheTimestamp < CACHE_TTL_SECONDS) return ApiResult.Success(cached)
+        }
+        return safeApiCall {
+            val locale = localeProvider.current()
+            val response = api.getCures()
+            CureCatalog(
+                actionTypes = response.actionTypes.map { it.toDomain(locale) },
+                cures = response.cures.map { it.toDomain(locale) },
+                forms = response.forms.map { it.toDomain(locale) },
+                doses = response.doses.map { it.toDomain(locale) },
+                frequencies = response.frequency.map { it.toDomain(locale) },
+            ).also {
+                cachedCatalog = it
+                cacheTimestamp = now
+            }
+        }
+    }
+
+    companion object {
+        private const val CACHE_TTL_SECONDS = 3600L
     }
 
     override fun observeTherapies(): Flow<List<TherapyDomain>> =

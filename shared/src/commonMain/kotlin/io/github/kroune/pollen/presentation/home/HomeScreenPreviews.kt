@@ -16,6 +16,8 @@ import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.PollenLevelDomain
 import io.github.kroune.pollen.domain.model.WeatherDomain
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -23,6 +25,7 @@ import kotlinx.collections.immutable.toImmutableList
 private val previewPollen = PollenDomain(
     id = 1,
     name = "Берёза",
+    nameRus = "Берёза",
     nameEng = "Birch",
     description = "Common allergen in spring",
     maxLevel = 4,
@@ -73,13 +76,13 @@ private fun PreviewLocationRow() {
 @Composable
 private fun PreviewDayStrip() {
     val days = persistentListOf(
-        HomeDayForecastUi(23, "ср", 1, "2026-04-23"),
-        HomeDayForecastUi(24, "чт", 1, "2026-04-24"),
-        HomeDayForecastUi(25, "пт", 3, "2026-04-25"),
-        HomeDayForecastUi(26, "сб", 2, "2026-04-26"),
-        HomeDayForecastUi(27, "вс", 3, "2026-04-27"),
-        HomeDayForecastUi(28, "пн", 2, "2026-04-28"),
-        HomeDayForecastUi(29, "вт", 1, "2026-04-29"),
+        HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, "2026-04-23"),
+        HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, "2026-04-24"),
+        HomeDayForecastUi(25, StringDesc.Raw("пт"), 3, "2026-04-25"),
+        HomeDayForecastUi(26, StringDesc.Raw("сб"), 2, "2026-04-26"),
+        HomeDayForecastUi(27, StringDesc.Raw("вс"), 3, "2026-04-27"),
+        HomeDayForecastUi(28, StringDesc.Raw("пн"), 2, "2026-04-28"),
+        HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, "2026-04-29"),
     )
     PollenTheme {
         Box(Modifier.background(MaterialTheme.colorScheme.background)) {
@@ -146,13 +149,13 @@ private fun PreviewOtherAllergenPills() {
 @Composable
 private fun PreviewHomeScreenFull() {
     val days = persistentListOf(
-        HomeDayForecastUi(23, "ср", 1, "2026-04-23"),
-        HomeDayForecastUi(24, "чт", 1, "2026-04-24"),
-        HomeDayForecastUi(25, "пт", 3, "2026-04-25"),
-        HomeDayForecastUi(26, "сб", 2, "2026-04-26"),
-        HomeDayForecastUi(27, "вс", 3, "2026-04-27"),
-        HomeDayForecastUi(28, "пн", 2, "2026-04-28"),
-        HomeDayForecastUi(29, "вт", 1, "2026-04-29"),
+        HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, "2026-04-23"),
+        HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, "2026-04-24"),
+        HomeDayForecastUi(25, StringDesc.Raw("пт"), 3, "2026-04-25"),
+        HomeDayForecastUi(26, StringDesc.Raw("сб"), 2, "2026-04-26"),
+        HomeDayForecastUi(27, StringDesc.Raw("вс"), 3, "2026-04-27"),
+        HomeDayForecastUi(28, StringDesc.Raw("пн"), 2, "2026-04-28"),
+        HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, "2026-04-29"),
     )
     val allergens = persistentListOf(
         AllergenRowData(previewPollen, 2, 4),

@@ -6,10 +6,15 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
+    alias(libs.plugins.mokoResources)
 }
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+multiplatformResources {
+    resourcesPackage.set("io.github.kroune.pollen")
 }
 
 kotlin {
@@ -64,9 +69,14 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
 
+            implementation(libs.compose.media.player)
+
             implementation(libs.navigation3.ui)
 
             implementation(libs.vico.compose.m3)
+
+            api(libs.moko.resources)
+            api(libs.moko.resources.compose)
         }
         commonTest.dependencies {
             api(libs.kotlin.test)

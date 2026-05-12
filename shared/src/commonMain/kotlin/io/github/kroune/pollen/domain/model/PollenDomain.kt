@@ -3,6 +3,7 @@ package io.github.kroune.pollen.domain.model
 data class PollenDomain(
     val id: Int,
     val name: String,
+    val nameRus: String,
     val nameEng: String,
     val description: String,
     val maxLevel: Int,

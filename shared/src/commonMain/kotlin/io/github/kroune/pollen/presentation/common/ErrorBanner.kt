@@ -23,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 
 @Composable
 fun ErrorBanner(
@@ -49,14 +51,14 @@ fun ErrorBanner(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    "Failed to load data",
+                    stringResource(MR.strings.error_load_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
             TextButton(onClick = onRetry) {
-                Text("Retry", color = MaterialTheme.colorScheme.onErrorContainer)
+                Text(stringResource(MR.strings.retry), color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
     }
@@ -77,13 +79,13 @@ fun FullScreenError(
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                "Something went wrong",
+                stringResource(MR.strings.error_something_went_wrong),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error,
             )
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onRetry) {
-                Text("Retry")
+                Text(stringResource(MR.strings.retry))
             }
         }
     }

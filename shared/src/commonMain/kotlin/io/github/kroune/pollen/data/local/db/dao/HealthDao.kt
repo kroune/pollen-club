@@ -15,6 +15,9 @@ interface HealthDao {
     @Query("SELECT * FROM health_entries WHERE date = :date LIMIT 1")
     suspend fun getByDate(date: String): HealthEntryEntity?
 
+    @Query("SELECT * FROM health_entries WHERE date = :date LIMIT 1")
+    fun observeByDate(date: String): Flow<HealthEntryEntity?>
+
     @Query("SELECT * FROM health_entries WHERE date BETWEEN :from AND :to ORDER BY date DESC")
     fun observeByDateRange(from: String, to: String): Flow<List<HealthEntryEntity>>
 

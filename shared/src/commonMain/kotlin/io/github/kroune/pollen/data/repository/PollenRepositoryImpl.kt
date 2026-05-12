@@ -17,6 +17,7 @@ import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
@@ -32,15 +33,13 @@ class PollenRepositoryImpl(
     private val localeProvider: LocaleProvider,
 ) : PollenRepository {
 
-    override fun observePollens(): Flow<List<PollenDomain>> {
-        return pollenDao.observeAll().map { entities ->
-            val locale = localeProvider.current()
+    override fun observePollens(): Flow<List<PollenDomain>> =
+        combine(pollenDao.observeAll(), localeProvider.currentLocale) { entities, locale ->
             entities.map { entity ->
                 val levelInfos = pollenDao.getLevelInfos(entity.id)
                 entity.toDomain(locale, levelInfos)
             }
         }
-    }
 
     override suspend fun syncPollens(): ApiResult<Unit> = safeApiCall {
         val response = api.getPollens()

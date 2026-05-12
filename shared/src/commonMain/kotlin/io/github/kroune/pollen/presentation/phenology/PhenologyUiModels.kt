@@ -17,6 +17,6 @@ data class PhenologyScreenDataUi(
     val allergenName: String,
     val locationLabel: String,
     val currentStageLabel: String,
-    val currentStageDate: String,
+    val currentStageEpochSeconds: Long?,
     val stages: ImmutableList<PhenologyStageUi>,
 )

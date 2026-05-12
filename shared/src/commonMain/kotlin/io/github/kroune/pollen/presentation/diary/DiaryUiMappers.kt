@@ -1,5 +1,8 @@
 package io.github.kroune.pollen.presentation.diary
 
+import dev.icerock.moko.resources.desc.StringDesc
+import dev.icerock.moko.resources.desc.desc
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.BodyZone
 import io.github.kroune.pollen.domain.model.Feeling
@@ -22,16 +25,16 @@ fun buildDates(
     val date = weekStart.plus(offset, DateTimeUnit.DAY)
     DiaryDateUi(
         dayOfMonth = date.day,
-        dayOfWeek = russianDayOfWeek(date.dayOfWeek),
+        dayOfWeek = dayOfWeekStringDesc(date.dayOfWeek),
         isSelected = date == selectedDate,
         isoDate = date.toString(),
     )
 }.toImmutableList()
 
 fun buildMoodOptions(selectedFeeling: Feeling?): ImmutableList<DiaryMoodOptionUi> = listOf(
-    DiaryMoodOptionUi(Feeling.GOOD, "Хорошо", selectedFeeling == Feeling.GOOD),
-    DiaryMoodOptionUi(Feeling.MIDDLE, "Терпимо", selectedFeeling == Feeling.MIDDLE),
-    DiaryMoodOptionUi(Feeling.BAD, "Плохо", selectedFeeling == Feeling.BAD),
+    DiaryMoodOptionUi(Feeling.GOOD, MR.strings.feeling_good.desc(), selectedFeeling == Feeling.GOOD),
+    DiaryMoodOptionUi(Feeling.MIDDLE, MR.strings.feeling_moderate.desc(), selectedFeeling == Feeling.MIDDLE),
+    DiaryMoodOptionUi(Feeling.BAD, MR.strings.feeling_bad.desc(), selectedFeeling == Feeling.BAD),
 ).toImmutableList()
 
 fun mapBodyZones(
@@ -40,7 +43,7 @@ fun mapBodyZones(
 ): ImmutableList<DiaryBodyZoneUi> = BodyZone.entries.map { zone ->
     DiaryBodyZoneUi(
         zone = zone,
-        label = russianZoneLabel(zone),
+        label = zoneStringDesc(zone),
         symptomCount = selectedTagKeys.count { it.startsWith(zonePrefix(zone)) },
         isSelected = zone == selectedZone,
     )
@@ -78,41 +81,54 @@ fun mapTherapyItems(
     }.toImmutableList()
 }
 
-fun russianMonthLabel(date: LocalDate): String {
-    val month = when (date.month) {
-        Month.JANUARY -> "Январь"
-        Month.FEBRUARY -> "Февраль"
-        Month.MARCH -> "Март"
-        Month.APRIL -> "Апрель"
-        Month.MAY -> "Май"
-        Month.JUNE -> "Июнь"
-        Month.JULY -> "Июль"
-        Month.AUGUST -> "Август"
-        Month.SEPTEMBER -> "Сентябрь"
-        Month.OCTOBER -> "Октябрь"
-        Month.NOVEMBER -> "Ноябрь"
-        Month.DECEMBER -> "Декабрь"
-    }
-    return "$month ${date.year}"
+fun monthStringDesc(month: Month): StringDesc = when (month) {
+    Month.JANUARY -> MR.strings.month_january.desc()
+    Month.FEBRUARY -> MR.strings.month_february.desc()
+    Month.MARCH -> MR.strings.month_march.desc()
+    Month.APRIL -> MR.strings.month_april.desc()
+    Month.MAY -> MR.strings.month_may.desc()
+    Month.JUNE -> MR.strings.month_june.desc()
+    Month.JULY -> MR.strings.month_july.desc()
+    Month.AUGUST -> MR.strings.month_august.desc()
+    Month.SEPTEMBER -> MR.strings.month_september.desc()
+    Month.OCTOBER -> MR.strings.month_october.desc()
+    Month.NOVEMBER -> MR.strings.month_november.desc()
+    Month.DECEMBER -> MR.strings.month_december.desc()
 }
 
-fun russianDayOfWeek(dayOfWeek: DayOfWeek): String = when (dayOfWeek) {
-    DayOfWeek.MONDAY -> "пн"
-    DayOfWeek.TUESDAY -> "вт"
-    DayOfWeek.WEDNESDAY -> "ср"
-    DayOfWeek.THURSDAY -> "чт"
-    DayOfWeek.FRIDAY -> "пт"
-    DayOfWeek.SATURDAY -> "сб"
-    DayOfWeek.SUNDAY -> "вс"
+fun monthShortStringDesc(month: Month): StringDesc = when (month) {
+    Month.JANUARY -> MR.strings.month_jan_short.desc()
+    Month.FEBRUARY -> MR.strings.month_feb_short.desc()
+    Month.MARCH -> MR.strings.month_mar_short.desc()
+    Month.APRIL -> MR.strings.month_apr_short.desc()
+    Month.MAY -> MR.strings.month_may_short.desc()
+    Month.JUNE -> MR.strings.month_jun_short.desc()
+    Month.JULY -> MR.strings.month_jul_short.desc()
+    Month.AUGUST -> MR.strings.month_aug_short.desc()
+    Month.SEPTEMBER -> MR.strings.month_sep_short.desc()
+    Month.OCTOBER -> MR.strings.month_oct_short.desc()
+    Month.NOVEMBER -> MR.strings.month_nov_short.desc()
+    Month.DECEMBER -> MR.strings.month_dec_short.desc()
 }
 
-fun russianZoneLabel(zone: BodyZone): String = when (zone) {
-    BodyZone.EYES -> "Глаза"
-    BodyZone.NOSE -> "Нос"
-    BodyZone.THROAT -> "Горло"
-    BodyZone.CHEST -> "Грудь"
-    BodyZone.SKIN -> "Кожа"
+fun dayOfWeekStringDesc(dayOfWeek: DayOfWeek): StringDesc = when (dayOfWeek) {
+    DayOfWeek.MONDAY -> MR.strings.dow_mon.desc()
+    DayOfWeek.TUESDAY -> MR.strings.dow_tue.desc()
+    DayOfWeek.WEDNESDAY -> MR.strings.dow_wed.desc()
+    DayOfWeek.THURSDAY -> MR.strings.dow_thu.desc()
+    DayOfWeek.FRIDAY -> MR.strings.dow_fri.desc()
+    DayOfWeek.SATURDAY -> MR.strings.dow_sat.desc()
+    DayOfWeek.SUNDAY -> MR.strings.dow_sun.desc()
 }
+
+fun zoneStringDesc(zone: BodyZone): StringDesc = when (zone) {
+    BodyZone.EYES -> MR.strings.zone_eyes.desc()
+    BodyZone.NOSE -> MR.strings.zone_nose.desc()
+    BodyZone.THROAT -> MR.strings.zone_throat.desc()
+    BodyZone.CHEST -> MR.strings.zone_chest.desc()
+    BodyZone.SKIN -> MR.strings.zone_skin.desc()
+}
+
 
 fun zonePrefix(zone: BodyZone): String = when (zone) {
     BodyZone.EYES -> "eyes_"

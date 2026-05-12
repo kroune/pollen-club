@@ -50,12 +50,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.localized
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
+import kotlin.math.abs
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -63,7 +70,7 @@ fun PhenologyScreen(viewModel: PhenologyViewModel = koinViewModel()) {
     val uiState by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+    CollectEvents(viewModel.events, snackbarHostState)
 
     if (uiState.form.showDialog) {
         val screenData = uiState.screenData
@@ -83,7 +90,7 @@ fun PhenologyScreen(viewModel: PhenologyViewModel = koinViewModel()) {
     Box(Modifier.fillMaxSize()) {
         when (val data = uiState.screenData) {
             is LoadState.Loading -> PhenologySkeleton()
-            is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
+            is LoadState.Failed -> FullScreenError(onRetry = {})
             is LoadState.Loaded -> PhenologyContent(data.data)
         }
 
@@ -97,7 +104,7 @@ fun PhenologyScreen(viewModel: PhenologyViewModel = koinViewModel()) {
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp, bottom = 16.dp),
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить наблюдение")
+                Icon(Icons.Default.Add, contentDescription = stringResource(MR.strings.phenology_add_observation))
             }
         }
 
@@ -206,14 +213,14 @@ private fun PhenologyContent(data: PhenologyScreenDataUi) {
         if (data.currentStageLabel.isNotEmpty()) {
             CurrentStageCard(
                 label = data.currentStageLabel,
-                date = data.currentStageDate,
+                date = data.currentStageEpochSeconds?.let { formatObservationDate(it) } ?: "",
             )
         } else {
             InstructionCard()
         }
 
         Text(
-            text = "ВСЕ СТАДИИ",
+            text = stringResource(MR.strings.phenology_all_stages).uppercase(),
             style = MaterialTheme.typography.labelMedium,
             color = colors.ink3,
             modifier = Modifier.padding(top = 24.dp, bottom = 10.dp),
@@ -234,7 +241,7 @@ private fun CurrentStageCard(label: String, date: String) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "ТЕКУЩАЯ СТАДИЯ",
+                text = stringResource(MR.strings.phenology_current_stage).uppercase(),
                 style = MaterialTheme.typography.labelMedium,
                 color = colors.ink3,
             )
@@ -246,7 +253,7 @@ private fun CurrentStageCard(label: String, date: String) {
             )
             if (date.isNotEmpty()) {
                 Text(
-                    text = "Отметили $date",
+                    text = stringResource(MR.strings.phenology_marked_on, date),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = colors.ink3,
                     modifier = Modifier.padding(top = 6.dp),
@@ -266,7 +273,7 @@ private fun InstructionCard() {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = "Отмечайте стадию цветения, чтобы другие пользователи имели более точную картину пыления",
+            text = stringResource(MR.strings.phenology_instruction),
             style = MaterialTheme.typography.bodyMedium,
             color = colors.ink2,
             modifier = Modifier.padding(16.dp),
@@ -316,7 +323,7 @@ private fun StageTimelineItem(stage: PhenologyStageUi, isLast: Boolean) {
         Spacer(Modifier.width(8.dp))
         Column {
             Text(
-                text = "Стадия №${stage.number}",
+                text = stringResource(MR.strings.phenology_stage_number, stage.number),
                 style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
                 fontWeight = if (stage.isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (stage.isDone || stage.isCurrent) colors.ink else colors.ink3,
@@ -400,6 +407,27 @@ private fun Modifier.dashedCircleBorder(
     )
 }
 
+@Composable
+private fun formatObservationDate(epochSeconds: Long): String {
+    val now = kotlin.time.Clock.System.now()
+    val diffSeconds = now.epochSeconds - epochSeconds
+    val diffDays = abs(diffSeconds / 86400)
+
+    val instant = kotlin.time.Instant.fromEpochSeconds(epochSeconds)
+    val local = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    val monthName = monthShortStringDesc(local.month).localized()
+    val dateStr = "${local.dayOfMonth} $monthName"
+
+    val relativeStr = when {
+        diffDays == 0L -> stringResource(MR.strings.date_today)
+        diffDays == 1L -> stringResource(MR.strings.date_yesterday)
+        diffDays < 7L -> stringResource(MR.strings.date_days_ago, diffDays.toInt())
+        else -> null
+    }
+
+    return if (relativeStr != null) "$dateStr · $relativeStr" else dateStr
+}
+
 // ── Add Observation Dialog ──
 
 @Composable
@@ -418,12 +446,12 @@ private fun AddPhenologyDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(14.dp),
         title = {
-            Text("Новое наблюдение", style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(MR.strings.phenology_new_observation), style = MaterialTheme.typography.headlineMedium)
         },
         text = {
             Column {
                 Text(
-                    text = "ВЫБЕРИТЕ СТАДИЮ",
+                    text = stringResource(MR.strings.phenology_select_stage).uppercase(),
                     style = MaterialTheme.typography.labelMedium,
                     color = colors.ink3,
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -462,7 +490,7 @@ private fun AddPhenologyDialog(
                 OutlinedTextField(
                     value = comment,
                     onValueChange = onCommentChange,
-                    label = { Text("Написать комментарий к стадии") },
+                    label = { Text(stringResource(MR.strings.phenology_comment_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )
@@ -470,11 +498,11 @@ private fun AddPhenologyDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Готово", color = colors.accent)
+                Text(stringResource(MR.strings.done), color = colors.accent)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть") }
+            TextButton(onClick = onDismiss) { Text(stringResource(MR.strings.close)) }
         },
     )
 }

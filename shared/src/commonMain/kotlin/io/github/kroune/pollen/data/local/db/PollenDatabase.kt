@@ -51,7 +51,7 @@ import io.github.kroune.pollen.data.local.db.entity.UserEntity
         AllergenSensitivityEntity::class,
         MedicationIntakeEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @ConstructedBy(PollenDatabaseConstructor::class)

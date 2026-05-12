@@ -18,6 +18,8 @@ import io.github.kroune.pollen.domain.model.MediaItemDomain
 import io.github.kroune.pollen.domain.model.MediaType
 import io.github.kroune.pollen.domain.model.VkPostDomain
 
+private val VIDEO_EXTENSIONS = setOf("mp4", "avi", "mov", "webm", "mkv", "3gp")
+
 fun CommentDto.toDomain(locale: AppLocale): CommentDomain {
     val expertId = expert.toIntOrNull() ?: 0
     return CommentDomain(
@@ -41,9 +43,13 @@ fun VkPostDto.toDomain(): VkPostDomain = VkPostDomain(
 fun MediaItemDto.toDomain(locale: AppLocale): MediaItemDomain = MediaItemDomain(
     id = id,
     date = date,
-    type = if (mediaType == "video") MediaType.VIDEO else MediaType.IMAGE,
+    type = if (mediaType == "video" || url.substringAfterLast('.').lowercase() in VIDEO_EXTENSIONS) {
+        MediaType.VIDEO
+    } else {
+        MediaType.IMAGE
+    },
     url = url,
-    description = if (locale == AppLocale.RU) infoRus else infoEng,
+    description = (if (locale == AppLocale.RU) infoRus else infoEng).trim(),
 )
 
 fun FriendFeelDto.toDomain(): FriendFeelDomain = FriendFeelDomain(
@@ -62,6 +68,7 @@ fun FriendDto.toEntity(): FriendEntity = FriendEntity(
 fun FriendEntity.toDomain(): FriendDomain = FriendDomain(
     id = id,
     friendId = friendId,
+    name = name,
 )
 
 fun PinDto.toDomain(): MapPinDomain = MapPinDomain(

@@ -65,6 +65,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.localized
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
@@ -85,7 +88,7 @@ fun ReferenceScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     var selectedAllergen by remember { mutableStateOf<ReferenceAllergenUi?>(null) }
 
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+    CollectEvents(viewModel.events, snackbarHostState)
 
     BackHandler(enabled = selectedAllergen != null) {
         selectedAllergen = null
@@ -130,14 +133,14 @@ fun ReferenceScreen(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Назад",
+                        contentDescription = stringResource(MR.strings.back),
                         tint = PollenTheme.colors.ink2,
                         modifier = Modifier.size(16.dp),
                     )
                 }
 
                 Text(
-                    text = "Справочник",
+                    text = stringResource(MR.strings.reference_title),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = (-0.2).sp,
@@ -162,7 +165,7 @@ fun ReferenceScreen(
                 ) {
                     Icon(
                         if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                        contentDescription = if (showSearch) "Закрыть поиск" else "Поиск",
+                        contentDescription = if (showSearch) stringResource(MR.strings.close_search) else stringResource(MR.strings.search),
                         tint = PollenTheme.colors.ink2,
                         modifier = Modifier.size(15.dp),
                     )
@@ -185,7 +188,7 @@ fun ReferenceScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     placeholder = {
                         Text(
-                            "Найти аллерген…",
+                            stringResource(MR.strings.reference_search_placeholder),
                             color = PollenTheme.colors.ink3,
                         )
                     },
@@ -208,7 +211,7 @@ fun ReferenceScreen(
                             ) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Очистить",
+                                    contentDescription = stringResource(MR.strings.clear),
                                     tint = PollenTheme.colors.ink3,
                                     modifier = Modifier.size(16.dp),
                                 )
@@ -234,7 +237,7 @@ fun ReferenceScreen(
             // Body
             when (val allergens = state.allergens) {
                 is LoadState.Loading -> ReferenceSkeleton()
-                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
+                is LoadState.Failed -> FullScreenError(onRetry = {})
                 is LoadState.Loaded -> {
                     val filtered = remember(allergens.data, state.searchQuery) {
                         if (state.searchQuery.isBlank()) {
@@ -251,7 +254,7 @@ fun ReferenceScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Ничего не найдено",
+                                text = stringResource(MR.strings.reference_nothing_found),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = PollenTheme.colors.ink3,
                             )
@@ -327,7 +330,7 @@ private fun AllergenDetailSheet(allergen: ReferenceAllergenUi) {
             )
         } else {
             Text(
-                text = "Описание недоступно",
+                text = stringResource(MR.strings.reference_description_unavailable),
                 style = MaterialTheme.typography.bodyMedium,
                 color = PollenTheme.colors.ink3,
             )
@@ -414,7 +417,7 @@ private fun ReferenceAllergenCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = allergen.severityLabel,
+                        text = allergen.severityLabel.localized(),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = PollenTheme.colors.severityColor(allergen.severityLevel),
@@ -423,7 +426,7 @@ private fun ReferenceAllergenCard(
                 }
             } else {
                 Text(
-                    text = "не активен",
+                    text = stringResource(MR.strings.status_not_active),
                     fontSize = 10.sp,
                     color = PollenTheme.colors.ink3,
                 )

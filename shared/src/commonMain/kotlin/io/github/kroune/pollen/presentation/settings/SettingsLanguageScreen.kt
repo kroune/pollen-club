@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import org.koin.compose.viewmodel.koinViewModel
@@ -48,13 +50,13 @@ fun SettingsLanguageScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад",
+                    contentDescription = stringResource(MR.strings.back),
                     tint = PollenTheme.colors.ink2,
                     modifier = Modifier.size(22.dp),
                 )
             }
             Text(
-                text = "Язык",
+                text = stringResource(MR.strings.settings_language),
                 style = MaterialTheme.typography.displaySmall,
                 color = PollenTheme.colors.ink,
             )
@@ -70,13 +72,13 @@ fun SettingsLanguageScreen(
         ) {
             Column {
                 LanguageRow(
-                    label = "Русский",
+                    label = stringResource(MR.strings.language_russian),
                     isSelected = currentLocale == AppLocale.RU,
                     onClick = { viewModel.setLocale(AppLocale.RU) },
                 )
                 HorizontalDivider(color = PollenTheme.colors.line2)
                 LanguageRow(
-                    label = "English",
+                    label = stringResource(MR.strings.language_english),
                     isSelected = currentLocale == AppLocale.EN,
                     onClick = { viewModel.setLocale(AppLocale.EN) },
                 )

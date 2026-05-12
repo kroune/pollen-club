@@ -2,177 +2,191 @@ package io.github.kroune.pollen.presentation.diary
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.icerock.moko.resources.desc.desc
+import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.BodyZone
 import io.github.kroune.pollen.domain.model.Feeling
 import io.github.kroune.pollen.domain.model.HealthEntryDomain
+import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.model.SymptomTagRegistry
+import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.repository.HealthRepository
 import io.github.kroune.pollen.domain.repository.MedicationRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.toLocalDateTime
 
 class DiaryViewModel(
     private val healthRepository: HealthRepository,
     private val userRepository: UserRepository,
     private val medicationRepository: MedicationRepository,
+    private val todayProvider: TodayProvider,
+    private val localeProvider: LocaleProvider,
 ) : ViewModel() {
-
-    private val _state = MutableStateFlow(DiaryUiState())
-    val state: StateFlow<DiaryUiState> = _state.asStateFlow()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private val _selectedDateStr = MutableStateFlow(today().toString())
-
-    private var selectedDate: LocalDate = today()
-    private var weekStart: LocalDate = today().startOfWeek()
-    private var selectedFeeling: Feeling? = null
-    private var selectedZone: BodyZone? = null
-    private var selectedTagKeys = mutableSetOf<String>()
-    private var currentEntryId: Long = 0
-    private var loadJob: Job? = null
+    private val _selectedDate = MutableStateFlow(todayProvider.today.value)
+    private val _weekStart = MutableStateFlow(todayProvider.today.value.startOfWeek())
+    private val _selectedFeeling = MutableStateFlow<Feeling?>(null)
+    private val _selectedZone = MutableStateFlow<BodyZone?>(null)
+    private val _selectedTagKeys = MutableStateFlow<Set<String>>(emptySet())
 
     init {
-        rebuildUi()
-        loadEntryForCurrentDate()
-        observeTherapy()
+        observeTodayAdvance()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val entryFlow = _selectedDate.flatMapLatest { date ->
+        healthRepository.observeEntryByDate(date.toString())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val therapyFlow = _selectedDate.flatMapLatest { date ->
+        combine(
+            medicationRepository.observeTherapies(),
+            medicationRepository.observeIntakesForDate(date.toString()),
+        ) { therapies, intakes -> mapTherapyItems(therapies, intakes) }
+    }
+
+    val state: StateFlow<DiaryUiState> = combine(
+        _selectedDate,
+        _weekStart,
+        _selectedFeeling,
+        _selectedZone,
+    ) { date, weekStart, feeling, zone ->
+        UiInputs(date, weekStart, feeling, zone)
+    }.combine(_selectedTagKeys) { inputs, tags ->
+        Pair(inputs, tags)
+    }.combine(therapyFlow) { (inputs, tags), therapyItems ->
+        Triple(inputs, tags, therapyItems)
+    }.combine(localeProvider.currentLocale) { (inputs, tags, therapyItems), locale ->
+        DiaryUiState(
+            monthName = monthStringDesc(inputs.weekStart.month),
+            selectedIsoDate = inputs.date.toString(),
+            dates = buildDates(inputs.weekStart, inputs.date),
+            moodOptions = buildMoodOptions(inputs.feeling),
+            bodyZones = mapBodyZones(tags, inputs.zone),
+            selectedZoneLabel = inputs.zone?.let { zoneStringDesc(it) },
+            selectedZoneTags = mapZoneTags(inputs.zone, tags, locale),
+            therapyItems = therapyItems,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DiaryUiState())
+
+    init {
+        observeEntry()
+    }
+
+    private fun observeTodayAdvance() {
+        viewModelScope.launch {
+            todayProvider.today.collect { newToday ->
+                val currentSelected = _selectedDate.value
+                val yesterday = newToday.minus(1, DateTimeUnit.DAY)
+                if (currentSelected == yesterday) {
+                    _selectedDate.value = newToday
+                    _weekStart.value = newToday.startOfWeek()
+                }
+            }
+        }
+    }
+
+    private fun observeEntry() {
+        viewModelScope.launch {
+            entryFlow.collect { entry ->
+                if (entry != null) {
+                    _selectedFeeling.value = entry.feeling
+                    _selectedTagKeys.value = entry.tags
+                        .split(",")
+                        .filter { it.isNotBlank() }
+                        .toSet()
+                    _selectedZone.value = inferPrimaryZone(_selectedTagKeys.value)
+                }
+            }
+        }
     }
 
     fun selectDate(isoDate: String) {
         val date = LocalDate.parse(isoDate)
-        if (date == selectedDate) return
+        if (date == _selectedDate.value) return
 
-        selectedDate = date
-        if (date < weekStart || date >= weekStart.plus(7, DateTimeUnit.DAY)) {
-            weekStart = date.startOfWeek()
+        _selectedDate.value = date
+        if (date < _weekStart.value || date >= _weekStart.value.plus(7, DateTimeUnit.DAY)) {
+            _weekStart.value = date.startOfWeek()
         }
         resetForm()
-        rebuildUi()
-        _selectedDateStr.value = date.toString()
-        loadEntryForCurrentDate()
     }
 
     fun navigateWeek(forward: Boolean) {
-        weekStart = if (forward) {
-            weekStart.plus(7, DateTimeUnit.DAY)
+        _weekStart.value = if (forward) {
+            _weekStart.value.plus(7, DateTimeUnit.DAY)
         } else {
-            weekStart.minus(7, DateTimeUnit.DAY)
+            _weekStart.value.minus(7, DateTimeUnit.DAY)
         }
-        rebuildUi()
     }
 
     fun selectFeeling(feeling: Feeling) {
-        selectedFeeling = feeling
-        rebuildUi()
+        _selectedFeeling.value = feeling
         saveEntry()
     }
 
     fun selectZone(zone: BodyZone) {
-        selectedZone = if (selectedZone == zone) null else zone
-        rebuildUi()
+        _selectedZone.value = if (_selectedZone.value == zone) null else zone
     }
 
     fun toggleTag(key: String) {
-        if (key in selectedTagKeys) selectedTagKeys.remove(key) else selectedTagKeys.add(key)
-        rebuildUi()
+        val current = _selectedTagKeys.value.toMutableSet()
+        if (key in current) current.remove(key) else current.add(key)
+        _selectedTagKeys.value = current
         saveEntry()
     }
 
     fun toggleMedicationTaken(therapyId: Long) {
-        val item = _state.value.therapyItems.firstOrNull { it.therapyId == therapyId } ?: return
         viewModelScope.launch {
             try {
-                medicationRepository.recordIntake(therapyId, selectedDate.toString(), !item.taken)
+                val dateStr = _selectedDate.value.toString()
+                val intakes = medicationRepository.observeIntakesForDate(dateStr)
+                    .stateIn(viewModelScope).value
+                val currentlyTaken = intakes.any { it.therapyId == therapyId && it.taken }
+                medicationRepository.recordIntake(therapyId, dateStr, !currentlyTaken)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _events.send(UiEvent.ShowError("Не удалось обновить приём"))
+                _events.send(UiEvent.ShowError(MR.strings.error_update_intake.desc()))
             }
         }
     }
 
     private fun resetForm() {
-        selectedFeeling = null
-        selectedZone = null
-        selectedTagKeys.clear()
-        currentEntryId = 0
-    }
-
-    private fun loadEntryForCurrentDate() {
-        loadJob?.cancel()
-        loadJob = viewModelScope.launch {
-            try {
-                val entry = healthRepository.getEntryByDate(selectedDate.toString())
-                if (entry != null) {
-                    currentEntryId = entry.id
-                    selectedFeeling = entry.feeling
-                    selectedTagKeys = entry.tags
-                        .split(",")
-                        .filter { it.isNotBlank() }
-                        .toMutableSet()
-                    selectedZone = inferPrimaryZone(selectedTagKeys)
-                }
-                rebuildUi()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _events.send(UiEvent.ShowError("Не удалось загрузить запись"))
-            }
-        }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun observeTherapy() {
-        viewModelScope.launch {
-            _selectedDateStr.flatMapLatest { dateStr ->
-                combine(
-                    medicationRepository.observeTherapies(),
-                    medicationRepository.observeIntakesForDate(dateStr),
-                ) { therapies, intakes -> mapTherapyItems(therapies, intakes) }
-            }.collect { items ->
-                _state.value = _state.value.copy(therapyItems = items)
-            }
-        }
-    }
-
-    private fun rebuildUi() {
-        _state.value = _state.value.copy(
-            monthLabel = russianMonthLabel(weekStart),
-            selectedIsoDate = selectedDate.toString(),
-            dates = buildDates(weekStart, selectedDate),
-            moodOptions = buildMoodOptions(selectedFeeling),
-            bodyZones = mapBodyZones(selectedTagKeys, selectedZone),
-            selectedZoneLabel = selectedZone?.let { "Симптомы · ${russianZoneLabel(it)}" },
-            selectedZoneTags = mapZoneTags(selectedZone, selectedTagKeys),
-        )
+        _selectedFeeling.value = null
+        _selectedZone.value = null
+        _selectedTagKeys.value = emptySet()
     }
 
     private fun saveEntry() {
-        val feeling = selectedFeeling ?: return
+        val feeling = _selectedFeeling.value ?: return
         viewModelScope.launch {
             try {
-                val tags = selectedTagKeys.toList()
+                val tags = _selectedTagKeys.value.toList()
+                val existingEntry = healthRepository.getEntryByDate(_selectedDate.value.toString())
                 val entry = HealthEntryDomain(
-                    id = currentEntryId,
-                    date = selectedDate.toString(),
+                    id = existingEntry?.id ?: 0,
+                    date = _selectedDate.value.toString(),
                     feeling = feeling,
                     tags = tags.joinToString(","),
                     eyes = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.EYES),
@@ -180,12 +194,11 @@ class DiaryViewModel(
                     throat = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.THROAT),
                     lungs = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.CHEST),
                 )
-                val savedId = healthRepository.saveEntry(entry)
-                if (currentEntryId == 0L) currentEntryId = savedId
+                healthRepository.saveEntry(entry)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _events.send(UiEvent.ShowError("Не удалось сохранить запись"))
+                _events.send(UiEvent.ShowError(MR.strings.error_save_entry.desc()))
             }
         }
     }
@@ -195,7 +208,11 @@ class DiaryViewModel(
             .maxByOrNull { zone -> tags.count { it.startsWith(zonePrefix(zone)) } }
             ?.takeIf { zone -> tags.any { it.startsWith(zonePrefix(zone)) } }
     }
-
-    private fun today(): LocalDate =
-        kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 }
+
+private data class UiInputs(
+    val date: LocalDate,
+    val weekStart: LocalDate,
+    val feeling: Feeling?,
+    val zone: BodyZone?,
+)

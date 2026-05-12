@@ -46,7 +46,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.MedicationListSkeleton
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.datetime.DayOfWeek
@@ -84,20 +89,28 @@ fun MedicationsScreen(
                     )
                     Spacer(Modifier.height(18.dp))
 
-                    SectionHeader("Ваши препараты")
+                    SectionHeader(stringResource(MR.strings.medications_your_meds))
                     Spacer(Modifier.height(8.dp))
-                    RecentMedsList(
-                        meds = state.recentMeds,
-                        onToggleTaken = viewModel::toggleTakenToday,
-                    )
+                    when (val meds = state.recentMeds) {
+                        is LoadState.Loading -> MedicationListSkeleton()
+                        is LoadState.Failed -> MedicationListSkeleton(count = 2)
+                        is LoadState.Loaded -> RecentMedsList(
+                            meds = meds.data,
+                            onToggleTaken = viewModel::toggleTakenToday,
+                        )
+                    }
 
                     Spacer(Modifier.height(16.dp))
                     HorizontalDivider(color = PollenTheme.colors.line2)
                     Spacer(Modifier.height(12.dp))
 
-                    SectionHeader("Категории")
+                    SectionHeader(stringResource(MR.strings.medications_categories))
                     Spacer(Modifier.height(8.dp))
-                    CategoriesCard(categories = state.categories)
+                    when (val cats = state.categories) {
+                        is LoadState.Loading -> MedicationListSkeleton(count = 3)
+                        is LoadState.Failed -> MedicationListSkeleton(count = 3)
+                        is LoadState.Loaded -> CategoriesCard(categories = cats.data)
+                    }
                 }
             }
 
@@ -140,7 +153,7 @@ private fun TopBar(onBack: () -> Unit) {
             )
         }
         Text(
-            text = "Препарат",
+            text = stringResource(MR.strings.medications_title),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = PollenTheme.colors.ink,
@@ -173,7 +186,7 @@ private fun SearchField(
         Spacer(Modifier.width(10.dp))
         if (query.isEmpty()) {
             Text(
-                "Поиск препарата",
+                stringResource(MR.strings.medications_search),
                 fontSize = 13.sp,
                 color = PollenTheme.colors.ink3,
             )
@@ -250,7 +263,7 @@ private fun RecentMedRow(
                 modifier = Modifier.padding(top = 1.dp),
             )
             Text(
-                text = "${med.count} приёмов · ${med.lastTaken}",
+                text = stringResource(MR.strings.medications_intakes_format, med.count, med.lastTaken),
                 fontSize = 9.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(top = 2.dp),
@@ -272,7 +285,7 @@ private fun RecentMedRow(
                 .padding(horizontal = 12.dp, vertical = 5.dp),
         ) {
             Text(
-                text = if (med.takenToday) "отменить" else "+ принять",
+                text = if (med.takenToday) stringResource(MR.strings.medications_cancel_intake) else stringResource(MR.strings.medications_take),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 color = pillTextColor,
@@ -427,20 +440,20 @@ private fun CollapsedSheetContent(
 
         Row(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Сегодня",
+                text = stringResource(MR.strings.date_today).replaceFirstChar { it.uppercase() },
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.ink,
             )
             Text(
-                text = " · $todayCount приёма",
+                text = stringResource(MR.strings.medications_intakes_today, todayCount),
                 fontSize = 12.sp,
                 color = PollenTheme.colors.ink3,
             )
         }
 
         Text(
-            text = "детали",
+            text = stringResource(MR.strings.medications_details),
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.accent2,
@@ -485,7 +498,7 @@ private fun ExpandedSheetContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Сегодня",
+                text = stringResource(MR.strings.date_today).replaceFirstChar { it.uppercase() },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.ink,
@@ -569,7 +582,7 @@ private fun TodayDoseCard(
             }
 
             Text(
-                text = "+ заметка",
+                text = stringResource(MR.strings.medications_add_note),
                 fontSize = 10.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(top = 6.dp),
@@ -578,34 +591,34 @@ private fun TodayDoseCard(
     }
 }
 
+@Composable
 private fun todayDateLabel(): String {
-    // TODO: use actual date formatting with locale
     val now = kotlin.time.Clock.System.now()
     val date = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
     val dayOfWeek = when (date.dayOfWeek) {
-        DayOfWeek.MONDAY -> "пн"
-        DayOfWeek.TUESDAY -> "вт"
-        DayOfWeek.WEDNESDAY -> "ср"
-        DayOfWeek.THURSDAY -> "чт"
-        DayOfWeek.FRIDAY -> "пт"
-        DayOfWeek.SATURDAY -> "сб"
-        DayOfWeek.SUNDAY -> "вс"
+        DayOfWeek.MONDAY -> stringResource(MR.strings.dow_mon)
+        DayOfWeek.TUESDAY -> stringResource(MR.strings.dow_tue)
+        DayOfWeek.WEDNESDAY -> stringResource(MR.strings.dow_wed)
+        DayOfWeek.THURSDAY -> stringResource(MR.strings.dow_thu)
+        DayOfWeek.FRIDAY -> stringResource(MR.strings.dow_fri)
+        DayOfWeek.SATURDAY -> stringResource(MR.strings.dow_sat)
+        DayOfWeek.SUNDAY -> stringResource(MR.strings.dow_sun)
     }
     val month = when (date.month) {
-        kotlinx.datetime.Month.JANUARY -> "янв"
-        kotlinx.datetime.Month.FEBRUARY -> "фев"
-        kotlinx.datetime.Month.MARCH -> "мар"
-        kotlinx.datetime.Month.APRIL -> "апр"
-        kotlinx.datetime.Month.MAY -> "май"
-        kotlinx.datetime.Month.JUNE -> "июн"
-        kotlinx.datetime.Month.JULY -> "июл"
-        kotlinx.datetime.Month.AUGUST -> "авг"
-        kotlinx.datetime.Month.SEPTEMBER -> "сен"
-        kotlinx.datetime.Month.OCTOBER -> "окт"
-        kotlinx.datetime.Month.NOVEMBER -> "ноя"
-        kotlinx.datetime.Month.DECEMBER -> "дек"
+        kotlinx.datetime.Month.JANUARY -> stringResource(MR.strings.month_jan_short)
+        kotlinx.datetime.Month.FEBRUARY -> stringResource(MR.strings.month_feb_short)
+        kotlinx.datetime.Month.MARCH -> stringResource(MR.strings.month_mar_short)
+        kotlinx.datetime.Month.APRIL -> stringResource(MR.strings.month_apr_short)
+        kotlinx.datetime.Month.MAY -> stringResource(MR.strings.month_may_short)
+        kotlinx.datetime.Month.JUNE -> stringResource(MR.strings.month_jun_short)
+        kotlinx.datetime.Month.JULY -> stringResource(MR.strings.month_jul_short)
+        kotlinx.datetime.Month.AUGUST -> stringResource(MR.strings.month_aug_short)
+        kotlinx.datetime.Month.SEPTEMBER -> stringResource(MR.strings.month_sep_short)
+        kotlinx.datetime.Month.OCTOBER -> stringResource(MR.strings.month_oct_short)
+        kotlinx.datetime.Month.NOVEMBER -> stringResource(MR.strings.month_nov_short)
+        kotlinx.datetime.Month.DECEMBER -> stringResource(MR.strings.month_dec_short)
     }
-    return "$dayOfWeek, ${date.day} $month"
+    return "$dayOfWeek, ${date.dayOfMonth} $month"
 }
 
 // endregion

@@ -1,7 +1,9 @@
 package io.github.kroune.pollen.presentation.medications
 
 import androidx.compose.runtime.Immutable
+import io.github.kroune.pollen.domain.model.LoadState
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Immutable
 data class RecentMedUi(
@@ -29,10 +31,10 @@ data class TodayDoseUi(
 
 @Immutable
 data class MedicationsUiState(
-    val recentMeds: ImmutableList<RecentMedUi>,
-    val categories: ImmutableList<MedCategoryUi>,
-    val todayDoses: ImmutableList<TodayDoseUi>,
-    val todayCount: Int,
-    val searchQuery: String,
-    val isSheetExpanded: Boolean,
+    val recentMeds: LoadState<ImmutableList<RecentMedUi>> = LoadState.Loading,
+    val categories: LoadState<ImmutableList<MedCategoryUi>> = LoadState.Loading,
+    val todayDoses: ImmutableList<TodayDoseUi> = persistentListOf(),
+    val todayCount: Int = 0,
+    val searchQuery: String = "",
+    val isSheetExpanded: Boolean = false,
 )

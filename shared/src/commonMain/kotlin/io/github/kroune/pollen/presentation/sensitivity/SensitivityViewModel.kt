@@ -2,6 +2,8 @@ package io.github.kroune.pollen.presentation.sensitivity
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.icerock.moko.resources.desc.desc
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.repository.PollenRepository
@@ -59,7 +61,7 @@ class SensitivityViewModel(
                 throw e
             } catch (e: Exception) {
                 _state.value = _state.value.copy(allergens = LoadState.Failed)
-                _events.send(UiEvent.ShowError("Не удалось загрузить аллергены"))
+                _events.send(UiEvent.ShowError(MR.strings.error_load_allergens.desc()))
             }
         }
     }
@@ -71,7 +73,7 @@ class SensitivityViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _events.send(UiEvent.ShowError("Не удалось сохранить"))
+                _events.send(UiEvent.ShowError(MR.strings.error_save_sensitivity.desc()))
             }
         }
     }

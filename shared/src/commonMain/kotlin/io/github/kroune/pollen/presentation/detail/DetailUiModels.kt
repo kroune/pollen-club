@@ -13,7 +13,7 @@ data class DetailChartPointUi(
 @Immutable
 data class DetailStatsUi(
     val peakDate: String,
-    val declineDate: String,
+    val declineDate: String?,
     val symptomCount: Int,
 )
 

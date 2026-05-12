@@ -29,6 +29,8 @@ import io.github.kroune.pollen.presentation.SettingsFriendsRoute
 import io.github.kroune.pollen.presentation.SettingsLanguageRoute
 import io.github.kroune.pollen.presentation.SettingsLocationsRoute
 import io.github.kroune.pollen.presentation.SettingsRoute
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.presentation.bottomNavItems
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import io.github.kroune.pollen.presentation.diary.DiaryScreen
@@ -43,6 +45,9 @@ import io.github.kroune.pollen.presentation.phenology.PhenologyScreen
 import io.github.kroune.pollen.presentation.reference.ReferenceScreen
 import io.github.kroune.pollen.presentation.sensitivity.SensitivityScreen
 import io.github.kroune.pollen.presentation.settings.SettingsLanguageScreen
+import io.github.kroune.pollen.presentation.AddFriendRoute
+import io.github.kroune.pollen.presentation.friends.AddFriendScreen
+import io.github.kroune.pollen.presentation.friends.FriendsListScreen
 import io.github.kroune.pollen.presentation.settings.SettingsPlaceholderScreen
 import io.github.kroune.pollen.presentation.settings.SettingsScreen
 import org.koin.compose.viewmodel.koinViewModel
@@ -81,8 +86,8 @@ fun App() {
                                     }
                                 }
                             },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
+                            label = { Text(stringResource(item.labelRes)) },
                             colors = navItemColors,
                         )
                     }
@@ -126,7 +131,11 @@ fun App() {
                         }
                     }
                     entry<FeedRoute> {
-                        Box(Modifier.padding(innerPadding).fillMaxSize()) { FeedScreen() }
+                        Box(Modifier.padding(innerPadding).fillMaxSize()) {
+                            FeedScreen(
+                                onNavigateToAddFriend = { backStack.add(AddFriendRoute) },
+                            )
+                        }
                     }
                     entry<SettingsRoute> {
                         Box(Modifier.padding(innerPadding).fillMaxSize()) {
@@ -165,15 +174,22 @@ fun App() {
                     entry<SettingsLocationsRoute> {
                         Box(Modifier.padding(innerPadding).fillMaxSize()) {
                             SettingsPlaceholderScreen(
-                                title = "Регион мониторинга",
+                                title = stringResource(MR.strings.settings_monitoring_region),
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }
                     }
                     entry<SettingsFriendsRoute> {
                         Box(Modifier.padding(innerPadding).fillMaxSize()) {
-                            SettingsPlaceholderScreen(
-                                title = "Друзья",
+                            FriendsListScreen(
+                                onBack = { backStack.removeLastOrNull() },
+                                onNavigateToAddFriend = { backStack.add(AddFriendRoute) },
+                            )
+                        }
+                    }
+                    entry<AddFriendRoute> {
+                        Box(Modifier.padding(innerPadding).fillMaxSize()) {
+                            AddFriendScreen(
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }

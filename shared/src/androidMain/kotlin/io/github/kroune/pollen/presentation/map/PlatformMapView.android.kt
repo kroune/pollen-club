@@ -125,20 +125,18 @@ actual fun PlatformMapView(
             val strokeColor = parseHexColor(domainPolygon.color, domainPolygon.opacity)
             val fillColor = parseHexColor(domainPolygon.fillColor, domainPolygon.fillOpacity.coerceAtMost(0.15f))
 
-            domainPolygon.polygons.forEach { geoPolygon ->
-                val exterior = geoPolygon.firstOrNull()?.toLatLngs() ?: return@forEach
-                if (exterior.size < 3) return@forEach
-                val holes = geoPolygon.drop(1)
-                    .map { it.toLatLngs() }
-                    .filter { it.size >= 3 }
-
-                Polygon(
-                    points = exterior,
-                    holes = holes,
-                    strokeColor = strokeColor,
-                    fillColor = fillColor,
-                    strokeWidth = 2f,
-                )
+            domainPolygon.polygons.forEach { group ->
+                group.forEach { ring ->
+                    val points = ring.toLatLngs()
+                    if (points.size >= 3) {
+                        Polygon(
+                            points = points,
+                            strokeColor = strokeColor,
+                            fillColor = fillColor,
+                            strokeWidth = 2f,
+                        )
+                    }
+                }
             }
         }
     }

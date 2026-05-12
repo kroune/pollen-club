@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Day-of-week abbreviations -->
+    <string name="dow_mon">пн</string>
+    <string name="dow_tue">вт</string>
+    <string name="dow_wed">ср</string>
+    <string name="dow_thu">чт</string>
+    <string name="dow_fri">пт</string>
+    <string name="dow_sat">сб</string>
+    <string name="dow_sun">вс</string>
+
+    <!-- Month names (full) -->
+    <string name="month_january">Январь</string>
+    <string name="month_february">Февраль</string>
+    <string name="month_march">Март</string>
+    <string name="month_april">Апрель</string>
+    <string name="month_may">Май</string>
+    <string name="month_june">Июнь</string>
+    <string name="month_july">Июль</string>
+    <string name="month_august">Август</string>
+    <string name="month_september">Сентябрь</string>
+    <string name="month_october">Октябрь</string>
+    <string name="month_november">Ноябрь</string>
+    <string name="month_december">Декабрь</string>
+
+    <!-- Month names (abbreviated) -->
+    <string name="month_jan_short">янв</string>
+    <string name="month_feb_short">фев</string>
+    <string name="month_mar_short">мар</string>
+    <string name="month_apr_short">апр</string>
+    <string name="month_may_short">мая</string>
+    <string name="month_jun_short">июн</string>
+    <string name="month_jul_short">июл</string>
+    <string name="month_aug_short">авг</string>
+    <string name="month_sep_short">сен</string>
+    <string name="month_oct_short">окт</string>
+    <string name="month_nov_short">ноя</string>
+    <string name="month_dec_short">дек</string>
+
+    <!-- Severity labels -->
+    <string name="severity_none">Нулевой</string>
+    <string name="severity_low">Низкий</string>
+    <string name="severity_medium">Средний</string>
+    <string name="severity_high">Высокий</string>
+    <string name="severity_very_high">Очень высокий</string>
+    <string name="severity_extra">Экстра</string>
+
+    <!-- Feeling/mood labels -->
+    <string name="feeling_good">Хорошо</string>
+    <string name="feeling_moderate">Терпимо</string>
+    <string name="feeling_bad">Плохо</string>
+
+    <!-- Body zone labels -->
+    <string name="zone_eyes">Глаза</string>
+    <string name="zone_nose">Нос</string>
+    <string name="zone_throat">Горло</string>
+    <string name="zone_chest">Грудь</string>
+    <string name="zone_skin">Кожа</string>
+
+    <!-- Status labels -->
+    <string name="status_not_active">не активен</string>
+
+    <!-- Section headers -->
+    <string name="section_symptoms">Симптомы · %s</string>
+
+    <!-- Relative dates -->
+    <string name="date_today">сегодня</string>
+    <string name="date_yesterday">вчера</string>
+    <string name="date_days_ago">%d дн. назад</string>
+
+    <!-- Sensitivity labels -->
+    <string name="sensitivity_none">нет</string>
+    <string name="sensitivity_light">лёгкая</string>
+    <string name="sensitivity_moderate">средняя</string>
+    <string name="sensitivity_strong">сильная</string>
+    <string name="sensitivity_title">Чувствительность</string>
+    <string name="sensitivity_description">Насколько каждый аллерген влияет на вас. Это определяет ваш персональный индекс.</string>
+
+    <!-- Settings -->
+    <string name="language_russian">Русский</string>
+    <string name="language_english">English</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_title">Настройки</string>
+    <string name="settings_participant_code">Код участника</string>
+    <string name="settings_copy">копировать</string>
+    <string name="settings_general">Основные</string>
+    <string name="settings_monitoring_region">Регион мониторинга</string>
+    <string name="settings_main_allergen">Основной аллерген</string>
+    <string name="settings_friends">Друзья</string>
+    <string name="settings_info">Информация</string>
+    <string name="settings_allergen_reference">Справочник аллергенов</string>
+    <string name="settings_guide">Руководство</string>
+    <string name="settings_become_participant">Стать соучастником</string>
+    <string name="settings_coming_soon">Скоро будет доступно</string>
+    <string name="settings_friends_count">%d друзей</string>
+
+    <!-- Navigation -->
+    <string name="back">Назад</string>
+    <string name="nav_forecast">Прогноз</string>
+    <string name="nav_diary">Дневник</string>
+    <string name="nav_map">Карта</string>
+    <string name="nav_feed">Лента</string>
+    <string name="nav_phenology">Фенология</string>
+
+    <!-- Severity (abbreviated for map chips) -->
+    <string name="severity_none_short">нулевой</string>
+    <string name="severity_low_short">низкий</string>
+    <string name="severity_medium_short">средний</string>
+    <string name="severity_high_short">высокий</string>
+    <string name="severity_very_high_short">оч. выс.</string>
+    <string name="severity_extra_short">экстра</string>
+
+    <!-- Map -->
+    <string name="map_my_location">Моё местоположение</string>
+    <string name="map_select_allergen">Выбрать аллерген</string>
+    <string name="map_reset_north">Сбросить на север</string>
+
+    <!-- Weather descriptions -->
+    <string name="weather_clear_sky">Ясно</string>
+    <string name="weather_mainly_clear">Преимущественно ясно</string>
+    <string name="weather_partly_cloudy">Переменная облачность</string>
+    <string name="weather_overcast">Пасмурно</string>
+    <string name="weather_foggy">Туман</string>
+    <string name="weather_drizzle">Морось</string>
+    <string name="weather_freezing_drizzle">Ледяная морось</string>
+    <string name="weather_rain">Дождь</string>
+    <string name="weather_freezing_rain">Ледяной дождь</string>
+    <string name="weather_snow">Снег</string>
+    <string name="weather_snow_grains">Снежная крупа</string>
+    <string name="weather_rain_showers">Ливень</string>
+    <string name="weather_snow_showers">Снегопад</string>
+    <string name="weather_thunderstorm">Гроза</string>
+    <string name="weather_thunderstorm_hail">Гроза с градом</string>
+    <string name="weather_unknown">Неизвестно</string>
+
+    <!-- Common UI -->
+    <string name="error_something_went_wrong">Что-то пошло не так</string>
+    <string name="retry">Повторить</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Отмена</string>
+    <string name="close">Закрыть</string>
+    <string name="done">Готово</string>
+    <string name="search">Поиск</string>
+    <string name="close_search">Закрыть поиск</string>
+    <string name="clear">Очистить</string>
+
+    <!-- Diary -->
+    <string name="diary_mood_header">Самочувствие</string>
+    <string name="diary_add_zone">+ другую зону</string>
+    <string name="diary_select_body_zone">Выберите зону тела</string>
+    <string name="diary_therapy_header">Терапия</string>
+    <string name="diary_add_medication">+ препарат</string>
+    <string name="diary_no_medications">Нет назначенных препаратов</string>
+
+    <!-- Home -->
+    <string name="home_no_pollen_data">Нет данных о пыльце</string>
+    <string name="home_your_allergens">Ваши аллергены</string>
+    <string name="home_configure">настроить</string>
+    <string name="home_other">Прочие</string>
+    <string name="home_change_city">Сменить город</string>
+
+    <!-- Forecast detail -->
+    <string name="forecast_score_today">/ %s · сегодня</string>
+    <string name="forecast_daily_dynamics">Динамика по дням</string>
+    <string name="forecast_swipe_hint">листайте</string>
+    <string name="forecast_pollen_legend">пыление</string>
+    <string name="forecast_feeling_legend">самочувствие</string>
+    <string name="forecast_no_data">Нет доступных данных</string>
+    <string name="forecast_about_period">О периоде</string>
+    <string name="forecast_stat_peak">пик</string>
+    <string name="forecast_stat_decline">спад</string>
+    <string name="forecast_stat_yours">ваше</string>
+    <string name="forecast_stat_symptoms">%d симп.</string>
+
+    <!-- Reference -->
+    <string name="reference_title">Справочник</string>
+    <string name="reference_search_placeholder">Найти аллерген…</string>
+    <string name="reference_nothing_found">Ничего не найдено</string>
+    <string name="reference_description_unavailable">Описание недоступно</string>
+
+    <!-- Phenology -->
+    <string name="phenology_all_stages">Все стадии</string>
+    <string name="phenology_current_stage">Текущая стадия</string>
+    <string name="phenology_marked_on">Отметили %s</string>
+    <string name="phenology_instruction">Отмечайте стадию цветения, чтобы другие пользователи имели более точную картину пыления</string>
+    <string name="phenology_stage_number">Стадия №%d</string>
+    <string name="phenology_new_observation">Новое наблюдение</string>
+    <string name="phenology_select_stage">Выберите стадию</string>
+    <string name="phenology_comment_label">Написать комментарий к стадии</string>
+    <string name="phenology_add_observation">Добавить наблюдение</string>
+
+    <!-- Medications -->
+    <string name="medications_title">Препарат</string>
+    <string name="medications_search">Поиск препарата</string>
+    <string name="medications_your_meds">Ваши препараты</string>
+    <string name="medications_categories">Категории</string>
+    <string name="medications_intakes_format">%d приёмов · %s</string>
+    <string name="medications_cancel_intake">отменить</string>
+    <string name="medications_take">+ принять</string>
+    <string name="medications_intakes_today">· %d приёма</string>
+    <string name="medications_details">детали</string>
+    <string name="medications_add_note">+ заметка</string>
+
+    <!-- Location picker -->
+    <string name="location_picker_title">Выбор города</string>
+    <string name="location_picker_search">Поиск…</string>
+
+    <!-- Feed -->
+    <string name="feed_tab_news">Новости</string>
+    <string name="feed_tab_feed">Лента</string>
+    <string name="feed_tab_friends">Друзья</string>
+    <string name="feed_tab_media">Медиа</string>
+    <string name="feed_no_expert_comments">Нет комментариев экспертов.</string>
+    <string name="feed_no_posts">Нет записей в ленте.</string>
+    <string name="feed_no_media">Нет медиа.</string>
+    <string name="media_play_video">Воспроизвести видео</string>
+
+    <!-- Error messages -->
+    <string name="error_load_pollen_data">Не удалось загрузить данные о пыльце</string>
+    <string name="error_load_locations">Не удалось загрузить локации</string>
+    <string name="error_load_weather">Не удалось загрузить погоду</string>
+    <string name="error_load_levels">Не удалось загрузить уровни пыльцы</string>
+    <string name="error_load_day_data">Не удалось загрузить данные за этот день</string>
+    <string name="error_add_allergen">Не удалось добавить аллерген</string>
+    <string name="error_load_forecast">Не удалось загрузить прогноз</string>
+    <string name="error_load_entry">Не удалось загрузить запись</string>
+    <string name="error_save_entry">Не удалось сохранить запись</string>
+    <string name="error_update_intake">Не удалось обновить приём</string>
+    <string name="error_load_reference">Не удалось загрузить справочник</string>
+    <string name="error_load_phenology">Не удалось загрузить данные фенологии</string>
+    <string name="error_submit_observation">Не удалось отправить наблюдение</string>
+    <string name="error_load_settings">Не удалось загрузить настройки</string>
+    <string name="error_load_allergens">Не удалось загрузить аллергены</string>
+    <string name="error_save_sensitivity">Не удалось сохранить</string>
+    <string name="error_load_feed">Не удалось загрузить ленту</string>
+    <string name="error_load_map_pins">Не удалось загрузить метки на карте</string>
+    <string name="error_load_hashtags">Не удалось загрузить хештеги</string>
+    <string name="error_load_pollen_forecast">Не удалось загрузить прогноз пыльцы</string>
+    <string name="error_allergen_not_found">Аллерген не найден</string>
+    <string name="error_load_data">Не удалось загрузить данные</string>
+    <string name="error_remove_dose">Не удалось удалить приём</string>
+    <string name="error_load_categories">Не удалось загрузить категории</string>
+    <string name="error_add_friend">Не удалось добавить друга</string>
+    <string name="error_delete_friend">Не удалось удалить друга</string>
+    <string name="error_load_friends">Не удалось загрузить друзей</string>
+
+    <!-- Friends feature -->
+    <string name="friends_your_friends">Ваши друзья</string>
+    <string name="friends_add">добавить</string>
+    <string name="friends_add_title">Добавить друга</string>
+    <string name="friends_id_label">ID участника</string>
+    <string name="friends_name_label">Имя (для вас)</string>
+    <string name="friends_name_hint">Имя хранится только у вас на устройстве</string>
+    <string name="friends_add_button">Добавить</string>
+    <string name="friends_your_id">Ваш ID</string>
+    <string name="friends_copy">копировать</string>
+    <string name="friends_your_id_hint">Сообщите этот код другу, чтобы он добавил вас</string>
+    <string name="friends_your_id_for_friends">ВАШ ID ДЛЯ ДРУЗЕЙ</string>
+    <string name="friends_no_pins">нет отметок</string>
+    <string name="friends_map_hint">Отметки друзей видны на карте. Самочувствие обновляется, когда друг ставит новую точку.</string>
+    <string name="friends_empty_title">Пока нет друзей</string>
+    <string name="friends_empty_body">Добавьте друзей по ID, чтобы видеть их отметки на карте</string>
+    <string name="friends_empty_cta">Добавить друга</string>
+    <string name="friends_delete">Удалить</string>
+</resources>

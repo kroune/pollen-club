@@ -54,6 +54,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.localized
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.BodyZone
 import io.github.kroune.pollen.domain.model.Feeling
 import io.github.kroune.pollen.presentation.common.CollectEvents
@@ -92,7 +95,7 @@ fun DiaryScreen(
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
         Column(modifier = Modifier.fillMaxSize()) {
             DateHeader(
-                monthLabel = state.monthLabel,
+                monthLabel = state.monthName?.localized() ?: "",
                 dates = state.dates,
                 onDateSelected = viewModel::selectDate,
                 onPreviousWeek = { viewModel.navigateWeek(forward = false) },
@@ -115,7 +118,9 @@ fun DiaryScreen(
                     Spacer(Modifier.height(16.dp))
                     BodySymptomsSection(
                         bodyZones = state.bodyZones,
-                        selectedZoneLabel = state.selectedZoneLabel,
+                        selectedZoneLabel = state.selectedZoneLabel?.let {
+                            stringResource(MR.strings.section_symptoms, it.localized())
+                        },
                         selectedZoneTags = state.selectedZoneTags,
                         onZoneSelected = viewModel::selectZone,
                         onTagToggled = viewModel::toggleTag,
@@ -214,7 +219,7 @@ private fun DateHeader(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = date.dayOfWeek,
+                            text = date.dayOfWeek.localized(),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (date.isSelected) {
@@ -248,7 +253,7 @@ private fun MoodSection(
     onMoodSelected: (Feeling) -> Unit,
 ) {
     Text(
-        text = "САМОЧУВСТВИЕ",
+        text = stringResource(MR.strings.diary_mood_header).uppercase(),
         style = MaterialTheme.typography.labelMedium,
         color = PollenTheme.colors.ink3,
     )
@@ -299,7 +304,7 @@ private fun MoodPill(
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            text = option.label,
+            text = option.label.localized(),
             fontSize = 12.sp,
             fontWeight = if (option.isSelected) FontWeight.SemiBold else FontWeight.Normal,
         )
@@ -351,7 +356,7 @@ private fun BodySymptomsSection(
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "+ другую зону",
+                    text = stringResource(MR.strings.diary_add_zone),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = PollenTheme.colors.accent2,
@@ -361,7 +366,7 @@ private fun BodySymptomsSection(
                 )
             } else {
                 Text(
-                    text = "Выберите зону тела",
+                    text = stringResource(MR.strings.diary_select_body_zone),
                     style = MaterialTheme.typography.bodySmall,
                     color = PollenTheme.colors.ink3,
                     modifier = Modifier.padding(top = 4.dp),
@@ -414,7 +419,7 @@ private fun BodyZonePlaceholder(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = zone.label,
+                        text = zone.label.localized(),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = if (zone.isSelected) PollenTheme.colors.accent2 else PollenTheme.colors.ink2,
@@ -503,12 +508,12 @@ private fun DiaryDatePickerDialog(
                     onDateSelected(date.toString())
                 }
             }) {
-                Text("OK")
+                Text(stringResource(MR.strings.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(stringResource(MR.strings.cancel))
             }
         },
         shape = RoundedCornerShape(20.dp),
@@ -538,12 +543,12 @@ private fun TherapySection(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "ТЕРАПИЯ",
+            text = stringResource(MR.strings.diary_therapy_header).uppercase(),
             style = MaterialTheme.typography.labelMedium,
             color = PollenTheme.colors.ink3,
         )
         Text(
-            text = "+ препарат",
+            text = stringResource(MR.strings.diary_add_medication),
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.accent2,
@@ -555,7 +560,7 @@ private fun TherapySection(
 
     if (items.isEmpty()) {
         Text(
-            text = "Нет назначенных препаратов",
+            text = stringResource(MR.strings.diary_no_medications),
             style = MaterialTheme.typography.bodySmall,
             color = PollenTheme.colors.ink3,
             modifier = Modifier.padding(vertical = 8.dp),

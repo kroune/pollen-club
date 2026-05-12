@@ -48,6 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.localized
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.PollenDomain
@@ -144,7 +147,7 @@ fun HomeScreen(
                             PersonalIndexCard(
                                 score = index.data.score,
                                 severityLevel = index.data.severityLevel,
-                                label = index.data.label,
+                                label = index.data.label.localized(),
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
@@ -164,7 +167,7 @@ fun HomeScreen(
                                     Modifier.fillMaxWidth().padding(vertical = 32.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Text("Нет данных о пыльце")
+                                    Text(stringResource(MR.strings.home_no_pollen_data))
                                 }
                             }
                         } else {
@@ -193,8 +196,8 @@ fun HomeScreen(
                             if (userAllergens.isNotEmpty()) {
                                 item {
                                     SectionHeader(
-                                        title = "ВАШИ АЛЛЕРГЕНЫ",
-                                        actionLabel = "настроить",
+                                        title = stringResource(MR.strings.home_your_allergens).uppercase(),
+                                        actionLabel = stringResource(MR.strings.home_configure),
                                         onAction = onNavigateToAllergenSettings,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
                                     )
@@ -266,7 +269,7 @@ fun LocationRow(
             Spacer(Modifier.width(2.dp))
             Icon(
                 Icons.Default.KeyboardArrowDown,
-                contentDescription = "Сменить город",
+                contentDescription = stringResource(MR.strings.home_change_city),
                 tint = PollenTheme.colors.ink3,
                 modifier = Modifier.size(16.dp),
             )
@@ -274,7 +277,7 @@ fun LocationRow(
         Spacer(Modifier.weight(1f))
         Icon(
             Icons.Default.Settings,
-            contentDescription = "Настройки",
+            contentDescription = stringResource(MR.strings.settings_title),
             tint = PollenTheme.colors.ink3,
             modifier = Modifier
                 .size(20.dp)
@@ -328,7 +331,7 @@ fun DayStrip(
 @Composable
 private fun DayStripContent(day: HomeDayForecastUi, isActive: Boolean) {
     Text(
-        text = day.dayOfWeek.uppercase(),
+        text = day.dayOfWeek.localized().uppercase(),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Medium,
         color = if (isActive) PollenTheme.colors.accent2 else PollenTheme.colors.ink3,
@@ -520,7 +523,7 @@ fun OtherAllergensSection(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "ПРОЧИЕ",
+            text = stringResource(MR.strings.home_other).uppercase(),
             style = MaterialTheme.typography.labelMedium,
             color = PollenTheme.colors.ink3,
             modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
@@ -591,7 +594,7 @@ fun WeatherCard(weather: io.github.kroune.pollen.domain.model.WeatherDomain) {
             )
             Spacer(Modifier.width(20.dp))
             Text(
-                text = io.github.kroune.pollen.util.weatherCodeToDescription(weather.weatherCode),
+                text = stringResource(io.github.kroune.pollen.util.weatherCodeToResource(weather.weatherCode)),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

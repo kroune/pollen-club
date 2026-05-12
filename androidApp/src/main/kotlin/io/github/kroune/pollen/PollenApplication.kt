@@ -1,13 +1,13 @@
 package io.github.kroune.pollen
 
 import android.app.Application
-import io.github.kroune.pollen.data.local.db.appContext
+import android.content.Context
 import io.github.kroune.pollen.di.initKoin
+import org.koin.dsl.module
 
 class PollenApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        appContext = this
-        initKoin()
+        initKoin(listOf(module { single<Context> { this@PollenApplication } }))
     }
 }

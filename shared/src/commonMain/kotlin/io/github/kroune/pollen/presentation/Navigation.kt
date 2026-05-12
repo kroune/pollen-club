@@ -8,6 +8,8 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.SentimentSatisfied
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
+import dev.icerock.moko.resources.StringResource
+import io.github.kroune.pollen.MR
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
@@ -63,6 +65,10 @@ data object SettingsLanguageRoute : NavKey
 data object SettingsFriendsRoute : NavKey
 
 @Serializable
+@SerialName("add_friend")
+data object AddFriendRoute : NavKey
+
+@Serializable
 @SerialName("reference")
 data object ReferenceRoute : NavKey
 
@@ -72,16 +78,16 @@ data class ForecastDetailRoute(val pollenId: Int) : NavKey
 
 data class BottomNavItem(
     val route: NavKey,
-    val label: String,
+    val labelRes: StringResource,
     val icon: ImageVector,
 )
 
 val bottomNavItems = listOf(
-    BottomNavItem(HomeRoute, "Прогноз", Icons.Default.Home),
-    BottomNavItem(DiaryRoute, "Дневник", Icons.Default.SentimentSatisfied),
-    BottomNavItem(MapRoute, "Карта", Icons.Default.LocationOn),
-    BottomNavItem(FeedRoute, "Лента", Icons.Default.ChatBubbleOutline),
-    BottomNavItem(PhenologyRoute, "Фенология", Icons.Default.Eco),
+    BottomNavItem(HomeRoute, MR.strings.nav_forecast, Icons.Default.Home),
+    BottomNavItem(DiaryRoute, MR.strings.nav_diary, Icons.Default.SentimentSatisfied),
+    BottomNavItem(MapRoute, MR.strings.nav_map, Icons.Default.LocationOn),
+    BottomNavItem(FeedRoute, MR.strings.nav_feed, Icons.Default.ChatBubbleOutline),
+    BottomNavItem(PhenologyRoute, MR.strings.nav_phenology, Icons.Default.Eco),
 )
 
 val navSerializersModule = SerializersModule {
@@ -98,6 +104,7 @@ val navSerializersModule = SerializersModule {
         subclass(SettingsLocationsRoute::class, SettingsLocationsRoute.serializer())
         subclass(SettingsLanguageRoute::class, SettingsLanguageRoute.serializer())
         subclass(SettingsFriendsRoute::class, SettingsFriendsRoute.serializer())
+        subclass(AddFriendRoute::class, AddFriendRoute.serializer())
         subclass(ReferenceRoute::class, ReferenceRoute.serializer())
         subclass(ForecastDetailRoute::class, ForecastDetailRoute.serializer())
     }

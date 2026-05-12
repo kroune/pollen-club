@@ -3,25 +3,28 @@ package io.github.kroune.pollen.presentation.reference
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.repository.LocationRepository
+import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
+import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.home.PollenIconRegistry
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.coroutines.flow.stateIn
 import org.jetbrains.compose.resources.DrawableResource
-import kotlin.coroutines.cancellation.CancellationException
 
 data class ReferenceUiState(
     val allergens: LoadState<ImmutableList<ReferenceAllergenUi>> = LoadState.Loading,
@@ -36,80 +39,69 @@ data class ReferenceAllergenUi(
     val description: String,
     val iconRes: DrawableResource?,
     val severityLevel: Int,
-    val severityLabel: String,
+    val severityLabel: StringDesc,
 )
 
 class ReferenceViewModel(
     private val pollenRepository: PollenRepository,
     private val userRepository: UserRepository,
-    private val locationRepository: LocationRepository,
+    private val todayProvider: TodayProvider,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ReferenceUiState())
-    val state: StateFlow<ReferenceUiState> = _state.asStateFlow()
+    private val _searchQuery = MutableStateFlow("")
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    init {
-        loadData()
-    }
-
-    fun loadData() {
-        _state.value = ReferenceUiState(searchQuery = _state.value.searchQuery)
-
-        viewModelScope.launch {
-            try {
-                val pollens = pollenRepository.observePollens().first()
-
-                val user = userRepository.getLocalUser()
-                val locationId = if (user != null && user.location > 0) {
-                    user.location
-                } else {
-                    locationRepository.getAll().firstOrNull()?.id
-                }
-
-                val levelMap = if (locationId != null) {
-                    val today = kotlin.time.Clock.System.now()
-                        .toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
-                    val live = pollenRepository.getLevelsForLocation(locationId, today)
-                    val levels = live.ifEmpty {
-                        pollenRepository.getForecastsForLocation(locationId, today)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val state: StateFlow<ReferenceUiState> = combine(
+        pollenRepository.observePollens(),
+        userRepository.observeUser().flatMapLatest { user ->
+            val locationId = user?.location?.takeIf { it > 0 }
+            if (locationId != null) {
+                combine(
+                    pollenRepository.observeLevelsForLocation(locationId),
+                    pollenRepository.observeForecastsForLocation(locationId),
+                ) { levels, forecasts ->
+                    val levelMap = levels.associateBy { it.pollenId }
+                    val forecastMap = forecasts.associateBy { it.pollenId }
+                    levelMap.keys.union(forecastMap.keys).associateWith { pid ->
+                        levelMap[pid] ?: forecastMap[pid]!!
                     }
-                    levels.associateBy { it.pollenId }
-                } else {
-                    emptyMap()
                 }
-
-                val allergens = pollens.map { pollen ->
-                    val currentLevel = levelMap[pollen.id]?.value ?: 0
-                    val label = if (currentLevel > 0) {
-                        pollen.levels.firstOrNull { it.level == currentLevel }?.name ?: "не активен"
-                    } else {
-                        "не активен"
-                    }
-                    ReferenceAllergenUi(
-                        pollenId = pollen.id,
-                        name = pollen.name,
-                        nameEng = pollen.nameEng,
-                        description = pollen.description,
-                        iconRes = PollenIconRegistry.iconFor(pollen),
-                        severityLevel = currentLevel,
-                        severityLabel = label,
-                    )
-                }.toImmutableList()
-
-                _state.value = _state.value.copy(allergens = LoadState.Loaded(allergens))
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(allergens = LoadState.Failed)
-                _events.send(UiEvent.ShowError("Не удалось загрузить справочник"))
+            } else {
+                kotlinx.coroutines.flow.flowOf(emptyMap())
             }
-        }
-    }
+        },
+        _searchQuery,
+    ) { pollens, levelMap, query ->
+        val allergens = pollens.map { pollen ->
+            val currentLevel = levelMap[pollen.id]?.value ?: 0
+            val label: StringDesc = if (currentLevel > 0) {
+                pollen.levels.firstOrNull { it.level == currentLevel }?.name
+                    ?.let { StringDesc.Raw(it) }
+                    ?: MR.strings.status_not_active.desc()
+            } else {
+                MR.strings.status_not_active.desc()
+            }
+            ReferenceAllergenUi(
+                pollenId = pollen.id,
+                name = pollen.name,
+                nameEng = pollen.nameEng,
+                description = pollen.description,
+                iconRes = PollenIconRegistry.iconFor(pollen),
+                severityLevel = currentLevel,
+                severityLabel = label,
+            )
+        }.toImmutableList()
+
+        ReferenceUiState(
+            allergens = LoadState.Loaded(allergens),
+            searchQuery = query,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReferenceUiState())
 
     fun onSearchQueryChange(query: String) {
-        _state.value = _state.value.copy(searchQuery = query)
+        _searchQuery.value = query
     }
 }

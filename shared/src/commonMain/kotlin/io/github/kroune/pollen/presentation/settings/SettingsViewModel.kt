@@ -3,6 +3,10 @@ package io.github.kroune.pollen.presentation.settings
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.icerock.moko.resources.desc.ResourceFormatted
+import dev.icerock.moko.resources.desc.StringDesc
+import dev.icerock.moko.resources.desc.desc
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.repository.FriendsRepository
@@ -28,10 +32,10 @@ data class SettingsUiState(
 @Stable
 data class SettingsData(
     val participantCode: String,
-    val languageLabel: String,
+    val languageLabel: StringDesc,
     val regionLabel: String,
     val mainAllergenLabel: String,
-    val friendsLabel: String,
+    val friendsLabel: StringDesc?,
 )
 
 class SettingsViewModel(
@@ -65,9 +69,9 @@ class SettingsViewModel(
                 ) { user, locale, locations, pollens, friends ->
                     val participantCode = user?.serverId?.takeIf { it > 0 }?.toString() ?: "—"
 
-                    val languageLabel = when (locale) {
-                        AppLocale.RU -> "Русский"
-                        AppLocale.EN -> "English"
+                    val languageLabel: StringDesc = when (locale) {
+                        AppLocale.RU -> MR.strings.language_russian.desc()
+                        AppLocale.EN -> MR.strings.language_english.desc()
                     }
 
                     val regionLabel = if (user != null && user.location > 0) {
@@ -84,10 +88,10 @@ class SettingsViewModel(
                     }
 
                     val friendsCount = friends.size
-                    val friendsLabel = if (friendsCount > 0) {
-                        "$friendsCount участн."
+                    val friendsLabel: StringDesc? = if (friendsCount > 0) {
+                        StringDesc.ResourceFormatted(MR.strings.settings_friends_count, friendsCount)
                     } else {
-                        "—"
+                        null
                     }
 
                     SettingsData(
@@ -104,7 +108,7 @@ class SettingsViewModel(
                 throw e
             } catch (e: Exception) {
                 _state.value = SettingsUiState(data = LoadState.Failed)
-                _events.send(UiEvent.ShowError("Не удалось загрузить настройки"))
+                _events.send(UiEvent.ShowError(MR.strings.error_load_settings.desc()))
             }
         }
     }

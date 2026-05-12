@@ -270,24 +270,11 @@ function PReference() {
 
 // ── SETTINGS ──
 function PSettings() {
-  const groups = [
-    {
-      h: 'Основные',
-      items: [
-        { l: 'Язык', v: 'Русский' },
-        { l: 'Регион мониторинга', v: 'Москва' },
-        { l: 'Основной аллерген', v: 'Берёза' },
-        { l: 'Друзья', v: '4 участника' },
-      ],
-    },
-    {
-      h: 'Информация',
-      items: [
-        { l: 'Справочник аллергенов', v: '' },
-        { l: 'Руководство', v: '' },
-        { l: 'Стать соучастником', v: '' },
-      ],
-    },
+  const items = [
+    { l: 'Язык', v: 'Русский' },
+    { l: 'Регион мониторинга', v: 'Москва' },
+    { l: 'Основной аллерген', v: 'Берёза' },
+    { l: 'Друзья', v: '4 участника' },
   ];
   return (
     <PPhone>
@@ -306,23 +293,19 @@ function PSettings() {
             </div>
           </div>
 
-          {groups.map(g => (
-            <div key={g.h} style={{ marginBottom: 20 }}>
-              <div className="p-eyebrow" style={{ marginBottom: 8 }}>{g.h}</div>
-              <div className="p-card" style={{ padding: 0 }}>
-                {g.items.map((it, i) => (
-                  <div key={it.l} className="row" style={{
-                    padding: '13px 16px',
-                    borderTop: i === 0 ? 'none' : '1px solid var(--line-2)',
-                  }}>
-                    <div style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{it.l}</div>
-                    {it.v && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{it.v}</div>}
-                    <PIcon d={P_ICONS.chevR} size={13} stroke="var(--ink-3)" sw={1.4} />
-                  </div>
-                ))}
+          <div className="p-eyebrow" style={{ marginBottom: 8 }}>Основные</div>
+          <div className="p-card" style={{ padding: 0 }}>
+            {items.map((it, i) => (
+              <div key={it.l} className="row" style={{
+                padding: '13px 16px',
+                borderTop: i === 0 ? 'none' : '1px solid var(--line-2)',
+              }}>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{it.l}</div>
+                {it.v && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{it.v}</div>}
+                <PIcon d={P_ICONS.chevR} size={13} stroke="var(--ink-3)" sw={1.4} />
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
       <PTabBar active="home" />

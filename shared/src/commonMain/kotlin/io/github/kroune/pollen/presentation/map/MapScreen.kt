@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
@@ -54,8 +56,6 @@ import io.github.kroune.pollen.presentation.common.MapAreaSkeleton
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlin.math.absoluteValue
 import org.koin.compose.viewmodel.koinViewModel
-
-private val SeverityLabels = listOf("нулевой", "низкий", "средний", "высокий", "оч. выс.", "экстра")
 
 @Composable
 fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
@@ -153,7 +153,7 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.MyLocation,
-                        contentDescription = "My location",
+                        contentDescription = stringResource(MR.strings.map_my_location),
                         tint = PollenTheme.colors.accent,
                         modifier = Modifier.size(18.dp),
                     )
@@ -234,7 +234,7 @@ private fun AllergenSelectorChip(
                 Spacer(Modifier.width(4.dp))
                 Icon(
                     Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Select allergen",
+                    contentDescription = stringResource(MR.strings.map_select_allergen),
                     tint = PollenTheme.colors.ink3,
                     modifier = Modifier.size(14.dp),
                 )
@@ -288,8 +288,16 @@ private fun SeverityLegend(modifier: Modifier = Modifier) {
                             .background(colors.severityColor(level), shape),
                     )
                     Spacer(Modifier.width(6.dp))
+                    val severityLabel = when (level) {
+                        0 -> stringResource(MR.strings.severity_none_short)
+                        1 -> stringResource(MR.strings.severity_low_short)
+                        2 -> stringResource(MR.strings.severity_medium_short)
+                        3 -> stringResource(MR.strings.severity_high_short)
+                        4 -> stringResource(MR.strings.severity_very_high_short)
+                        else -> stringResource(MR.strings.severity_extra_short)
+                    }
                     Text(
-                        text = SeverityLabels[level],
+                        text = severityLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = PollenTheme.colors.ink3,
                     )
@@ -321,7 +329,7 @@ private fun MapCompass(
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 Icons.Default.Explore,
-                contentDescription = "Reset north",
+                contentDescription = stringResource(MR.strings.map_reset_north),
                 tint = PollenTheme.colors.accent,
                 modifier = Modifier.size(20.dp),
             )

@@ -26,6 +26,7 @@ kotlinxCoroutines = "1.10.2"
 kotlinxCollectionsImmutable = "0.3.8"
 
 coil = "3.4.0"
+composeMediaPlayer = "0.10.0"
 kermit = "2.0.8"
 vico = "3.1.0"
 
@@ -34,6 +35,7 @@ composable-preview-scanner = "0.8.2"
 robolectric = "4.16.1"
 uiTestJunit4 = "1.10.5"
 
+mokoResources = "0.26.4"
 navigation3 = "1.0.0-alpha05"
 
 googleMaps = "6.4.0"
@@ -83,6 +85,8 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
 coil-test = { group = "io.coil-kt.coil3", name = "coil-test", version.ref = "coil" }
 
+compose-media-player = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composeMediaPlayer" }
+
 roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
@@ -90,6 +94,9 @@ composable-preview-scanner = { module = "io.github.sergio-sastre.ComposablePrevi
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "uiTestJunit4" }
 
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
+
+moko-resources = { module = "dev.icerock.moko:resources", version.ref = "mokoResources" }
+moko-resources-compose = { module = "dev.icerock.moko:resources-compose", version.ref = "mokoResources" }
 
 navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 
@@ -109,3 +116,4 @@ kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versio
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
 roborazziPlugin = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+mokoResources = { id = "dev.icerock.mobile.multiplatform-resources", version.ref = "mokoResources" }

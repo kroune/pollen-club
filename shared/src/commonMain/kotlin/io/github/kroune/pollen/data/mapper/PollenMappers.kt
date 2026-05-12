@@ -36,6 +36,7 @@ fun PollenEntity.toDomain(
 ): PollenDomain = PollenDomain(
     id = id,
     name = if (locale == AppLocale.RU) descRu else descEng,
+    nameRus = descRu,
     nameEng = descEng,
     description = if (locale == AppLocale.RU) infoRu else infoEng,
     maxLevel = maxLevel,

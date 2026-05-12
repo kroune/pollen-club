@@ -1,6 +1,10 @@
 package io.github.kroune.pollen.di
 
+import io.github.kroune.pollen.data.repository.TodayProviderImpl
 import io.github.kroune.pollen.data.repository.FeedRepositoryImpl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import io.github.kroune.pollen.data.repository.FriendsRepositoryImpl
 import io.github.kroune.pollen.data.repository.HealthRepositoryImpl
 import io.github.kroune.pollen.data.repository.LocaleProviderImpl
@@ -17,6 +21,7 @@ import io.github.kroune.pollen.data.repository.PersonalIndexRepositoryImpl
 import io.github.kroune.pollen.data.repository.SensitivityRepositoryImpl
 import io.github.kroune.pollen.data.repository.WeatherRepositoryImpl
 import io.github.kroune.pollen.domain.model.LocaleProvider
+import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.repository.FeedRepository
 import io.github.kroune.pollen.domain.repository.FriendsRepository
 import io.github.kroune.pollen.domain.repository.HealthRepository
@@ -35,7 +40,10 @@ import io.github.kroune.pollen.domain.repository.WeatherRepository
 import org.koin.dsl.module
 
 val sharedModule = module {
+    single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
+
     single<LocaleProvider> { LocaleProviderImpl(get()) }
+    single<TodayProvider> { TodayProviderImpl(get<CoroutineScope>()) }
 
     single<UserRepository> { UserRepositoryImpl(get(), get()) }
     single<PollenRepository> { PollenRepositoryImpl(get(), get(), get(), get(), get()) }

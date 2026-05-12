@@ -78,7 +78,11 @@ import com.patrykandpatrick.vico.compose.common.component.ShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import dev.icerock.moko.resources.compose.localized
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LevelDomain
+import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.PollenLevelDomain
 import io.github.kroune.pollen.presentation.common.CollectEvents
@@ -155,7 +159,7 @@ private fun DetailContent(
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(MR.strings.back),
                     tint = PollenTheme.colors.ink2,
                 )
             }
@@ -178,7 +182,7 @@ private fun DetailContent(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "/ ${state.currentScoreMax} · сегодня",
+                text = stringResource(MR.strings.forecast_score_today, state.currentScoreMax),
                 fontSize = 14.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(bottom = 5.dp),
@@ -201,7 +205,7 @@ private fun DetailContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "ДИНАМИКА ПО ДНЯМ",
+                    text = stringResource(MR.strings.forecast_daily_dynamics).uppercase(),
                     style = MaterialTheme.typography.labelMedium,
                     color = PollenTheme.colors.ink3,
                 )
@@ -216,7 +220,7 @@ private fun DetailContent(
                         modifier = Modifier.size(14.dp),
                     )
                     Text(
-                        text = "листайте",
+                        text = stringResource(MR.strings.forecast_swipe_hint),
                         fontSize = 10.sp,
                         color = PollenTheme.colors.ink3,
                     )
@@ -238,7 +242,7 @@ private fun DetailContent(
                             .height(3.dp)
                             .background(PollenTheme.colors.ink, RoundedCornerShape(2.dp))
                     )
-                    Text("пыление", fontSize = 13.sp, color = PollenTheme.colors.ink2)
+                    Text(stringResource(MR.strings.forecast_pollen_legend), fontSize = 13.sp, color = PollenTheme.colors.ink2)
                 }
 
                 // Feeling legend (toggleable)
@@ -257,7 +261,7 @@ private fun DetailContent(
                         )
                     }
                     Text(
-                        "самочувствие",
+                        stringResource(MR.strings.forecast_feeling_legend),
                         fontSize = 13.sp,
                         color = PollenTheme.colors.ink2.copy(alpha = if (state.showFeelingLine) 1f else 0.4f),
                     )
@@ -314,7 +318,7 @@ private fun DetailContent(
                         Modifier.fillMaxWidth().height(220.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("No data available", color = PollenTheme.colors.ink3)
+                        Text(stringResource(MR.strings.forecast_no_data), color = PollenTheme.colors.ink3)
                     }
                 } else if (pollenLoaded != null) {
                     DetailChart(
@@ -345,7 +349,7 @@ private fun DetailContent(
         if (state.aboutText.isNotBlank()) {
             Spacer(Modifier.height(20.dp))
             Text(
-                text = "О ПЕРИОДЕ",
+                text = stringResource(MR.strings.forecast_about_period).uppercase(),
                 style = MaterialTheme.typography.labelMedium,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -406,20 +410,20 @@ private fun StatsCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             StatItem(
-                label = "пик",
-                value = stats.peakDate,
+                label = stringResource(MR.strings.forecast_stat_peak),
+                value = formatShortDate(stats.peakDate),
                 modifier = Modifier.weight(1f),
             )
             VerticalDivider()
             StatItem(
-                label = "спад",
-                value = stats.declineDate,
+                label = stringResource(MR.strings.forecast_stat_decline),
+                value = stats.declineDate?.let { "~${formatShortDate(it)}" } ?: "—",
                 modifier = Modifier.weight(1f),
             )
             VerticalDivider()
             StatItem(
-                label = "ваше",
-                value = "${stats.symptomCount} симп.",
+                label = stringResource(MR.strings.forecast_stat_yours),
+                value = stringResource(MR.strings.forecast_stat_symptoms, stats.symptomCount),
                 valueColor = PollenTheme.colors.severity3,
                 modifier = Modifier.weight(1f),
             )
@@ -461,6 +465,16 @@ private fun VerticalDivider() {
             .height(32.dp)
             .background(PollenTheme.colors.line2),
     )
+}
+
+@Composable
+private fun formatShortDate(dateStr: String): String {
+    val parsed = remember(dateStr) {
+        runCatching { LocalDate.parse(dateStr) }.getOrNull()
+    }
+    if (parsed == null) return dateStr
+    val month = monthShortStringDesc(parsed.month).localized()
+    return "${parsed.dayOfMonth} $month"
 }
 
 @Composable

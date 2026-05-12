@@ -39,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.presentation.common.CollectEvents
@@ -48,7 +50,13 @@ import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import org.koin.compose.viewmodel.koinViewModel
 
-private val SENSITIVITY_LABELS = listOf("нет", "лёгкая", "средняя", "сильная")
+@Composable
+private fun sensitivityLabel(level: SensitivityLevel): String = when (level) {
+    SensitivityLevel.NONE -> stringResource(MR.strings.sensitivity_none)
+    SensitivityLevel.LIGHT -> stringResource(MR.strings.sensitivity_light)
+    SensitivityLevel.MODERATE -> stringResource(MR.strings.sensitivity_moderate)
+    SensitivityLevel.SEVERE -> stringResource(MR.strings.sensitivity_strong)
+}
 
 @Composable
 fun SensitivityScreen(
@@ -75,13 +83,13 @@ fun SensitivityScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Назад",
+                        contentDescription = stringResource(MR.strings.back),
                         tint = PollenTheme.colors.ink2,
                         modifier = Modifier.size(22.dp),
                     )
                 }
                 Text(
-                    text = "Чувствительность",
+                    text = stringResource(MR.strings.sensitivity_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = PollenTheme.colors.ink,
@@ -89,7 +97,7 @@ fun SensitivityScreen(
             }
 
             Text(
-                text = "Насколько каждый аллерген влияет на вас. Это определяет ваш персональный индекс.",
+                text = stringResource(MR.strings.sensitivity_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
@@ -190,7 +198,7 @@ private fun SensitivityRow(
         }
 
         Text(
-            text = SENSITIVITY_LABELS[allergen.level.value],
+            text = sensitivityLabel(allergen.level),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             fontSize = 10.sp,

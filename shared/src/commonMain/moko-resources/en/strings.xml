@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Day-of-week abbreviations -->
+    <string name="dow_mon">Mon</string>
+    <string name="dow_tue">Tue</string>
+    <string name="dow_wed">Wed</string>
+    <string name="dow_thu">Thu</string>
+    <string name="dow_fri">Fri</string>
+    <string name="dow_sat">Sat</string>
+    <string name="dow_sun">Sun</string>
+
+    <!-- Month names (full) -->
+    <string name="month_january">January</string>
+    <string name="month_february">February</string>
+    <string name="month_march">March</string>
+    <string name="month_april">April</string>
+    <string name="month_may">May</string>
+    <string name="month_june">June</string>
+    <string name="month_july">July</string>
+    <string name="month_august">August</string>
+    <string name="month_september">September</string>
+    <string name="month_october">October</string>
+    <string name="month_november">November</string>
+    <string name="month_december">December</string>
+
+    <!-- Month names (abbreviated) -->
+    <string name="month_jan_short">Jan</string>
+    <string name="month_feb_short">Feb</string>
+    <string name="month_mar_short">Mar</string>
+    <string name="month_apr_short">Apr</string>
+    <string name="month_may_short">May</string>
+    <string name="month_jun_short">Jun</string>
+    <string name="month_jul_short">Jul</string>
+    <string name="month_aug_short">Aug</string>
+    <string name="month_sep_short">Sep</string>
+    <string name="month_oct_short">Oct</string>
+    <string name="month_nov_short">Nov</string>
+    <string name="month_dec_short">Dec</string>
+
+    <!-- Severity labels -->
+    <string name="severity_none">None</string>
+    <string name="severity_low">Low</string>
+    <string name="severity_medium">Medium</string>
+    <string name="severity_high">High</string>
+    <string name="severity_very_high">Very high</string>
+    <string name="severity_extra">Extreme</string>
+
+    <!-- Feeling/mood labels -->
+    <string name="feeling_good">Good</string>
+    <string name="feeling_moderate">Moderate</string>
+    <string name="feeling_bad">Bad</string>
+
+    <!-- Body zone labels -->
+    <string name="zone_eyes">Eyes</string>
+    <string name="zone_nose">Nose</string>
+    <string name="zone_throat">Throat</string>
+    <string name="zone_chest">Chest</string>
+    <string name="zone_skin">Skin</string>
+
+    <!-- Status labels -->
+    <string name="status_not_active">not active</string>
+
+    <!-- Section headers -->
+    <string name="section_symptoms">Symptoms · %s</string>
+
+    <!-- Relative dates -->
+    <string name="date_today">today</string>
+    <string name="date_yesterday">yesterday</string>
+    <string name="date_days_ago">%d days ago</string>
+
+    <!-- Sensitivity labels -->
+    <string name="sensitivity_none">none</string>
+    <string name="sensitivity_light">light</string>
+    <string name="sensitivity_moderate">moderate</string>
+    <string name="sensitivity_strong">strong</string>
+    <string name="sensitivity_title">Sensitivity</string>
+    <string name="sensitivity_description">How much each allergen affects you. This determines your personal index.</string>
+
+    <!-- Settings -->
+    <string name="language_russian">Russian</string>
+    <string name="language_english">English</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_participant_code">Participant code</string>
+    <string name="settings_copy">copy</string>
+    <string name="settings_general">General</string>
+    <string name="settings_monitoring_region">Monitoring region</string>
+    <string name="settings_main_allergen">Main allergen</string>
+    <string name="settings_friends">Friends</string>
+    <string name="settings_info">Information</string>
+    <string name="settings_allergen_reference">Allergen reference</string>
+    <string name="settings_guide">Guide</string>
+    <string name="settings_become_participant">Become a participant</string>
+    <string name="settings_coming_soon">Coming soon</string>
+    <string name="settings_friends_count">%d friends</string>
+
+    <!-- Navigation -->
+    <string name="back">Back</string>
+    <string name="nav_forecast">Forecast</string>
+    <string name="nav_diary">Diary</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_phenology">Phenology</string>
+
+    <!-- Severity (abbreviated for map chips) -->
+    <string name="severity_none_short">none</string>
+    <string name="severity_low_short">low</string>
+    <string name="severity_medium_short">medium</string>
+    <string name="severity_high_short">high</string>
+    <string name="severity_very_high_short">v. high</string>
+    <string name="severity_extra_short">extreme</string>
+
+    <!-- Map -->
+    <string name="map_my_location">My location</string>
+    <string name="map_select_allergen">Select allergen</string>
+    <string name="map_reset_north">Reset north</string>
+
+    <!-- Weather descriptions -->
+    <string name="weather_clear_sky">Clear sky</string>
+    <string name="weather_mainly_clear">Mainly clear</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_overcast">Overcast</string>
+    <string name="weather_foggy">Foggy</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_freezing_drizzle">Freezing drizzle</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_freezing_rain">Freezing rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_snow_grains">Snow grains</string>
+    <string name="weather_rain_showers">Rain showers</string>
+    <string name="weather_snow_showers">Snow showers</string>
+    <string name="weather_thunderstorm">Thunderstorm</string>
+    <string name="weather_thunderstorm_hail">Thunderstorm with hail</string>
+    <string name="weather_unknown">Unknown</string>
+
+    <!-- Common UI -->
+    <string name="error_something_went_wrong">Something went wrong</string>
+    <string name="retry">Retry</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="done">Done</string>
+    <string name="search">Search</string>
+    <string name="close_search">Close search</string>
+    <string name="clear">Clear</string>
+
+    <!-- Diary -->
+    <string name="diary_mood_header">Well-being</string>
+    <string name="diary_add_zone">+ another zone</string>
+    <string name="diary_select_body_zone">Select body zone</string>
+    <string name="diary_therapy_header">Therapy</string>
+    <string name="diary_add_medication">+ medication</string>
+    <string name="diary_no_medications">No prescribed medications</string>
+
+    <!-- Home -->
+    <string name="home_no_pollen_data">No pollen data</string>
+    <string name="home_your_allergens">Your allergens</string>
+    <string name="home_configure">configure</string>
+    <string name="home_other">Other</string>
+    <string name="home_change_city">Change city</string>
+
+    <!-- Forecast detail -->
+    <string name="forecast_score_today">/ %s · today</string>
+    <string name="forecast_daily_dynamics">Daily dynamics</string>
+    <string name="forecast_swipe_hint">swipe</string>
+    <string name="forecast_pollen_legend">pollen</string>
+    <string name="forecast_feeling_legend">well-being</string>
+    <string name="forecast_no_data">No data available</string>
+    <string name="forecast_about_period">About period</string>
+    <string name="forecast_stat_peak">peak</string>
+    <string name="forecast_stat_decline">decline</string>
+    <string name="forecast_stat_yours">yours</string>
+    <string name="forecast_stat_symptoms">%d symp.</string>
+
+    <!-- Reference -->
+    <string name="reference_title">Reference</string>
+    <string name="reference_search_placeholder">Find allergen…</string>
+    <string name="reference_nothing_found">Nothing found</string>
+    <string name="reference_description_unavailable">Description unavailable</string>
+
+    <!-- Phenology -->
+    <string name="phenology_all_stages">All stages</string>
+    <string name="phenology_current_stage">Current stage</string>
+    <string name="phenology_marked_on">Marked on %s</string>
+    <string name="phenology_instruction">Mark the flowering stage so other users have a more accurate picture of pollination</string>
+    <string name="phenology_stage_number">Stage #%d</string>
+    <string name="phenology_new_observation">New observation</string>
+    <string name="phenology_select_stage">Select stage</string>
+    <string name="phenology_comment_label">Write a comment about the stage</string>
+    <string name="phenology_add_observation">Add observation</string>
+
+    <!-- Medications -->
+    <string name="medications_title">Medication</string>
+    <string name="medications_search">Search medication</string>
+    <string name="medications_your_meds">Your medications</string>
+    <string name="medications_categories">Categories</string>
+    <string name="medications_intakes_format">%d intakes · %s</string>
+    <string name="medications_cancel_intake">undo</string>
+    <string name="medications_take">+ take</string>
+    <string name="medications_intakes_today">· %d intakes</string>
+    <string name="medications_details">details</string>
+    <string name="medications_add_note">+ note</string>
+
+    <!-- Location picker -->
+    <string name="location_picker_title">City selection</string>
+    <string name="location_picker_search">Search…</string>
+
+    <!-- Feed -->
+    <string name="feed_tab_news">News</string>
+    <string name="feed_tab_feed">Feed</string>
+    <string name="feed_tab_friends">Friends</string>
+    <string name="feed_tab_media">Media</string>
+    <string name="feed_no_expert_comments">No expert comments yet.</string>
+    <string name="feed_no_posts">No feed posts yet.</string>
+    <string name="feed_no_media">No media items yet.</string>
+    <string name="media_play_video">Play video</string>
+
+    <!-- Error messages -->
+    <string name="error_load_pollen_data">Failed to load pollen data</string>
+    <string name="error_load_locations">Failed to load locations</string>
+    <string name="error_load_weather">Failed to load weather</string>
+    <string name="error_load_levels">Failed to load pollen levels</string>
+    <string name="error_load_day_data">Failed to load data for this day</string>
+    <string name="error_add_allergen">Failed to add allergen</string>
+    <string name="error_load_forecast">Failed to load forecast</string>
+    <string name="error_load_entry">Failed to load entry</string>
+    <string name="error_save_entry">Failed to save entry</string>
+    <string name="error_update_intake">Failed to update intake</string>
+    <string name="error_load_reference">Failed to load reference</string>
+    <string name="error_load_phenology">Failed to load phenology data</string>
+    <string name="error_submit_observation">Failed to submit observation</string>
+    <string name="error_load_settings">Failed to load settings</string>
+    <string name="error_load_allergens">Failed to load allergens</string>
+    <string name="error_save_sensitivity">Failed to save</string>
+    <string name="error_load_feed">Failed to load feed</string>
+    <string name="error_load_map_pins">Failed to load map pins</string>
+    <string name="error_load_hashtags">Failed to load hashtags</string>
+    <string name="error_load_pollen_forecast">Failed to load pollen forecast</string>
+    <string name="error_allergen_not_found">Allergen not found</string>
+    <string name="error_load_data">Failed to load data</string>
+    <string name="error_remove_dose">Failed to remove dose</string>
+    <string name="error_load_categories">Failed to load categories</string>
+    <string name="error_add_friend">Failed to add friend</string>
+    <string name="error_delete_friend">Failed to delete friend</string>
+    <string name="error_load_friends">Failed to load friends</string>
+
+    <!-- Friends feature -->
+    <string name="friends_your_friends">Your friends</string>
+    <string name="friends_add">add</string>
+    <string name="friends_add_title">Add friend</string>
+    <string name="friends_id_label">Member ID</string>
+    <string name="friends_name_label">Name (for you)</string>
+    <string name="friends_name_hint">Name is stored only on your device</string>
+    <string name="friends_add_button">Add</string>
+    <string name="friends_your_id">Your ID</string>
+    <string name="friends_copy">copy</string>
+    <string name="friends_your_id_hint">Share this code with a friend so they can add you</string>
+    <string name="friends_your_id_for_friends">YOUR ID FOR FRIENDS</string>
+    <string name="friends_no_pins">no check-ins</string>
+    <string name="friends_map_hint">Friend check-ins are visible on the map. Status updates when a friend posts a new pin.</string>
+    <string name="friends_empty_title">No friends yet</string>
+    <string name="friends_empty_body">Add friends by ID to see their check-ins on the map</string>
+    <string name="friends_empty_cta">Add friend</string>
+    <string name="friends_delete">Delete</string>
+</resources>

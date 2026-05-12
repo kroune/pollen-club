@@ -8,5 +8,6 @@ interface HealthRepository {
     suspend fun saveEntry(entry: HealthEntryDomain): Long
     fun observeEntries(): Flow<List<HealthEntryDomain>>
     suspend fun getEntryByDate(date: String): HealthEntryDomain?
+    fun observeEntryByDate(date: String): Flow<HealthEntryDomain?>
     suspend fun syncToServer(userId: Long): ApiResult<Unit>
 }

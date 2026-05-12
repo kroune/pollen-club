@@ -31,6 +31,10 @@ class HealthRepositoryImpl(
         return healthDao.getByDate(date)?.toDomain()
     }
 
+    override fun observeEntryByDate(date: String): Flow<HealthEntryDomain?> {
+        return healthDao.observeByDate(date).map { it?.toDomain() }
+    }
+
     override suspend fun syncToServer(userId: Long): ApiResult<Unit> = safeApiCall {
         val unsynced = healthDao.getUnsynced()
         for (entry in unsynced) {

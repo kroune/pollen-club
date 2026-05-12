@@ -31,6 +31,7 @@ import io.github.kroune.pollen.data.remote.dto.response.StatisticsDataResponse
 import io.github.kroune.pollen.data.remote.dto.response.UserForecastDataResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -43,8 +44,8 @@ interface PollenApiService {
     suspend fun addUserCure(request: AddUserCureRequest): AddUserFeelAndSymptomsResponse
     suspend fun addUserSymptoms(request: AddUserSymptomsRequest): AddUserFeelAndSymptomsResponse
     suspend fun addFenology(request: AddFenologyRequest): BaseResponse
-    suspend fun addFriend(request: AddFriendRequest): BaseResponse
-    suspend fun deleteFriend(request: DeleteFriendRequest): BaseResponse
+    suspend fun addFriend(request: AddFriendRequest): HttpResponse
+    suspend fun deleteFriend(request: DeleteFriendRequest): HttpResponse
     suspend fun checkAdsForUser(request: GetUserRequest): CheckAdsResponse
     suspend fun checkAndroidVersion(request: CheckAndroidVersionRequest): CheckAndroidVersionResponse
     suspend fun getCommentsAndLenta(request: GetUserRequest): CommentsDataResponse
@@ -86,11 +87,11 @@ class PollenApiServiceImpl(
     override suspend fun addFenology(request: AddFenologyRequest): BaseResponse =
         client.post("$BASE_URL/add_fenology.php") { setBody(request) }.body()
 
-    override suspend fun addFriend(request: AddFriendRequest): BaseResponse =
-        client.post("$BASE_URL/add_friend.php") { setBody(request) }.body()
+    override suspend fun addFriend(request: AddFriendRequest): HttpResponse =
+        client.post("$BASE_URL/add_friend.php") { setBody(request) }
 
-    override suspend fun deleteFriend(request: DeleteFriendRequest): BaseResponse =
-        client.post("$BASE_URL/delete_friend.php") { setBody(request) }.body()
+    override suspend fun deleteFriend(request: DeleteFriendRequest): HttpResponse =
+        client.post("$BASE_URL/delete_friend.php") { setBody(request) }
 
     override suspend fun checkAdsForUser(request: GetUserRequest): CheckAdsResponse =
         client.post("$BASE_URL/check_ads_for_user.php") { setBody(request) }.body()

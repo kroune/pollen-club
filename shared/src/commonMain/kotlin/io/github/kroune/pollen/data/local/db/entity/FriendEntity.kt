@@ -8,4 +8,5 @@ import androidx.room.PrimaryKey
 data class FriendEntity(
     @PrimaryKey val id: Int,
     @ColumnInfo(name = "friend_id") val friendId: Int = 0,
+    @ColumnInfo(name = "name") val name: String = "",
 )

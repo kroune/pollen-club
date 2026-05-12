@@ -38,6 +38,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.localized
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
@@ -74,13 +77,13 @@ fun SettingsScreen(
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Назад",
+                        contentDescription = stringResource(MR.strings.back),
                         tint = PollenTheme.colors.ink2,
                         modifier = Modifier.size(22.dp),
                     )
                 }
                 Text(
-                    text = "Настройки",
+                    text = stringResource(MR.strings.settings_title),
                     style = MaterialTheme.typography.displaySmall,
                     color = PollenTheme.colors.ink,
                 )
@@ -131,7 +134,7 @@ private fun SettingsContent(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "КОД УЧАСТНИКА",
+                    text = stringResource(MR.strings.settings_participant_code).uppercase(),
                     style = MaterialTheme.typography.labelMedium,
                     color = PollenTheme.colors.ink3,
                 )
@@ -149,7 +152,7 @@ private fun SettingsContent(
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        text = "копировать",
+                        text = stringResource(MR.strings.settings_copy),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Medium,
                         color = PollenTheme.colors.accent2,
@@ -167,12 +170,12 @@ private fun SettingsContent(
 
         // "Основные" section
         SettingsGroup(
-            header = "Основные",
+            header = stringResource(MR.strings.settings_general),
             items = listOf(
-                SettingsRowData("Язык", data.languageLabel, onNavigateToLanguage),
-                SettingsRowData("Регион мониторинга", data.regionLabel, onNavigateToLocations),
-                SettingsRowData("Основной аллерген", data.mainAllergenLabel, onNavigateToAllergens),
-                SettingsRowData("Друзья", data.friendsLabel, onNavigateToFriends),
+                SettingsRowData(stringResource(MR.strings.settings_language), data.languageLabel.localized(), onNavigateToLanguage),
+                SettingsRowData(stringResource(MR.strings.settings_monitoring_region), data.regionLabel, onNavigateToLocations),
+                SettingsRowData(stringResource(MR.strings.settings_main_allergen), data.mainAllergenLabel, onNavigateToAllergens),
+                SettingsRowData(stringResource(MR.strings.settings_friends), data.friendsLabel?.localized() ?: "—", onNavigateToFriends),
             ),
         )
 
@@ -180,13 +183,13 @@ private fun SettingsContent(
 
         // "Информация" section
         SettingsGroup(
-            header = "Информация",
+            header = stringResource(MR.strings.settings_info),
             items = listOf(
-                SettingsRowData("Справочник аллергенов", "", onNavigateToReference),
-                SettingsRowData("Руководство", "", {
+                SettingsRowData(stringResource(MR.strings.settings_allergen_reference), "", onNavigateToReference),
+                SettingsRowData(stringResource(MR.strings.settings_guide), "", {
                     uriHandler.openUri("https://pollen.club/guide/")
                 }),
-                SettingsRowData("Стать соучастником", "", {
+                SettingsRowData(stringResource(MR.strings.settings_become_participant), "", {
                     uriHandler.openUri("https://pollen.club/offer/")
                 }),
             ),

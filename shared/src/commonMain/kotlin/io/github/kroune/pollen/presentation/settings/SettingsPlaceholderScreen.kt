@@ -17,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 
 @Composable
@@ -34,7 +36,7 @@ fun SettingsPlaceholderScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад",
+                    contentDescription = stringResource(MR.strings.back),
                     tint = PollenTheme.colors.ink2,
                     modifier = Modifier.size(22.dp),
                 )
@@ -50,7 +52,7 @@ fun SettingsPlaceholderScreen(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "Скоро будет доступно",
+                text = stringResource(MR.strings.settings_coming_soon),
                 style = MaterialTheme.typography.bodyLarge,
                 color = PollenTheme.colors.ink3,
             )

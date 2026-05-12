@@ -34,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import dev.icerock.moko.resources.compose.stringResource
+import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 
@@ -56,7 +58,7 @@ fun LocationPickerDialog(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Выбор города",
+                    text = stringResource(MR.strings.location_picker_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = PollenTheme.colors.ink,
                 )
@@ -66,7 +68,7 @@ fun LocationPickerDialog(
                     onValueChange = { query = it },
                     placeholder = {
                         Text(
-                            "Поиск…",
+                            stringResource(MR.strings.location_picker_search),
                             color = PollenTheme.colors.ink3,
                         )
                     },
@@ -124,7 +126,7 @@ fun LocationPickerDialog(
                     modifier = Modifier.align(Alignment.End),
                 ) {
                     Text(
-                        "Закрыть",
+                        stringResource(MR.strings.close),
                         color = PollenTheme.colors.accent2,
                         fontWeight = FontWeight.Medium,
                     )

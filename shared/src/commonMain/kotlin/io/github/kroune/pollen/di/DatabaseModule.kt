@@ -43,8 +43,14 @@ private val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+private val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE friends ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 val databaseModule = module {
-    single { getDatabaseBuilder().addMigrations(MIGRATION_1_2, MIGRATION_2_3).build() }
+    single { getDatabaseBuilder().addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build() }
 
     single { get<PollenDatabase>().userDao() }
     single { get<PollenDatabase>().syncStateDao() }

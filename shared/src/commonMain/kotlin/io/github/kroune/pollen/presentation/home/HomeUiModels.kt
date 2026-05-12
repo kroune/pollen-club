@@ -1,12 +1,13 @@
 package io.github.kroune.pollen.presentation.home
 
 import androidx.compose.runtime.Immutable
+import dev.icerock.moko.resources.desc.StringDesc
 import kotlinx.collections.immutable.ImmutableList
 
 @Immutable
 data class HomeDayForecastUi(
     val dayOfMonth: Int,
-    val dayOfWeek: String,
+    val dayOfWeek: StringDesc,
     val severity: Int,
     val date: String,
 )
@@ -28,7 +29,7 @@ data class HomeOtherAllergenUi(
 data class HomePersonalIndexUi(
     val score: String,
     val severityLevel: Int,
-    val label: String,
+    val label: StringDesc,
 )
 
 @Immutable
