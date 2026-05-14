@@ -31,5 +31,5 @@ val viewModelModule = module {
     viewModelOf(::SensitivityViewModel)
     viewModelOf(::ReferenceViewModel)
     viewModelOf(::RegionSelectorViewModel)
-    factory { params -> ForecastDetailViewModel(params.get(), get(), get(), get(), get()) }
+    factory { params -> ForecastDetailViewModel(params.get(), get(), get(), get(), get(), get()) }
 }

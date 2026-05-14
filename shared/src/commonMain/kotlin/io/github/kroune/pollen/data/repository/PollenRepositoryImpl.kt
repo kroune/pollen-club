@@ -25,6 +25,8 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
+private const val STALE_DATA_DAYS = 60
+
 class PollenRepositoryImpl(
     private val api: PollenApiService,
     private val pollenDao: PollenDao,
@@ -49,6 +51,7 @@ class PollenRepositoryImpl(
     override suspend fun syncPollens(): ApiResult<Unit> = safeApiCall {
         val response = api.getPollens()
         val pollenEntities = response.pollens.map { it.toEntity() }
+        if (pollenEntities.isEmpty()) return@safeApiCall
         val levelInfoEntities = response.pollens.flatMap { dto ->
             dto.levels.map { level -> level.toEntity(dto.id) }
         }
@@ -69,6 +72,11 @@ class PollenRepositoryImpl(
             levelDao.upsertLevels(entities)
             syncStateDao.upsert(state.copy(lastLevelsId = entities.maxOf { it.id }))
         }
+        val cutoff = kotlin.time.Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date
+            .minus(DatePeriod(days = STALE_DATA_DAYS))
+            .toString()
+        levelDao.deleteLevelsOlderThan(cutoff)
     }
 
     override suspend fun getForecastsForLocation(locationId: Int, date: String): List<LevelDomain> =
@@ -85,6 +93,11 @@ class PollenRepositoryImpl(
             levelDao.upsertForecasts(entities)
             syncStateDao.upsert(state.copy(lastForecastId = entities.maxOf { it.id }))
         }
+        val cutoff = kotlin.time.Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date
+            .minus(DatePeriod(days = STALE_DATA_DAYS))
+            .toString()
+        levelDao.deleteForecastsOlderThan(cutoff)
     }
 
     override suspend fun getForecastTimeline(locationId: Int, pollenId: Int): List<LevelDomain> {
@@ -95,6 +108,10 @@ class PollenRepositoryImpl(
             today.minus(DatePeriod(days = 3)).toString(),
             today.plus(DatePeriod(days = 7)).toString(),
         )
+    }
+
+    override suspend fun resetSyncState() {
+        syncStateDao.resetLevelAndForecastIds()
     }
 
     override suspend fun getForecastTimeline(

@@ -204,7 +204,11 @@ fun App() {
                         val viewModel = koinViewModel<ForecastDetailViewModel>(
                             key = "forecast_${route.pollenId}",
                         ) { parametersOf(route.pollenId) }
-                        Box(Modifier.padding(innerPadding).fillMaxSize()) {
+                        Box(
+                            Modifier
+                                .padding(bottom = innerPadding.calculateBottomPadding())
+                                .fillMaxSize(),
+                        ) {
                             ForecastDetailScreen(
                                 viewModel = viewModel,
                                 onBack = { backStack.removeLastOrNull() },

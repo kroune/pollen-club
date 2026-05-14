@@ -5,6 +5,7 @@ import io.github.kroune.pollen.domain.model.DayForecastSummaryDomain
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.PersonalPollenIndexDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
+import kotlinx.datetime.LocalDate
 
 interface PersonalIndexRepository {
     suspend fun computePersonalIndex(
@@ -17,5 +18,18 @@ interface PersonalIndexRepository {
         locationId: Int,
         sensitivities: List<AllergenSensitivityDomain>,
         days: Int = 7,
+    ): List<DayForecastSummaryDomain>
+
+    suspend fun computeDayForecastSummaries(
+        locationId: Int,
+        sensitivities: List<AllergenSensitivityDomain>,
+        startDate: LocalDate,
+        days: Int,
+    ): List<DayForecastSummaryDomain>
+
+    suspend fun computeDayForecastSummariesForAllPollens(
+        locationId: Int,
+        startDate: LocalDate,
+        days: Int,
     ): List<DayForecastSummaryDomain>
 }

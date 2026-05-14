@@ -17,4 +17,5 @@ interface PollenRepository {
     suspend fun syncForecasts(): ApiResult<Unit>
     suspend fun getForecastTimeline(locationId: Int, pollenId: Int): List<LevelDomain>
     suspend fun getForecastTimeline(locationId: Int, pollenId: Int, startDate: String, endDate: String): List<LevelDomain>
+    suspend fun resetSyncState()
 }
