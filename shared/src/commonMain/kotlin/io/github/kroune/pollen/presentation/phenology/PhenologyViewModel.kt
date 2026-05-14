@@ -9,9 +9,9 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.model.PhenologyObservationDomain
+import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.UserDomain
-import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PhenologyRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
@@ -137,18 +137,11 @@ class PhenologyViewModel(
         val currentStage = stages.firstOrNull { it.isCurrent }
         val lastObservation = observations.maxByOrNull { it.time }
 
-        val allergenName = if (user != null && user.selectedAllergens.isNotEmpty()) {
-            val primaryId = user.selectedAllergens.first()
-            pollens.firstOrNull { it.id == primaryId }?.name ?: ""
-        } else {
-            ""
-        }
+        val allergenName = pollens.firstOrNull { it.id == BIRCH_POLLEN_ID }?.name ?: ""
 
-        val locationLabel = if (user != null && user.location > 0) {
-            locations.firstOrNull { it.id == user.location }?.name ?: ""
-        } else {
-            ""
-        }
+        val locationLabel = user?.location?.takeIf { it > 0 }
+            ?.let { locId -> locations.firstOrNull { it.id == locId }?.name }
+            ?: ""
 
         return PhenologyScreenDataUi(
             allergenName = allergenName,
@@ -157,6 +150,10 @@ class PhenologyViewModel(
             currentStageEpochSeconds = lastObservation?.time,
             stages = stages,
         )
+    }
+
+    companion object {
+        private const val BIRCH_POLLEN_ID = 1
     }
 }
 

@@ -1,6 +1,5 @@
 package io.github.kroune.pollen.presentation.reference
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -89,10 +88,6 @@ fun ReferenceScreen(
     var selectedAllergen by remember { mutableStateOf<ReferenceAllergenUi?>(null) }
 
     CollectEvents(viewModel.events, snackbarHostState)
-
-    BackHandler(enabled = selectedAllergen != null) {
-        selectedAllergen = null
-    }
 
     // Allergen detail bottom sheet
     if (selectedAllergen != null) {

@@ -198,17 +198,21 @@ private fun PhenologyContent(data: PhenologyScreenDataUi) {
             .padding(horizontal = 16.dp)
             .padding(top = 18.dp, bottom = 80.dp),
     ) {
-        Text(
-            text = data.allergenName,
-            style = MaterialTheme.typography.displaySmall,
-            color = colors.ink,
-        )
-        Text(
-            text = data.locationLabel,
-            style = MaterialTheme.typography.labelSmall,
-            color = colors.ink3,
-            modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
-        )
+        if (data.allergenName.isNotEmpty()) {
+            Text(
+                text = data.allergenName,
+                style = MaterialTheme.typography.displaySmall,
+                color = colors.ink,
+            )
+        }
+        if (data.locationLabel.isNotEmpty()) {
+            Text(
+                text = data.locationLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.ink3,
+                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
+            )
+        }
 
         if (data.currentStageLabel.isNotEmpty()) {
             CurrentStageCard(
