@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
+import org.koin.mp.KoinPlatform
 
 fun initKoin(platformModules: List<Module> = emptyList()) {
     startKoin {
@@ -18,7 +19,7 @@ fun initKoin(platformModules: List<Module> = emptyList()) {
             *platformModules.toTypedArray(),
         )
     }
-    val prefs = org.koin.core.context.GlobalContext.get().get<AppPreferences>()
+    val prefs: AppPreferences = KoinPlatform.getKoin().get()
     val languageCode = runBlocking { prefs.languageCode.first() }
     val locale = if (languageCode == "en") AppLocale.EN else AppLocale.RU
     applyMokoLocale(locale)
