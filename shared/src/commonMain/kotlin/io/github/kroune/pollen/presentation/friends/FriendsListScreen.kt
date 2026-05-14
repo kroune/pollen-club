@@ -314,7 +314,7 @@ private fun FriendRow(
             ) {
                 Text(
                     text = monogram,
-                    fontSize = if (name != null) 14.sp else 9.sp,
+                    fontSize = if (name != null) 15.sp else 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = PollenTheme.colors.ink2,
                 )
@@ -333,7 +333,6 @@ private fun FriendRow(
                     text = "ID: ${friend.friendId}",
                     style = MaterialTheme.typography.labelSmall,
                     color = PollenTheme.colors.ink3,
-                    fontSize = 10.sp,
                 )
             }
 
@@ -344,7 +343,6 @@ private fun FriendRow(
                     text = stringResource(MR.strings.friends_no_pins),
                     style = MaterialTheme.typography.labelSmall,
                     color = PollenTheme.colors.ink3,
-                    fontSize = 10.sp,
                 )
             }
         }
@@ -380,7 +378,6 @@ private fun LastPinInfo(friend: FriendUi, locale: AppLocale) {
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Medium,
                 color = feelingColor,
-                fontSize = 11.sp,
             )
         }
         val meta = buildString {
@@ -395,7 +392,6 @@ private fun LastPinInfo(friend: FriendUi, locale: AppLocale) {
                 text = meta,
                 style = MaterialTheme.typography.labelSmall,
                 color = PollenTheme.colors.ink3,
-                fontSize = 9.sp,
             )
         }
     }
@@ -500,7 +496,6 @@ private fun FriendsEmptyState(
                 fontWeight = FontWeight.Medium,
                 color = PollenTheme.colors.ink3,
                 letterSpacing = 1.2.sp,
-                fontSize = 9.sp,
             )
             Spacer(Modifier.height(4.dp))
             Text(

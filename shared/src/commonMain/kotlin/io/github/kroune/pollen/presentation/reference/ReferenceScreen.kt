@@ -141,7 +141,7 @@ fun ReferenceScreen(
 
                 Text(
                     text = stringResource(MR.strings.reference_title),
-                    fontSize = 15.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = (-0.2).sp,
                     color = PollenTheme.colors.ink,
@@ -304,14 +304,14 @@ private fun AllergenDetailSheet(allergen: ReferenceAllergenUi) {
             Column {
                 Text(
                     text = allergen.name,
-                    fontSize = 22.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = PollenTheme.colors.ink,
                 )
                 if (allergen.nameEng.isNotBlank()) {
                     Text(
                         text = allergen.nameEng,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         color = PollenTheme.colors.ink3,
                     )
                 }
@@ -396,7 +396,7 @@ private fun ReferenceAllergenCard(
 
             Text(
                 text = allergen.name,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.ink,
                 maxLines = 1,
@@ -418,7 +418,7 @@ private fun ReferenceAllergenCard(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = allergen.severityLabel.localized(),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = PollenTheme.colors.severityColor(allergen.severityLevel),
                         letterSpacing = 0.2.sp,
@@ -427,7 +427,7 @@ private fun ReferenceAllergenCard(
             } else {
                 Text(
                     text = stringResource(MR.strings.status_not_active),
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     color = PollenTheme.colors.ink3,
                 )
             }

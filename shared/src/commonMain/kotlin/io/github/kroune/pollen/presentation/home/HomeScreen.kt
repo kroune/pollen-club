@@ -419,7 +419,7 @@ fun PersonalIndexCard(
         ) {
             Text(
                 text = score,
-                fontSize = 24.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.severityColor(severityLevel),
                 modifier = Modifier.padding(end = 10.dp),
@@ -637,7 +637,6 @@ fun AllergenPill(
         Text(
             text = name,
             style = MaterialTheme.typography.bodySmall,
-            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.ink2,
         )

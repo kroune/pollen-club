@@ -103,7 +103,7 @@ fun LocationPickerDialog(
                         ) {
                             Text(
                                 text = location.name,
-                                fontSize = 14.sp,
+                                fontSize = 15.sp,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 color = if (isSelected) PollenTheme.colors.accent2 else PollenTheme.colors.ink,
                                 modifier = Modifier.weight(1f),

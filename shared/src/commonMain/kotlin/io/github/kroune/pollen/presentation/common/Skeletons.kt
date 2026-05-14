@@ -65,7 +65,7 @@ fun WeatherCardSkeleton(modifier: Modifier = Modifier) {
 fun PersonalIndexCardSkeleton(modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val scoreStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+    val scoreStyle = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
     val labelStyle = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium)
     val scoreSize = remember(scoreStyle) {
         val result = textMeasurer.measure("0,0", scoreStyle)

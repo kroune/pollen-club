@@ -200,12 +200,12 @@ private fun PhenologyContent(data: PhenologyScreenDataUi) {
     ) {
         Text(
             text = data.allergenName,
-            style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.sp),
+            style = MaterialTheme.typography.displaySmall,
             color = colors.ink,
         )
         Text(
             text = data.locationLabel,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            style = MaterialTheme.typography.labelSmall,
             color = colors.ink3,
             modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
         )
@@ -247,14 +247,14 @@ private fun CurrentStageCard(label: String, date: String) {
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
+                style = MaterialTheme.typography.headlineSmall,
                 color = colors.ink,
                 modifier = Modifier.padding(top = 6.dp),
             )
             if (date.isNotEmpty()) {
                 Text(
                     text = stringResource(MR.strings.phenology_marked_on, date),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    style = MaterialTheme.typography.labelSmall,
                     color = colors.ink3,
                     modifier = Modifier.padding(top = 6.dp),
                 )
@@ -324,13 +324,13 @@ private fun StageTimelineItem(stage: PhenologyStageUi, isLast: Boolean) {
         Column {
             Text(
                 text = stringResource(MR.strings.phenology_stage_number, stage.number),
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (stage.isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (stage.isDone || stage.isCurrent) colors.ink else colors.ink3,
             )
             Text(
                 text = stage.name,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                style = MaterialTheme.typography.labelSmall,
                 color = colors.ink3,
                 modifier = Modifier.padding(top = 1.dp),
             )
@@ -344,7 +344,7 @@ private fun StageIndicator(stage: PhenologyStageUi) {
     when {
         stage.isCurrent -> Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(28.dp)
                 .shadow(
                     4.dp,
                     CircleShape,
@@ -356,14 +356,14 @@ private fun StageIndicator(stage: PhenologyStageUi) {
         ) {
             Text(
                 text = "${stage.number}",
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
             )
         }
         stage.isDone -> Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(28.dp)
                 .background(colors.paper2, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -371,18 +371,18 @@ private fun StageIndicator(stage: PhenologyStageUi) {
                 Icons.Default.Check,
                 contentDescription = null,
                 tint = colors.accent2,
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(14.dp),
             )
         }
         else -> Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(28.dp)
                 .dashedCircleBorder(colors.line),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "${stage.number}",
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.ink3,
             )

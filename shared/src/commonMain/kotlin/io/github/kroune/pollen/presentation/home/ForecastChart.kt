@@ -103,7 +103,7 @@ fun ForecastChart(
     val lineColor = PollenTheme.colors.accent
 
     val axisLabel = rememberTextComponent(
-        style = TextStyle(color = PollenTheme.colors.ink3, fontSize = 10.sp),
+        style = TextStyle(color = PollenTheme.colors.ink3, fontSize = 11.sp),
     )
     val subtleGuideline = rememberLineComponent(
         fill = Fill(PollenTheme.colors.line2),

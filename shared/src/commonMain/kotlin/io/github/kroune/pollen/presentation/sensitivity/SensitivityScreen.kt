@@ -201,7 +201,6 @@ private fun SensitivityRow(
             text = sensitivityLabel(allergen.level),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            fontSize = 10.sp,
             textAlign = TextAlign.End,
             color = if (allergen.level != SensitivityLevel.NONE) {
                 PollenTheme.colors.ink2
