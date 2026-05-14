@@ -17,6 +17,9 @@ fun HealthEntryEntity.toDomain(): HealthEntryDomain = HealthEntryDomain(
     locationName = locationName,
     isSynced = isSynced,
     tags = tags,
+    latitude = latitude,
+    longitude = longitude,
+    locationId = locationId,
 )
 
 fun HealthEntryDomain.toEntity(userId: Long): HealthEntryEntity = HealthEntryEntity(
@@ -33,4 +36,7 @@ fun HealthEntryDomain.toEntity(userId: Long): HealthEntryEntity = HealthEntryEnt
     locationName = locationName,
     isSynced = isSynced,
     tags = tags,
+    latitude = latitude,
+    longitude = longitude,
+    locationId = locationId,
 )

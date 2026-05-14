@@ -1,6 +1,7 @@
 package io.github.kroune.pollen.presentation.map
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.clustering.ClusterItem
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapUiSettings
+import androidx.compose.ui.geometry.Offset
+import com.google.maps.android.compose.MarkerComposable
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polygon
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.clustering.Clustering
@@ -49,8 +53,8 @@ private fun GeoPoint.toLatLng(): LatLng = LatLng(latitude, longitude)
 
 private fun GeoRing.toLatLngs(): List<LatLng> = map { it.toLatLng() }
 
-private val MOSCOW = LatLng(55.7558, 37.6173)
 private const val DEFAULT_ZOOM = 8f
+private const val USER_LOCATION_ZOOM = 14f
 private const val MAX_FILL_OPACITY = 0.15f
 
 @Composable
@@ -62,11 +66,16 @@ actual fun PlatformMapView(
     overlayBottomY: Dp,
     onBearingChanged: (Float) -> Unit,
     resetBearingTrigger: Int,
+    initialLatitude: Double,
+    initialLongitude: Double,
+    userLatitude: Double?,
+    userLongitude: Double?,
+    centerOnUserTrigger: Int,
 ) {
     val defaultPosition = if (pins.isNotEmpty()) {
         LatLng(pins.first().latitude, pins.first().longitude)
     } else {
-        MOSCOW
+        LatLng(initialLatitude, initialLongitude)
     }
 
     val cameraPositionState = rememberCameraPositionState {
@@ -87,6 +96,17 @@ actual fun PlatformMapView(
                     CameraPosition.Builder(cameraPositionState.position)
                         .bearing(0f)
                         .build()
+                ),
+            )
+        }
+    }
+
+    LaunchedEffect(centerOnUserTrigger) {
+        if (centerOnUserTrigger > 0 && userLatitude != null && userLongitude != null) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(userLatitude, userLongitude),
+                    USER_LOCATION_ZOOM,
                 ),
             )
         }
@@ -143,6 +163,28 @@ actual fun PlatformMapView(
                 }
             }
         }
+
+        if (userLatitude != null && userLongitude != null) {
+            MarkerComposable(
+                state = MarkerState(position = LatLng(userLatitude, userLongitude)),
+                anchor = Offset(0.5f, 0.5f),
+                zIndex = 1f,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(Color(0x304285F4), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(Color(0xFF4285F4), CircleShape)
+                            .border(2.5.dp, Color.White, CircleShape),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -150,7 +192,7 @@ private fun parseHexColor(hex: String, opacity: Float): Color {
     return try {
         val color = Color(android.graphics.Color.parseColor(hex))
         color.copy(alpha = opacity.coerceIn(0f, 1f))
-    } catch (_: Exception) {
+    } catch (_: IllegalArgumentException) {
         Color.Gray.copy(alpha = opacity.coerceIn(0f, 1f))
     }
 }

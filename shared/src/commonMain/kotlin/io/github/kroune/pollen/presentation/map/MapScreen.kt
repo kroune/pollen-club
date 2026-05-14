@@ -49,10 +49,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.LocationAvailability
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MapAreaSkeleton
+import io.github.kroune.pollen.presentation.common.rememberLocationPermissionLauncher
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlin.math.absoluteValue
 import org.koin.compose.viewmodel.koinViewModel
@@ -63,6 +65,10 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+
+    val requestPermission = rememberLocationPermissionLauncher { granted ->
+        viewModel.onLocationPermissionResult(granted)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -91,6 +97,11 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
                         overlayBottomY = overlayBottom,
                         onBearingChanged = { bearing = it },
                         resetBearingTrigger = resetTrigger,
+                        initialLatitude = state.centerLatitude,
+                        initialLongitude = state.centerLongitude,
+                        userLatitude = state.userLatitude,
+                        userLongitude = state.userLongitude,
+                        centerOnUserTrigger = state.centerOnUserTrigger,
                     )
                 }
                 is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
@@ -141,7 +152,14 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
             )
 
             Surface(
-                onClick = { },
+                onClick = {
+                    when (state.locationAvailability) {
+                        LocationAvailability.Available -> viewModel.centerOnMyLocation()
+                        LocationAvailability.PermissionDenied,
+                        LocationAvailability.Unknown -> requestPermission()
+                        LocationAvailability.LocationDisabled -> viewModel.showLocationDisabledSnackbar()
+                    }
+                },
                 shape = RoundedCornerShape(14.dp),
                 color = Color.White,
                 shadowElevation = 4.dp,

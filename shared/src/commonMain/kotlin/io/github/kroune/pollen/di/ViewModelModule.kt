@@ -12,6 +12,7 @@ import io.github.kroune.pollen.presentation.phenology.PhenologyViewModel
 import io.github.kroune.pollen.presentation.reference.ReferenceViewModel
 import io.github.kroune.pollen.presentation.sensitivity.SensitivityViewModel
 import io.github.kroune.pollen.presentation.settings.SettingsLanguageViewModel
+import io.github.kroune.pollen.presentation.settings.RegionSelectorViewModel
 import io.github.kroune.pollen.presentation.settings.SettingsViewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -29,5 +30,6 @@ val viewModelModule = module {
     viewModelOf(::SettingsLanguageViewModel)
     viewModelOf(::SensitivityViewModel)
     viewModelOf(::ReferenceViewModel)
+    viewModelOf(::RegionSelectorViewModel)
     factory { params -> ForecastDetailViewModel(params.get(), get(), get(), get(), get()) }
 }

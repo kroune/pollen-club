@@ -205,6 +205,11 @@
     <string name="location_picker_title">Выбор города</string>
     <string name="location_picker_search">Поиск…</string>
 
+    <!-- Region selector -->
+    <string name="region_search_placeholder">Поиск региона…</string>
+    <string name="error_update_region">Не удалось обновить регион</string>
+    <string name="error_location_disabled">Включите геолокацию в настройках устройства</string>
+
     <!-- Feed -->
     <string name="feed_tab_news">Новости</string>
     <string name="feed_tab_feed">Лента</string>

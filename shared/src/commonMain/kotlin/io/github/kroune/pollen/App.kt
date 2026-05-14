@@ -48,7 +48,7 @@ import io.github.kroune.pollen.presentation.settings.SettingsLanguageScreen
 import io.github.kroune.pollen.presentation.AddFriendRoute
 import io.github.kroune.pollen.presentation.friends.AddFriendScreen
 import io.github.kroune.pollen.presentation.friends.FriendsListScreen
-import io.github.kroune.pollen.presentation.settings.SettingsPlaceholderScreen
+import io.github.kroune.pollen.presentation.settings.RegionSelectorScreen
 import io.github.kroune.pollen.presentation.settings.SettingsScreen
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -173,8 +173,7 @@ fun App() {
                     }
                     entry<SettingsLocationsRoute> {
                         Box(Modifier.padding(innerPadding).fillMaxSize()) {
-                            SettingsPlaceholderScreen(
-                                title = stringResource(MR.strings.settings_monitoring_region),
+                            RegionSelectorScreen(
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }

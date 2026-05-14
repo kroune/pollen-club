@@ -9,4 +9,5 @@ interface UserRepository {
     suspend fun getLocalUser(): UserDomain?
     fun observeUser(): Flow<UserDomain?>
     suspend fun updateAllergens(allergenIds: List<Int>)
+    suspend fun updateLocation(locationId: Int)
 }

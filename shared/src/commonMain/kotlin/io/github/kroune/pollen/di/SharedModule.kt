@@ -2,6 +2,7 @@ package io.github.kroune.pollen.di
 
 import io.github.kroune.pollen.data.repository.TodayProviderImpl
 import io.github.kroune.pollen.data.repository.FeedRepositoryImpl
+import io.github.kroune.pollen.domain.usecase.CoordinateResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,4 +61,5 @@ val sharedModule = module {
     single<UserForecastRepository> { UserForecastRepositoryImpl(get(), get()) }
     single<SensitivityRepository> { SensitivityRepositoryImpl(get()) }
     single<PersonalIndexRepository> { PersonalIndexRepositoryImpl(get()) }
+    factory { CoordinateResolver(get(), get(), get()) }
 }
