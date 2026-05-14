@@ -148,13 +148,13 @@ private fun TopBar(onBack: () -> Unit) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(22.dp),
                 tint = PollenTheme.colors.ink2,
             )
         }
         Text(
             text = stringResource(MR.strings.medications_title),
-            fontSize = 18.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = PollenTheme.colors.ink,
         )
@@ -180,20 +180,20 @@ private fun SearchField(
         Icon(
             Icons.Default.Search,
             contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(20.dp),
             tint = PollenTheme.colors.ink3,
         )
         Spacer(Modifier.width(10.dp))
         if (query.isEmpty()) {
             Text(
                 stringResource(MR.strings.medications_search),
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 color = PollenTheme.colors.ink3,
             )
         } else {
             Text(
                 query,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 color = PollenTheme.colors.ink,
             )
         }
@@ -252,19 +252,19 @@ private fun RecentMedRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = med.name,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = PollenTheme.colors.ink,
             )
             Text(
                 text = med.substance,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(top = 1.dp),
             )
             Text(
                 text = stringResource(MR.strings.medications_intakes_format, med.count, med.lastTaken),
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(top = 2.dp),
             )
@@ -286,7 +286,7 @@ private fun RecentMedRow(
         ) {
             Text(
                 text = if (med.takenToday) stringResource(MR.strings.medications_cancel_intake) else stringResource(MR.strings.medications_take),
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = pillTextColor,
             )
@@ -302,7 +302,7 @@ private fun MedInitialBadge(initial: Char, isTaken: Boolean) {
 
     Box(
         modifier = Modifier
-            .size(30.dp)
+            .size(34.dp)
             .clip(CircleShape)
             .background(bg, CircleShape)
             .then(if (!isTaken) Modifier.border(1.dp, borderColor, CircleShape) else Modifier),
@@ -312,13 +312,13 @@ private fun MedInitialBadge(initial: Char, isTaken: Boolean) {
             Icon(
                 Icons.Default.Check,
                 contentDescription = null,
-                modifier = Modifier.size(13.dp),
+                modifier = Modifier.size(16.dp),
                 tint = contentColor,
             )
         } else {
             Text(
                 text = "$initial",
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor,
             )
@@ -347,14 +347,14 @@ private fun CategoriesCard(categories: ImmutableList<MedCategoryUi>) {
             ) {
                 Text(
                     text = category.name,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     color = PollenTheme.colors.ink,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = null,
-                    modifier = Modifier.size(12.dp),
+                    modifier = Modifier.size(16.dp),
                     tint = PollenTheme.colors.ink3,
                 )
             }
@@ -420,7 +420,7 @@ private fun CollapsedSheetContent(
             doses.forEach { dose ->
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(PollenTheme.colors.accent, CircleShape)
                         .border(2.dp, PollenTheme.colors.card, CircleShape),
@@ -428,7 +428,7 @@ private fun CollapsedSheetContent(
                 ) {
                     Text(
                         text = "${dose.initial}",
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                     )
@@ -441,20 +441,20 @@ private fun CollapsedSheetContent(
         Row(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(MR.strings.date_today).replaceFirstChar { it.uppercase() },
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.ink,
             )
             Text(
                 text = stringResource(MR.strings.medications_intakes_today, todayCount),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = PollenTheme.colors.ink3,
             )
         }
 
         Text(
             text = stringResource(MR.strings.medications_details),
-            fontSize = 11.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.accent2,
         )
@@ -462,7 +462,7 @@ private fun CollapsedSheetContent(
         Icon(
             Icons.Default.ChevronRight,
             contentDescription = null,
-            modifier = Modifier.size(11.dp),
+            modifier = Modifier.size(14.dp),
             tint = PollenTheme.colors.accent2,
         )
     }
@@ -499,14 +499,14 @@ private fun ExpandedSheetContent(
         ) {
             Text(
                 text = stringResource(MR.strings.date_today).replaceFirstChar { it.uppercase() },
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.ink,
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = todayDateLabel(),
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 color = PollenTheme.colors.ink3,
             )
         }
@@ -540,14 +540,14 @@ private fun TodayDoseCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(PollenTheme.colors.accent, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "${dose.initial}",
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                     )
@@ -557,7 +557,7 @@ private fun TodayDoseCard(
 
                 Text(
                     text = dose.name,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = PollenTheme.colors.ink,
                     modifier = Modifier.weight(1f),
@@ -565,7 +565,7 @@ private fun TodayDoseCard(
 
                 Text(
                     text = dose.dosage,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     color = PollenTheme.colors.ink3,
                 )
 
@@ -575,7 +575,7 @@ private fun TodayDoseCard(
                     Icons.Default.Close,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(12.dp)
+                        .size(16.dp)
                         .clickable(onClick = onRemove),
                     tint = PollenTheme.colors.ink3,
                 )
@@ -583,7 +583,7 @@ private fun TodayDoseCard(
 
             Text(
                 text = stringResource(MR.strings.medications_add_note),
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(top = 6.dp),
             )

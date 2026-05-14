@@ -145,7 +145,7 @@ private fun SettingsContent(
                 ) {
                     Text(
                         text = data.participantCode,
-                        fontSize = 24.sp,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.sp,
                         color = PollenTheme.colors.ink,

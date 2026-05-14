@@ -207,7 +207,7 @@ private fun HashtagFilterRow(
                 Text(
                     text = hashtag.value,
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                     color = if (isActive) Color.White else PollenTheme.colors.ink2,
@@ -244,7 +244,7 @@ private fun AllergenSelectorChip(
                 Text(
                     text = selected.name,
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
                     color = PollenTheme.colors.ink,

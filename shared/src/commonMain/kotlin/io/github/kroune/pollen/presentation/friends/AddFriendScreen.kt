@@ -124,7 +124,6 @@ fun AddFriendScreen(
                     text = stringResource(MR.strings.friends_name_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = PollenTheme.colors.ink3,
-                    fontSize = 10.sp,
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -198,8 +197,7 @@ fun AddFriendScreen(
                         text = stringResource(MR.strings.friends_your_id_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = PollenTheme.colors.ink3,
-                        fontSize = 10.sp,
-                        lineHeight = 15.sp,
+                        lineHeight = 16.sp,
                     )
                 }
             }
@@ -237,10 +235,8 @@ private fun AddFriendTopBar(onBack: () -> Unit) {
 private fun EyebrowLabel(text: String) {
     Text(
         text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Medium,
         color = PollenTheme.colors.ink3,
-        letterSpacing = 1.2.sp,
-        fontSize = 10.sp,
     )
 }

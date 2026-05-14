@@ -187,14 +187,14 @@ private fun DetailContent(
         ) {
             Text(
                 text = state.currentScore,
-                fontSize = 40.sp,
+                fontSize = 46.sp,
                 fontWeight = FontWeight.Normal,
                 color = PollenTheme.colors.severityColor(state.severityLevel),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(MR.strings.forecast_score_today, state.currentScoreMax),
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(bottom = 5.dp),
             )
@@ -232,7 +232,7 @@ private fun DetailContent(
                     )
                     Text(
                         text = stringResource(MR.strings.forecast_swipe_hint),
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         color = PollenTheme.colors.ink3,
                     )
                 }
@@ -253,7 +253,7 @@ private fun DetailContent(
                             .height(3.dp)
                             .background(PollenTheme.colors.ink, RoundedCornerShape(2.dp))
                     )
-                    Text(stringResource(MR.strings.forecast_pollen_legend), fontSize = 13.sp, color = PollenTheme.colors.ink2)
+                    Text(stringResource(MR.strings.forecast_pollen_legend), fontSize = 14.sp, color = PollenTheme.colors.ink2)
                 }
 
                 // Feeling legend (toggleable)
@@ -273,7 +273,7 @@ private fun DetailContent(
                     }
                     Text(
                         stringResource(MR.strings.forecast_feeling_legend),
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         color = PollenTheme.colors.ink2.copy(alpha = if (state.showFeelingLine) 1f else 0.4f),
                     )
                     Box(
@@ -395,7 +395,7 @@ private fun SeverityLabel(
         )
         Text(
             text = label,
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.severityColor(level),
             letterSpacing = 0.2.sp,
@@ -450,7 +450,7 @@ private fun StatItem(
     Column(modifier = modifier) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.ink3,
             letterSpacing = 0.4.sp,
@@ -458,7 +458,7 @@ private fun StatItem(
         Spacer(Modifier.height(2.dp))
         Text(
             text = value,
-            fontSize = 16.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
             color = valueColor,
         )
@@ -657,11 +657,11 @@ private fun DetailChart(
     }
 
     val startAxisLabel = rememberTextComponent(
-        style = TextStyle(color = ink3Color, fontSize = 10.sp),
+        style = TextStyle(color = ink3Color, fontSize = 11.sp),
         margins = Insets(start = 6.dp, end = 4.dp),
     )
     val bottomAxisLabel = rememberTextComponent(
-        style = TextStyle(color = ink3Color, fontSize = 10.sp),
+        style = TextStyle(color = ink3Color, fontSize = 11.sp),
         margins = Insets(top = 6.dp),
     )
     val subtleGuideline = rememberLineComponent(

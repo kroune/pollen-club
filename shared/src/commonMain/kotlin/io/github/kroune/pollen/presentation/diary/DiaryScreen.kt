@@ -220,7 +220,7 @@ private fun DateHeader(
                     ) {
                         Text(
                             text = date.dayOfWeek.localized(),
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (date.isSelected) {
                                 Color.White.copy(alpha = 0.7f)
@@ -230,7 +230,7 @@ private fun DateHeader(
                         )
                         Text(
                             text = "${date.dayOfMonth}",
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = if (date.isSelected) FontWeight.SemiBold else FontWeight.Medium,
                             color = if (date.isSelected) Color.White else PollenTheme.colors.ink2,
                             modifier = Modifier.padding(top = 2.dp),
@@ -305,7 +305,7 @@ private fun MoodPill(
         Spacer(Modifier.width(6.dp))
         Text(
             text = option.label.localized(),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = if (option.isSelected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
@@ -357,7 +357,7 @@ private fun BodySymptomsSection(
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = stringResource(MR.strings.diary_add_zone),
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = PollenTheme.colors.accent2,
                     modifier = Modifier.clickable {
@@ -420,7 +420,7 @@ private fun BodyZonePlaceholder(
                 ) {
                     Text(
                         text = zone.label.localized(),
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = if (zone.isSelected) PollenTheme.colors.accent2 else PollenTheme.colors.ink2,
                     )
@@ -428,7 +428,7 @@ private fun BodyZonePlaceholder(
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = "${zone.symptomCount}",
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = PollenTheme.colors.severity3,
                         )
@@ -459,7 +459,7 @@ private fun SymptomTagPill(
     ) {
         Text(
             text = tag.label,
-            fontSize = 11.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = textColor,
         )
@@ -549,7 +549,7 @@ private fun TherapySection(
         )
         Text(
             text = stringResource(MR.strings.diary_add_medication),
-            fontSize = 11.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = PollenTheme.colors.accent2,
             modifier = Modifier.clickable(onClick = onAddMedication),
@@ -597,7 +597,7 @@ private fun TherapyRow(
         if (item.time.isNotBlank()) {
             Text(
                 text = item.time,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.width(34.dp),
@@ -633,13 +633,13 @@ private fun TherapyRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.name,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
             )
             if (item.dosage.isNotBlank()) {
                 Text(
                     text = item.dosage,
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = PollenTheme.colors.ink3,
                 )
