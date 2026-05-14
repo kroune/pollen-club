@@ -68,6 +68,12 @@ class UserRepositoryImpl(
         userDao.updateAllergens(user.id, allergenIds.joinToString(","))
     }
 
+    override suspend fun updateLocation(locationId: Int) {
+        val user = userDao.getUser() ?: return
+        userDao.updateLocation(user.id, locationId)
+        registerOrUpdateUser(user.toDomain().copy(location = locationId))
+    }
+
     private fun UserEntity.toDomain(): UserDomain = UserDomain(
         id = id,
         name = name,

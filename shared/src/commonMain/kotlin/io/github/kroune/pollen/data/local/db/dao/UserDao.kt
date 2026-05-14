@@ -22,4 +22,7 @@ interface UserDao {
 
     @Query("UPDATE users SET selected_allergens = :allergens WHERE id = :id")
     suspend fun updateAllergens(id: Long, allergens: String)
+
+    @Query("UPDATE users SET location = :locationId WHERE id = :id")
+    suspend fun updateLocation(id: Long, locationId: Int)
 }

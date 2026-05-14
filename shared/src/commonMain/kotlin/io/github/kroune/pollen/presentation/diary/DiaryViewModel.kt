@@ -14,6 +14,7 @@ import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.repository.HealthRepository
 import io.github.kroune.pollen.domain.repository.MedicationRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.usecase.CoordinateResolver
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,6 +38,7 @@ class DiaryViewModel(
     private val medicationRepository: MedicationRepository,
     private val todayProvider: TodayProvider,
     private val localeProvider: LocaleProvider,
+    private val coordinateResolver: CoordinateResolver,
 ) : ViewModel() {
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
@@ -184,6 +186,7 @@ class DiaryViewModel(
             try {
                 val tags = _selectedTagKeys.value.toList()
                 val existingEntry = healthRepository.getEntryByDate(_selectedDate.value.toString())
+                val location = coordinateResolver.resolve()
                 val entry = HealthEntryDomain(
                     id = existingEntry?.id ?: 0,
                     date = _selectedDate.value.toString(),
@@ -193,6 +196,10 @@ class DiaryViewModel(
                     nose = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.NOSE),
                     throat = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.THROAT),
                     lungs = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.CHEST),
+                    latitude = location?.latitude ?: 0.0,
+                    longitude = location?.longitude ?: 0.0,
+                    locationId = location?.regionId ?: 0,
+                    locationName = location?.regionName ?: "",
                 )
                 healthRepository.saveEntry(entry)
             } catch (e: CancellationException) {

@@ -7,12 +7,17 @@ import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.HashTagDomain
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.DEFAULT_CENTER_LATITUDE
+import io.github.kroune.pollen.domain.model.DEFAULT_CENTER_LONGITUDE
+import io.github.kroune.pollen.domain.model.LocationAvailability
+import io.github.kroune.pollen.domain.repository.DeviceLocationProvider
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.MapPinDomain
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.model.MapPolygonDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import co.touchlab.kermit.Logger
+import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.MapRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
@@ -40,6 +45,12 @@ data class MapUiState(
     val selectedAllergenIndex: Int = 0,
     val activeHashtagIndices: Set<Int> = emptySet(),
     val showAllergenDropdown: Boolean = false,
+    val centerLatitude: Double = DEFAULT_CENTER_LATITUDE,
+    val centerLongitude: Double = DEFAULT_CENTER_LONGITUDE,
+    val userLatitude: Double? = null,
+    val userLongitude: Double? = null,
+    val centerOnUserTrigger: Int = 0,
+    val locationAvailability: LocationAvailability = LocationAvailability.Unknown,
 )
 
 private val logger = Logger.withTag("MapViewModel")
@@ -48,6 +59,8 @@ class MapViewModel(
     private val mapRepository: MapRepository,
     private val userRepository: UserRepository,
     private val pollenRepository: PollenRepository,
+    private val deviceLocationProvider: DeviceLocationProvider,
+    private val locationRepository: LocationRepository,
 ) : ViewModel() {
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
@@ -59,6 +72,11 @@ class MapViewModel(
     private val _selectedAllergenIndex = MutableStateFlow(0)
     private val _activeHashtagIndices = MutableStateFlow<Set<Int>>(emptySet())
     private val _showAllergenDropdown = MutableStateFlow(false)
+    private val _centerLatitude = MutableStateFlow(DEFAULT_CENTER_LATITUDE)
+    private val _centerLongitude = MutableStateFlow(DEFAULT_CENTER_LONGITUDE)
+    private val _userLatitude = MutableStateFlow<Double?>(null)
+    private val _userLongitude = MutableStateFlow<Double?>(null)
+    private val _centerOnUserTrigger = MutableStateFlow(0)
 
     val state: StateFlow<MapUiState> = combine(
         pollenRepository.observePollens().map { LoadState.Loaded(it.toImmutableList()) },
@@ -85,6 +103,21 @@ class MapViewModel(
             activeHashtagIndices = hashIndices,
             showAllergenDropdown = showDropdown,
         )
+    }.combine(
+        combine(
+            _centerLatitude, _centerLongitude, _userLatitude, _userLongitude,
+        ) { cLat, cLng, uLat, uLng -> LocationFields(cLat, cLng, uLat, uLng) },
+    ) { base, loc ->
+        base.copy(
+            centerLatitude = loc.centerLat,
+            centerLongitude = loc.centerLng,
+            userLatitude = loc.userLat,
+            userLongitude = loc.userLng,
+        )
+    }.combine(_centerOnUserTrigger) { base, trigger ->
+        base.copy(centerOnUserTrigger = trigger)
+    }.combine(deviceLocationProvider.availability) { base, availability ->
+        base.copy(locationAvailability = availability)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapUiState())
 
     init {
@@ -98,11 +131,27 @@ class MapViewModel(
         _selectedAllergenIndex.value = 0
         _activeHashtagIndices.value = emptySet()
         viewModelScope.launch {
-            val user = userRepository.getLocalUser()
-            val userId = user?.serverId ?: 0L
-            launch { loadPins(userId) }
-            launch { loadHashtags() }
-            launch { loadPolygonsForCurrentAllergen() }
+            try {
+                val user = userRepository.getLocalUser()
+                val userId = user?.serverId ?: 0L
+                val regionId = user?.location ?: 0
+                if (regionId > 0) {
+                    val region = locationRepository.getById(regionId)
+                    if (region != null) {
+                        _centerLatitude.value = region.latitude
+                        _centerLongitude.value = region.longitude
+                    }
+                }
+                launch { loadPins(userId) }
+                launch { loadHashtags() }
+                launch { loadPolygonsForCurrentAllergen() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(e) { "Failed to initialize map data" }
+                _pins.value = LoadState.Failed
+                _events.send(UiEvent.ShowError(MR.strings.error_load_map_pins.desc()))
+            }
         }
     }
 
@@ -139,6 +188,34 @@ class MapViewModel(
             logger.e(e) { "Failed to load hashtags" }
             _hashtags.value = LoadState.Failed
             _events.send(UiEvent.ShowError(MR.strings.error_load_hashtags.desc()))
+        }
+    }
+
+    fun centerOnMyLocation() {
+        if (deviceLocationProvider.availability.value != LocationAvailability.Available) return
+        viewModelScope.launch {
+            try {
+                val coords = deviceLocationProvider.getCurrentLocation() ?: return@launch
+                _userLatitude.value = coords.latitude
+                _userLongitude.value = coords.longitude
+                _centerOnUserTrigger.value++
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.w(e) { "Failed to get current location" }
+                _events.send(UiEvent.ShowError(MR.strings.error_location_disabled.desc()))
+            }
+        }
+    }
+
+    fun onLocationPermissionResult(granted: Boolean) {
+        deviceLocationProvider.refreshAvailability()
+        if (granted) centerOnMyLocation()
+    }
+
+    fun showLocationDisabledSnackbar() {
+        viewModelScope.launch {
+            _events.send(UiEvent.ShowError(MR.strings.error_location_disabled.desc()))
         }
     }
 
@@ -188,6 +265,13 @@ class MapViewModel(
         }
     }
 }
+
+private data class LocationFields(
+    val centerLat: Double,
+    val centerLng: Double,
+    val userLat: Double?,
+    val userLng: Double?,
+)
 
 private fun filterPins(
     pins: List<MapPinDomain>,

@@ -11,9 +11,12 @@ import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.model.PhenologyObservationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.UserDomain
+import io.github.kroune.pollen.domain.model.LocationDomain
+import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PhenologyRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.usecase.CoordinateResolver
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
@@ -48,6 +51,8 @@ class PhenologyViewModel(
     private val userRepository: UserRepository,
     private val localeProvider: LocaleProvider,
     private val pollenRepository: PollenRepository,
+    private val coordinateResolver: CoordinateResolver,
+    private val locationRepository: LocationRepository,
 ) : ViewModel() {
 
     private val _form = MutableStateFlow(PhenologyFormState())
@@ -61,8 +66,9 @@ class PhenologyViewModel(
             userRepository.observeUser(),
             pollenRepository.observePollens(),
             localeProvider.currentLocale,
-        ) { observations, user, pollens, locale ->
-            buildScreenData(observations, user, pollens, locale)
+            locationRepository.observeLocations(),
+        ) { observations, user, pollens, locale, locations ->
+            buildScreenData(observations, user, pollens, locale, locations)
         },
         _form,
     ) { screenData, form ->
@@ -98,13 +104,14 @@ class PhenologyViewModel(
                 val now = kotlin.time.Clock.System.now()
                 val local = now.toLocalDateTime(TimeZone.currentSystemDefault())
                 val user = userRepository.getLocalUser()
+                val location = coordinateResolver.resolve()
                 phenologyRepository.submitObservation(
                     PhenologyObservationDomain(
                         date = local.date.toString(),
                         time = now.epochSeconds,
                         state = _form.value.selectedStage - 1,
-                        latitude = 0.0,
-                        longitude = 0.0,
+                        latitude = location?.latitude ?: 0.0,
+                        longitude = location?.longitude ?: 0.0,
                         comment = _form.value.comment,
                     ),
                     userId = user?.serverId ?: 0,
@@ -124,6 +131,7 @@ class PhenologyViewModel(
         user: UserDomain?,
         pollens: List<PollenDomain>,
         locale: AppLocale,
+        locations: List<LocationDomain>,
     ): PhenologyScreenDataUi {
         val stages = mapPhenologyStages(observations, locale)
         val currentStage = stages.firstOrNull { it.isCurrent }
@@ -136,7 +144,11 @@ class PhenologyViewModel(
             ""
         }
 
-        val locationLabel = ""
+        val locationLabel = if (user != null && user.location > 0) {
+            locations.firstOrNull { it.id == user.location }?.name ?: ""
+        } else {
+            ""
+        }
 
         return PhenologyScreenDataUi(
             allergenName = allergenName,

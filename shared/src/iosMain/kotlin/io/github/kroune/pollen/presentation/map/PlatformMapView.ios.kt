@@ -20,6 +20,11 @@ actual fun PlatformMapView(
     overlayBottomY: Dp,
     onBearingChanged: (Float) -> Unit,
     resetBearingTrigger: Int,
+    initialLatitude: Double,
+    initialLongitude: Double,
+    userLatitude: Double?,
+    userLongitude: Double?,
+    centerOnUserTrigger: Int,
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("Map not yet implemented on iOS")
