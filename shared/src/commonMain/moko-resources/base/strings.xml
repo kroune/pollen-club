@@ -156,8 +156,12 @@
     <string name="home_no_pollen_data">Нет данных о пыльце</string>
     <string name="home_your_allergens">Ваши аллергены</string>
     <string name="home_configure">настроить</string>
+    <string name="home_configure_allergens_prompt">Укажите ваши аллергены для персонального индекса</string>
+    <string name="home_configure_allergens_action">Настроить аллергены</string>
     <string name="home_other">Прочие</string>
     <string name="home_change_city">Сменить город</string>
+    <string name="home_prev_week">Предыдущая неделя</string>
+    <string name="home_next_week">Следующая неделя</string>
 
     <!-- Forecast detail -->
     <string name="forecast_score_today">/ %s · сегодня</string>

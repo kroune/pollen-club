@@ -29,5 +29,5 @@ val viewModelModule = module {
     viewModelOf(::SettingsLanguageViewModel)
     viewModelOf(::SensitivityViewModel)
     viewModelOf(::ReferenceViewModel)
-    factory { params -> ForecastDetailViewModel(params.get(), get(), get(), get(), get()) }
+    factory { params -> ForecastDetailViewModel(params.get(), get(), get(), get(), get(), get()) }
 }

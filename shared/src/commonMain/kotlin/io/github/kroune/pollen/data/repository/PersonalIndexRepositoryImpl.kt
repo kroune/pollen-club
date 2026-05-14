@@ -8,6 +8,8 @@ import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
+import io.github.kroune.pollen.util.normalizeSeverity
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
@@ -57,31 +59,75 @@ class PersonalIndexRepositoryImpl(
         sensitivities: List<AllergenSensitivityDomain>,
         days: Int,
     ): List<DayForecastSummaryDomain> {
+        val today = kotlin.time.Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date
+        return computeDayForecastSummaries(locationId, sensitivities, today, days)
+    }
+
+    override suspend fun computeDayForecastSummaries(
+        locationId: Int,
+        sensitivities: List<AllergenSensitivityDomain>,
+        startDate: kotlinx.datetime.LocalDate,
+        days: Int,
+    ): List<DayForecastSummaryDomain> {
         val sensitivePollenIds = sensitivities
             .filter { it.level != SensitivityLevel.NONE }
             .map { it.pollenId }
             .toSet()
         if (sensitivePollenIds.isEmpty()) return emptyList()
 
-        val today = kotlin.time.Clock.System.now()
-            .toLocalDateTime(TimeZone.currentSystemDefault()).date
-        val endDate = today.plus(days - 1, DateTimeUnit.DAY)
+        val pollens = pollenRepository.observePollens().first()
+        val maxLevelByPollen = pollens.associate { it.id to it.maxLevel }
+        val endDate = startDate.plus(days - 1, DateTimeUnit.DAY)
 
         val allForecasts = sensitivePollenIds.flatMap { pollenId ->
             pollenRepository.getForecastTimeline(
-                locationId, pollenId, today.toString(), endDate.toString(),
+                locationId, pollenId, startDate.toString(), endDate.toString(),
             )
         }
 
+        return buildDaySummaries(allForecasts, maxLevelByPollen, startDate, days)
+    }
+
+    override suspend fun computeDayForecastSummariesForAllPollens(
+        locationId: Int,
+        startDate: kotlinx.datetime.LocalDate,
+        days: Int,
+    ): List<DayForecastSummaryDomain> {
+        val pollens = pollenRepository.observePollens().first()
+        if (pollens.isEmpty()) return emptyList()
+
+        val maxLevelByPollen = pollens.associate { it.id to it.maxLevel }
+        val endDate = startDate.plus(days - 1, DateTimeUnit.DAY)
+        val allForecasts = pollens.flatMap { pollen ->
+            pollenRepository.getForecastTimeline(
+                locationId, pollen.id, startDate.toString(), endDate.toString(),
+            )
+        }
+
+        return buildDaySummaries(allForecasts, maxLevelByPollen, startDate, days)
+    }
+
+    private fun buildDaySummaries(
+        forecasts: List<LevelDomain>,
+        maxLevelByPollen: Map<Int, Int>,
+        startDate: kotlinx.datetime.LocalDate,
+        days: Int,
+    ): List<DayForecastSummaryDomain> {
         return (0 until days).map { offset ->
-            val date = today.plus(offset, DateTimeUnit.DAY).toString()
-            val dayLevels = allForecasts.filter { it.date == date }
-            val maxLevel = dayLevels.maxOfOrNull { it.value } ?: 0
-            val dominantId = dayLevels.maxByOrNull { it.value }?.pollenId
+            val date = startDate.plus(offset, DateTimeUnit.DAY).toString()
+            val dayLevels = forecasts.filter { it.date == date }
+            val dominantLevel = dayLevels.maxByOrNull { it.value }
+            val severity = if (dominantLevel != null) {
+                val pollenMax = maxLevelByPollen[dominantLevel.pollenId]?.takeIf { it > 0 } ?: 5
+                normalizeSeverity(dominantLevel.value, pollenMax)
+            } else {
+                0
+            }
             DayForecastSummaryDomain(
                 date = date,
-                maxSeverity = maxLevel,
-                dominantPollenId = dominantId,
+                maxSeverity = severity,
+                dominantPollenId = dominantLevel?.pollenId,
             )
         }
     }

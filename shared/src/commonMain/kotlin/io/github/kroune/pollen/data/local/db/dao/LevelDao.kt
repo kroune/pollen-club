@@ -38,4 +38,10 @@ interface LevelDao {
 
     @Query("SELECT * FROM levels WHERE location_id = :locationId AND pollen_id = :pollenId ORDER BY date ASC")
     suspend fun getLevelsByLocationAndPollen(locationId: Int, pollenId: Int): List<LevelEntity>
+
+    @Query("DELETE FROM levels WHERE date < :cutoffDate")
+    suspend fun deleteLevelsOlderThan(cutoffDate: String)
+
+    @Query("DELETE FROM forecast_levels WHERE date < :cutoffDate")
+    suspend fun deleteForecastsOlderThan(cutoffDate: String)
 }

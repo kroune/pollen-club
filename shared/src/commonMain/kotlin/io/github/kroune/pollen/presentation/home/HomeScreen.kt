@@ -18,14 +18,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,16 +54,17 @@ import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
-import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.DayStripSkeleton
+import io.github.kroune.pollen.presentation.common.ErrorBanner
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.LocationHeaderSkeleton
+import io.github.kroune.pollen.presentation.common.PersonalIndexCardSkeleton
 import io.github.kroune.pollen.presentation.common.PollenListSkeleton
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,7 +94,6 @@ fun HomeScreen(
 
     val allFailed = state.pollens is LoadState.Failed &&
         state.locations is LoadState.Failed
-    val isRefreshing = state.pollens is LoadState.Loading
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
         if (allFailed) {
@@ -99,7 +102,7 @@ fun HomeScreen(
         }
 
         PullToRefreshBox(
-            isRefreshing = isRefreshing,
+            isRefreshing = state.isRefreshing,
             onRefresh = viewModel::loadData,
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -122,36 +125,59 @@ fun HomeScreen(
                     }
                 }
 
+                // TODO: Add WeatherCard section here when weather UI is implemented
+
                 // Day strip
                 item {
                     when (val forecasts = state.dayForecasts) {
-                        is LoadState.Loading -> {}
+                        is LoadState.Loading -> {
+                            DayStripSkeleton()
+                        }
                         is LoadState.Loaded -> {
                             if (forecasts.data.isNotEmpty()) {
                                 DayStrip(
                                     days = forecasts.data,
                                     activeDayIndex = state.activeDayIndex,
+                                    weekLabel = state.weekLabel.localized(),
                                     onDaySelected = viewModel::selectDay,
+                                    onPreviousWeek = { viewModel.shiftWeek(-1) },
+                                    onNextWeek = { viewModel.shiftWeek(1) },
                                 )
                             }
                         }
-                        is LoadState.Failed -> {}
+                        is LoadState.Failed -> {
+                            ErrorBanner(onRetry = viewModel::loadData)
+                        }
                     }
                 }
 
                 // Personal index card
                 item {
                     when (val index = state.personalIndex) {
-                        is LoadState.Loading -> {}
-                        is LoadState.Loaded -> {
-                            PersonalIndexCard(
-                                score = index.data.score,
-                                severityLevel = index.data.severityLevel,
-                                label = index.data.label.localized(),
+                        is LoadState.Loading -> {
+                            PersonalIndexCardSkeleton(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
-                        is LoadState.Failed -> {}
+                        is LoadState.Loaded -> {
+                            val data = index.data
+                            if (data != null) {
+                                PersonalIndexCard(
+                                    score = data.score,
+                                    severityLevel = data.severityLevel,
+                                    label = data.label.localized(),
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            } else {
+                                ConfigureAllergensCard(
+                                    onClick = onNavigateToAllergenSettings,
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
+                        }
+                        is LoadState.Failed -> {
+                            ErrorBanner(onRetry = viewModel::loadData)
+                        }
                     }
                 }
 
@@ -171,29 +197,7 @@ fun HomeScreen(
                                 }
                             }
                         } else {
-                            val sensitiveIds = state.sensitivePollenIds
-                            val levelsMap = (state.levels as? LoadState.Loaded)?.data
-                                ?.associateBy { it.pollenId } ?: emptyMap()
-
-                            val hasSelection = sensitiveIds.isNotEmpty()
-
-                            val userAllergens = if (hasSelection) {
-                                pollens.data.filter { it.id in sensitiveIds }
-                            } else {
-                                pollens.data
-                            }.map { pollen ->
-                                val level = levelsMap[pollen.id]
-                                AllergenRowData(pollen, level?.value ?: 0, pollen.maxLevel)
-                            }.toImmutableList()
-
-                            val otherAllergens = if (hasSelection) {
-                                pollens.data.filter { it.id !in sensitiveIds }.toImmutableList()
-                            } else {
-                                emptyList<PollenDomain>().toImmutableList()
-                            }
-
-                            // "ВАШИ АЛЛЕРГЕНЫ" section
-                            if (userAllergens.isNotEmpty()) {
+                            if (state.userAllergens.isNotEmpty()) {
                                 item {
                                     SectionHeader(
                                         title = stringResource(MR.strings.home_your_allergens).uppercase(),
@@ -204,18 +208,19 @@ fun HomeScreen(
                                 }
                                 item {
                                     AllergenListCard(
-                                        allergens = userAllergens,
+                                        allergens = state.userAllergens,
                                         onAllergenClick = onNavigateToForecast,
                                         modifier = Modifier.padding(horizontal = 16.dp),
                                     )
                                 }
                             }
 
-                            // "ПРОЧИЕ" section
-                            if (otherAllergens.isNotEmpty()) {
+                            // TODO: Add expandable allergen row with ForecastChart
+
+                            if (state.otherAllergens.isNotEmpty()) {
                                 item {
                                     OtherAllergensSection(
-                                        allergens = otherAllergens,
+                                        allergens = state.otherAllergens,
                                         onAllergenAdd = viewModel::addAllergen,
                                         modifier = Modifier.padding(horizontal = 16.dp),
                                     )
@@ -223,7 +228,9 @@ fun HomeScreen(
                             }
                         }
                     }
-                    is LoadState.Failed -> {}
+                    is LoadState.Failed -> {
+                        item { ErrorBanner(onRetry = viewModel::loadData) }
+                    }
                 }
 
                 item { Spacer(Modifier.height(16.dp)) }
@@ -290,39 +297,75 @@ fun LocationRow(
 fun DayStrip(
     days: ImmutableList<HomeDayForecastUi>,
     activeDayIndex: Int,
+    weekLabel: String,
     onDaySelected: (Int) -> Unit,
+    onPreviousWeek: () -> Unit,
+    onNextWeek: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        val shape = RoundedCornerShape(10.dp)
-        val borderWidth = 1.5.dp
-        days.forEachIndexed { i, day ->
-            val isActive = i == activeDayIndex
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(shape)
-                    .clickable { onDaySelected(i) }
-                    .background(
-                        if (isActive) PollenTheme.colors.card else androidx.compose.ui.graphics.Color.Transparent,
-                        shape,
-                    )
-                    .border(
-                        BorderStroke(
-                            borderWidth,
-                            if (isActive) PollenTheme.colors.accent else androidx.compose.ui.graphics.Color.Transparent,
-                        ),
-                        shape,
-                    )
-                    .padding(vertical = 7.dp, horizontal = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                DayStripContent(day, isActive)
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            IconButton(onClick = onPreviousWeek, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(MR.strings.home_prev_week),
+                    tint = PollenTheme.colors.ink3,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Text(
+                text = weekLabel,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = PollenTheme.colors.ink2,
+            )
+            IconButton(onClick = onNextWeek, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = stringResource(MR.strings.home_next_week),
+                    tint = PollenTheme.colors.ink3,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp, end = 10.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            val shape = RoundedCornerShape(10.dp)
+            val borderWidth = 1.5.dp
+            days.forEachIndexed { i, day ->
+                val isActive = i == activeDayIndex
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(shape)
+                        .clickable { onDaySelected(i) }
+                        .background(
+                            if (isActive) PollenTheme.colors.card else Color.Transparent,
+                            shape,
+                        )
+                        .border(
+                            BorderStroke(
+                                borderWidth,
+                                if (isActive) PollenTheme.colors.accent else Color.Transparent,
+                            ),
+                            shape,
+                        )
+                        .padding(vertical = 7.dp, horizontal = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    DayStripContent(day, isActive)
+                }
             }
         }
     }
@@ -410,6 +453,40 @@ fun PersonalIndexCard(
 }
 
 @Composable
+fun ConfigureAllergensCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = PollenTheme.colors.card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(MR.strings.home_configure_allergens_prompt),
+                style = MaterialTheme.typography.bodyMedium,
+                color = PollenTheme.colors.ink2,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = stringResource(MR.strings.home_configure_allergens_action),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = PollenTheme.colors.accent2,
+            )
+        }
+    }
+}
+
+@Composable
 fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
@@ -439,12 +516,6 @@ fun SectionHeader(
         }
     }
 }
-
-data class AllergenRowData(
-    val pollen: PollenDomain,
-    val severity: Int,
-    val maxLevel: Int,
-)
 
 @Composable
 fun SeverityDotsRow(

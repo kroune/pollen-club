@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -84,9 +84,13 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.PollenLevelDomain
+import org.jetbrains.compose.resources.DrawableResource
 import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.ForecastDetailChartSkeleton
+import io.github.kroune.pollen.presentation.common.ForecastDetailHeaderSkeleton
+import io.github.kroune.pollen.presentation.common.ForecastDetailStatsSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.detail.DetailStatsUi
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
@@ -109,8 +113,14 @@ fun ForecastDetailScreen(
     ) { innerPadding ->
         when (pollenState) {
             is LoadState.Loading -> {
-                Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding).statusBarsPadding(),
+                ) {
+                    ForecastDetailHeaderSkeleton()
+                    Spacer(Modifier.height(20.dp))
+                    ForecastDetailChartSkeleton()
+                    Spacer(Modifier.height(16.dp))
+                    ForecastDetailStatsSkeleton(Modifier.padding(horizontal = 16.dp))
                 }
             }
             is LoadState.Failed -> {
@@ -139,7 +149,7 @@ fun ForecastDetailScreen(
 private fun DetailContent(
     state: ForecastDetailUiState,
     pollenName: String,
-    pollenIcon: org.jetbrains.compose.resources.DrawableResource?,
+    pollenIcon: DrawableResource?,
     onBack: () -> Unit,
     onToggleFeeling: () -> Unit,
     onRetry: () -> Unit,
@@ -153,6 +163,7 @@ private fun DetailContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(start = 4.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -299,11 +310,10 @@ private fun DetailContent(
         when (val timeline = state.timeline) {
             is LoadState.Loading -> {
                 Box(
-                    Modifier.fillMaxWidth().height(220.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                    Modifier.fillMaxWidth().height(220.dp).padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .shimmerEffect(),
+                )
             }
             is LoadState.Failed -> {
                 Box(
@@ -323,7 +333,6 @@ private fun DetailContent(
                 } else if (pollenLoaded != null) {
                     DetailChart(
                         timeline = timeline.data,
-                        pollenLevels = pollenLoaded.data.levels,
                         maxLevel = pollenLoaded.data.maxLevel,
                         today = state.today,
                         showFeelingLine = state.showFeelingLine,
@@ -474,13 +483,12 @@ private fun formatShortDate(dateStr: String): String {
     }
     if (parsed == null) return dateStr
     val month = monthShortStringDesc(parsed.month).localized()
-    return "${parsed.dayOfMonth} $month"
+    return "${parsed.day} $month"
 }
 
 @Composable
 private fun DetailChart(
     timeline: ImmutableList<LevelDomain>,
-    pollenLevels: List<PollenLevelDomain>,
     maxLevel: Int,
     today: LocalDate,
     showFeelingLine: Boolean,
@@ -501,13 +509,13 @@ private fun DetailChart(
         timeline.indexOfFirst { it.date == todayStr }
     }
 
-    val hasFeelingData = showFeelingLine && feelingValues.any { it != null }
+    val hasAnyFeelingData = feelingValues.any { it != null }
 
-    LaunchedEffect(timeline, feelingValues, showFeelingLine) {
+    LaunchedEffect(timeline, feelingValues) {
         modelProducer.runTransaction {
             lineSeries {
                 series(timeline.map { it.value })
-                if (hasFeelingData) {
+                if (hasAnyFeelingData) {
                     val feelX = mutableListOf<Number>()
                     val feelY = mutableListOf<Number>()
                     feelingValues.forEachIndexed { i, v ->
@@ -592,11 +600,15 @@ private fun DetailChart(
         pointProvider = pollenPointProvider,
     )
 
-    val feelingPoint = remember(sev4) {
+    val feelingLineColor = if (showFeelingLine) sev4 else Color.Transparent
+    val feelingPointFill = if (showFeelingLine) Color.White else Color.Transparent
+    val feelingPointStroke = if (showFeelingLine) sev4 else Color.Transparent
+
+    val feelingPoint = remember(feelingPointFill, feelingPointStroke) {
         LineCartesianLayer.Point(
             component = ShapeComponent(
-                fill = Fill(Color.White),
-                strokeFill = Fill(sev4),
+                fill = Fill(feelingPointFill),
+                strokeFill = Fill(feelingPointStroke),
                 strokeThickness = 1.4.dp,
                 shape = RoundedCornerShape(50),
             ),
@@ -616,7 +628,7 @@ private fun DetailChart(
     }
 
     val feelingLine = LineCartesianLayer.rememberLine(
-        fill = LineCartesianLayer.LineFill.single(Fill(sev4)),
+        fill = LineCartesianLayer.LineFill.single(Fill(feelingLineColor)),
         stroke = LineCartesianLayer.LineStroke.Dashed(
             thickness = 1.4.dp,
             dashLength = 4.dp,
@@ -626,7 +638,7 @@ private fun DetailChart(
         pointProvider = feelingPointProvider,
     )
 
-    val lineProvider = if (hasFeelingData) {
+    val lineProvider = if (hasAnyFeelingData) {
         LineCartesianLayer.LineProvider.series(pollenLine, feelingLine)
     } else {
         LineCartesianLayer.LineProvider.series(pollenLine)

@@ -156,8 +156,12 @@
     <string name="home_no_pollen_data">No pollen data</string>
     <string name="home_your_allergens">Your allergens</string>
     <string name="home_configure">configure</string>
+    <string name="home_configure_allergens_prompt">Set up your allergens for a personal index</string>
+    <string name="home_configure_allergens_action">Configure allergens</string>
     <string name="home_other">Other</string>
     <string name="home_change_city">Change city</string>
+    <string name="home_prev_week">Previous week</string>
+    <string name="home_next_week">Next week</string>
 
     <!-- Forecast detail -->
     <string name="forecast_score_today">/ %s · today</string>

@@ -1,8 +1,8 @@
 package io.github.kroune.pollen.presentation.home
 
-import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.LevelDomain
@@ -15,6 +15,7 @@ import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.model.UserDomain
 import io.github.kroune.pollen.domain.model.WeatherDomain
+import io.github.kroune.pollen.util.normalizeSeverity
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
@@ -22,11 +23,15 @@ import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.domain.repository.WeatherRepository
+import dev.icerock.moko.resources.desc.RawStringDesc
+import dev.icerock.moko.resources.desc.StringDesc
+import dev.icerock.moko.resources.desc.desc
+import dev.icerock.moko.resources.desc.plus
 import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableSet
-import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.coroutineScope
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,25 +47,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
-@Stable
-data class HomeUiState(
-    val user: UserDomain? = null,
-    val selectedLocation: LocationDomain? = null,
-    val locations: LoadState<ImmutableList<LocationDomain>> = LoadState.Loading,
-    val pollens: LoadState<ImmutableList<PollenDomain>> = LoadState.Loading,
-    val levels: LoadState<ImmutableList<LevelDomain>> = LoadState.Loading,
-    val weather: LoadState<WeatherDomain> = LoadState.Loading,
-    val dayForecasts: LoadState<ImmutableList<HomeDayForecastUi>> = LoadState.Loading,
-    val personalIndex: LoadState<HomePersonalIndexUi> = LoadState.Loading,
-    val sensitivePollenIds: ImmutableSet<Int> = persistentSetOf(),
-    val activeDayIndex: Int = 0,
-    val showLocationPicker: Boolean = false,
-    val expandedPollenId: Int? = null,
-    val forecastTimeline: LoadState<ImmutableList<LevelDomain>> = LoadState.Loading,
-    val today: LocalDate? = null,
-)
+private val logger = Logger.withTag("HomeViewModel")
+private const val DAYS_PER_WEEK = 7
 
 class HomeViewModel(
     private val userRepository: UserRepository,
@@ -78,11 +71,15 @@ class HomeViewModel(
     private val _selectedLocationOverride = MutableStateFlow<LocationDomain?>(null)
     private val _activeDayIndex = MutableStateFlow(0)
     private val _showLocationPicker = MutableStateFlow(false)
+    private val _isRefreshing = MutableStateFlow(false)
+    private val _weekOffset = MutableStateFlow(0)
+    private val _weekLabel = MutableStateFlow<StringDesc>(RawStringDesc(""))
     private val _expandedPollenId = MutableStateFlow<Int?>(null)
     private val _forecastTimeline = MutableStateFlow<LoadState<ImmutableList<LevelDomain>>>(LoadState.Loading)
+    private val _selectedDayLevels = MutableStateFlow<ImmutableList<LevelDomain>?>(null)
     private val _weather = MutableStateFlow<LoadState<WeatherDomain>>(LoadState.Loading)
     private val _dayForecasts = MutableStateFlow<LoadState<ImmutableList<HomeDayForecastUi>>>(LoadState.Loading)
-    private val _personalIndex = MutableStateFlow<LoadState<HomePersonalIndexUi>>(LoadState.Loading)
+    private val _personalIndex = MutableStateFlow<LoadState<HomePersonalIndexUi?>>(LoadState.Loading)
 
     private val selectedLocation = combine(
         _selectedLocationOverride,
@@ -116,7 +113,7 @@ class HomeViewModel(
 
     val state: StateFlow<HomeUiState> = combine(
         pollenRepository.observePollens().map { it.toImmutableList() },
-        sensitivityRepository.observeAll(),
+        sensitivityRepository.observeAll().map { it.toImmutableList() },
         locationRepository.observeLocations().map { it.toImmutableList() },
         userRepository.observeUser(),
         todayProvider.today,
@@ -126,6 +123,8 @@ class HomeViewModel(
         Pair(core, location)
     }.combine(levelsFlow) { (core, location), levels ->
         Triple(core, location, levels)
+    }.combine(_selectedDayLevels) { (core, location, todayLevels), selectedLevels ->
+        Triple(core, location, selectedLevels ?: todayLevels)
     }.combine(
         combine(_weather, _dayForecasts, _personalIndex, _activeDayIndex, _showLocationPicker) { w, d, p, ai, slp ->
             UiExtras(w, d, p, ai, slp)
@@ -136,51 +135,137 @@ class HomeViewModel(
             .map { it.pollenId }
             .toImmutableSet()
 
+        val levelsMap = levels.associateBy { it.pollenId }
+        val hasSelection = sensitiveIds.isNotEmpty()
+
+        val userAllergens = if (hasSelection) {
+            core.pollens.filter { it.id in sensitiveIds }.map { pollen ->
+                val rawValue = levelsMap[pollen.id]?.value ?: 0
+                AllergenRowData(pollen, normalizeSeverity(rawValue, pollen.maxLevel), pollen.maxLevel)
+            }.toImmutableList()
+        } else {
+            emptyList<AllergenRowData>().toImmutableList()
+        }
+
+        val otherAllergens = if (hasSelection) {
+            core.pollens.filter { it.id !in sensitiveIds }.toImmutableList()
+        } else {
+            core.pollens.toImmutableList()
+        }
+
         HomeUiState(
             user = core.user,
             selectedLocation = location,
             locations = LoadState.Loaded(core.locations),
             pollens = LoadState.Loaded(core.pollens),
-            levels = if (levels.isEmpty() && location != null) LoadState.Loading else LoadState.Loaded(levels),
             weather = extras.weather,
             dayForecasts = extras.dayForecasts,
             personalIndex = extras.personalIndex,
-            sensitivePollenIds = sensitiveIds,
+            userAllergens = userAllergens,
+            otherAllergens = otherAllergens,
             activeDayIndex = extras.activeDayIndex,
             showLocationPicker = extras.showLocationPicker,
-            expandedPollenId = _expandedPollenId.value,
-            forecastTimeline = _forecastTimeline.value,
             today = core.today,
         )
+    }.combine(_expandedPollenId) { state, expandedId ->
+        state.copy(expandedPollenId = expandedId)
+    }.combine(_forecastTimeline) { state, timeline ->
+        state.copy(forecastTimeline = timeline)
+    }.combine(_isRefreshing) { state, refreshing ->
+        state.copy(isRefreshing = refreshing)
+    }.combine(
+        combine(_weekOffset, _weekLabel) { offset, label -> Pair(offset, label) },
+    ) { state, (offset, label) ->
+        state.copy(weekOffset = offset, weekLabel = label)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     init {
-        loadData()
+        syncData(forceRefresh = false)
         observeLocationChanges()
         observeLevelChanges()
     }
 
     fun loadData() {
+        syncData(forceRefresh = true)
+    }
+
+    private fun syncData(forceRefresh: Boolean) {
+        _isRefreshing.value = true
         viewModelScope.launch {
-            var user = userRepository.getLocalUser()
-            if (user == null || user.serverId == 0L) {
-                val result = userRepository.registerOrUpdateUser(user ?: UserDomain())
-                if (result is ApiResult.Success) {
-                    user = userRepository.getLocalUser()
+            try {
+                if (forceRefresh) {
+                    try {
+                        pollenRepository.resetSyncState()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        logger.w(e) { "Failed to reset sync state" }
+                    }
                 }
+                var syncFailures = 0
+                coroutineScope {
+                    launch {
+                        try {
+                            var user = userRepository.getLocalUser()
+                            if (user == null || user.serverId == 0L) {
+                                val result = userRepository.registerOrUpdateUser(user ?: UserDomain())
+                                if (result !is ApiResult.Success) {
+                                    logger.w { "User registration returned error" }
+                                }
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            logger.w(e) { "Failed to register/update user" }
+                        }
+                    }
+                    launch {
+                        try {
+                            pollenRepository.syncPollens()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            syncFailures++
+                            logger.w(e) { "Failed to sync pollens" }
+                        }
+                    }
+                    launch {
+                        try {
+                            pollenRepository.syncLevels()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            syncFailures++
+                            logger.w(e) { "Failed to sync levels" }
+                        }
+                    }
+                    launch {
+                        try {
+                            pollenRepository.syncForecasts()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            syncFailures++
+                            logger.w(e) { "Failed to sync forecasts" }
+                        }
+                    }
+                    launch {
+                        try {
+                            locationRepository.syncLocations()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            syncFailures++
+                            logger.w(e) { "Failed to sync locations" }
+                        }
+                    }
+                }
+                if (syncFailures > 0) {
+                    _events.send(UiEvent.ShowError(MR.strings.error_load_data.desc()))
+                }
+            } finally {
+                _isRefreshing.value = false
             }
-        }
-        viewModelScope.launch {
-            try { pollenRepository.syncPollens() } catch (e: CancellationException) { throw e } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { pollenRepository.syncLevels() } catch (e: CancellationException) { throw e } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { pollenRepository.syncForecasts() } catch (e: CancellationException) { throw e } catch (_: Exception) {}
-        }
-        viewModelScope.launch {
-            try { locationRepository.syncLocations() } catch (e: CancellationException) { throw e } catch (_: Exception) {}
         }
     }
 
@@ -190,11 +275,9 @@ class HomeViewModel(
                 if (location != null) {
                     _weather.value = LoadState.Loading
                     _dayForecasts.value = LoadState.Loading
-                    loadWeather(location)
-                    val sensitivities = sensitivityRepository.getAll()
-                    if (sensitivities.any { it.level != SensitivityLevel.NONE }) {
-                        loadDayForecasts(location.id, sensitivities)
-                    }
+                    _selectedDayLevels.value = null
+                    launch { loadWeather(location) }
+                    loadDayForecasts(location.id)
                 }
             }
         }
@@ -205,10 +288,11 @@ class HomeViewModel(
             combine(levelsFlow, sensitivityRepository.observeAll(), pollenRepository.observePollens()) { levels, sens, pollens ->
                 Triple(levels, sens, pollens)
             }.collect { (levels, sensitivities, pollens) ->
-                if (levels.isNotEmpty() && sensitivities.any { it.level != SensitivityLevel.NONE }) {
+                val hasActiveSensitivities = sensitivities.any { it.level != SensitivityLevel.NONE }
+                if (levels.isNotEmpty() && hasActiveSensitivities) {
                     loadPersonalIndex(levels, sensitivities, pollens.toImmutableList())
                 } else {
-                    _personalIndex.value = LoadState.Loading
+                    _personalIndex.value = LoadState.Loaded(null)
                 }
             }
         }
@@ -218,8 +302,10 @@ class HomeViewModel(
         _selectedLocationOverride.value = location
         _showLocationPicker.value = false
         _activeDayIndex.value = 0
+        _weekOffset.value = 0
         _expandedPollenId.value = null
         _forecastTimeline.value = LoadState.Loading
+        _selectedDayLevels.value = null
     }
 
     fun showLocationPicker() {
@@ -244,12 +330,14 @@ class HomeViewModel(
                 val levels = live.ifEmpty {
                     pollenRepository.getForecastsForLocation(location.id, selectedDate)
                 }.toImmutableList()
+                _selectedDayLevels.value = levels
                 val sensitivities = sensitivityRepository.getAll()
                 val pollens = state.value.pollens.dataOrNull ?: return@launch
                 loadPersonalIndex(levels, sensitivities, pollens)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                _personalIndex.value = LoadState.Failed
                 _events.send(UiEvent.ShowError(MR.strings.error_load_day_data.desc()))
             }
         }
@@ -292,15 +380,50 @@ class HomeViewModel(
             throw e
         } catch (e: Exception) {
             _weather.value = LoadState.Failed
+            _events.send(UiEvent.ShowError(MR.strings.error_load_weather.desc()))
         }
     }
 
-    private suspend fun loadDayForecasts(
-        locationId: Int,
-        sensitivities: List<AllergenSensitivityDomain>,
-    ) {
+    fun shiftWeek(delta: Int) {
+        val newOffset = _weekOffset.value + delta
+        _weekOffset.value = newOffset
+        _activeDayIndex.value = 0
+        _dayForecasts.value = LoadState.Loading
+        _selectedDayLevels.value = null
+        _personalIndex.value = LoadState.Loading
+
+        viewModelScope.launch {
+            val location = state.value.selectedLocation ?: return@launch
+            loadDayForecasts(location.id)
+        }
+    }
+
+    private fun computeWeekStartDate(weekOffset: Int): LocalDate {
+        val today = todayProvider.today.value
+        val todayDow = today.dayOfWeek.ordinal
+        val monday = today.minus(todayDow.toLong(), DateTimeUnit.DAY)
+        return monday.plus((weekOffset * 7).toLong(), DateTimeUnit.DAY)
+    }
+
+    private fun computeWeekLabel(startDate: LocalDate): StringDesc {
+        val endDate = startDate.plus(6, DateTimeUnit.DAY)
+        val startMonth = monthShortStringDesc(startDate.month)
+        val endMonth = monthShortStringDesc(endDate.month)
+        return if (startDate.month == endDate.month) {
+            "${startDate.day}–${endDate.day} ".desc() + startMonth
+        } else {
+            "${startDate.day} ".desc() + startMonth + " – ${endDate.day} ".desc() + endMonth
+        }
+    }
+
+    private suspend fun loadDayForecasts(locationId: Int) {
         try {
-            val summaries = personalIndexRepository.computeDayForecastSummaries(locationId, sensitivities)
+            val weekStart = computeWeekStartDate(_weekOffset.value)
+            _weekLabel.value = computeWeekLabel(weekStart)
+
+            val summaries = personalIndexRepository.computeDayForecastSummariesForAllPollens(
+                locationId, weekStart, DAYS_PER_WEEK,
+            )
             val dayOfWeekNames = listOf(
                 MR.strings.dow_mon.desc(),
                 MR.strings.dow_tue.desc(),
@@ -312,11 +435,17 @@ class HomeViewModel(
             )
             val dayForecasts = summaries.toUi(dayOfWeekNames)
             _dayForecasts.value = LoadState.Loaded(dayForecasts)
-            _activeDayIndex.value = 0
+            _activeDayIndex.value = if (_weekOffset.value == 0) {
+                val today = todayProvider.today.value
+                dayForecasts.indexOfFirst { it.date == today.toString() }.coerceAtLeast(0)
+            } else {
+                0
+            }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             _dayForecasts.value = LoadState.Failed
+            _events.send(UiEvent.ShowError(MR.strings.error_load_pollen_forecast.desc()))
         }
     }
 
@@ -338,8 +467,9 @@ class HomeViewModel(
             _personalIndex.value = LoadState.Loaded(index.toUi(severityLabels))
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             _personalIndex.value = LoadState.Failed
+            _events.send(UiEvent.ShowError(MR.strings.error_load_data.desc()))
         }
     }
 
@@ -359,7 +489,7 @@ class HomeViewModel(
 
 private data class CoreData(
     val pollens: ImmutableList<PollenDomain>,
-    val sensitivities: List<AllergenSensitivityDomain>,
+    val sensitivities: ImmutableList<AllergenSensitivityDomain>,
     val locations: ImmutableList<LocationDomain>,
     val user: UserDomain?,
     val today: LocalDate,
@@ -368,7 +498,7 @@ private data class CoreData(
 private data class UiExtras(
     val weather: LoadState<WeatherDomain>,
     val dayForecasts: LoadState<ImmutableList<HomeDayForecastUi>>,
-    val personalIndex: LoadState<HomePersonalIndexUi>,
+    val personalIndex: LoadState<HomePersonalIndexUi?>,
     val activeDayIndex: Int,
     val showLocationPicker: Boolean,
 )

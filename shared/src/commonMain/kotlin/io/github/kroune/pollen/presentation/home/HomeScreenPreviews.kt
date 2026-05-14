@@ -84,7 +84,14 @@ private fun PreviewDayStrip() {
     )
     PollenTheme {
         Box(Modifier.background(MaterialTheme.colorScheme.background)) {
-            DayStrip(days = days, activeDayIndex = 3, onDaySelected = {})
+            DayStrip(
+                days = days,
+                activeDayIndex = 3,
+                weekLabel = "21–27 Apr",
+                onDaySelected = {},
+                onPreviousWeek = {},
+                onNextWeek = {},
+            )
         }
     }
 }
@@ -176,7 +183,14 @@ private fun PreviewHomeScreenFull() {
                 .fillMaxWidth(),
         ) {
             LocationRow(locationName = "Москва", onLocationClick = {}, onSettingsClick = {})
-            DayStrip(days = days, activeDayIndex = 3, onDaySelected = {})
+            DayStrip(
+                days = days,
+                activeDayIndex = 3,
+                weekLabel = "21–27 Apr",
+                onDaySelected = {},
+                onPreviousWeek = {},
+                onNextWeek = {},
+            )
             PersonalIndexCard(
                 score = "5,2",
                 severityLevel = 2,
