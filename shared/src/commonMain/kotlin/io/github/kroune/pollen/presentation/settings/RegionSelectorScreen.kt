@@ -50,10 +50,13 @@ import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import org.koin.compose.viewmodel.koinViewModel
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun RegionSelectorScreen(
     viewModel: RegionSelectorViewModel = koinViewModel(),
@@ -65,82 +68,151 @@ fun RegionSelectorScreen(
     CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, end = 16.dp, top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(MR.strings.back),
-                        tint = PollenTheme.colors.ink2,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Text(
-                    text = stringResource(MR.strings.settings_monitoring_region),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = PollenTheme.colors.ink,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
+        RegionSelectorScreen(
+            state = state,
+            onBack = onBack,
+            onRetry = viewModel::loadData,
+            onSearchQueryChange = viewModel::setSearchQuery,
+            onSelectLocation = viewModel::selectLocation,
+        )
+    }
+}
+
+/** State-based overload — previewable and testable. */
+@Composable
+fun RegionSelectorScreen(
+    state: RegionSelectorUiState,
+    onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onSelectLocation: (Int) -> Unit = {},
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 16.dp, top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(MR.strings.back),
+                    tint = PollenTheme.colors.ink2,
+                    modifier = Modifier.size(22.dp),
                 )
-                Spacer(Modifier.width(48.dp))
             }
-
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = viewModel::setSearchQuery,
-                placeholder = {
-                    Text(
-                        stringResource(MR.strings.region_search_placeholder),
-                        color = PollenTheme.colors.ink3,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = PollenTheme.colors.ink3,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PollenTheme.colors.accent,
-                    unfocusedBorderColor = PollenTheme.colors.line2,
-                    focusedContainerColor = PollenTheme.colors.paper2,
-                    unfocusedContainerColor = PollenTheme.colors.paper2,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            Text(
+                text = stringResource(MR.strings.settings_monitoring_region),
+                style = MaterialTheme.typography.displaySmall,
+                color = PollenTheme.colors.ink,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
             )
+            Spacer(Modifier.width(48.dp))
+        }
 
-            when (val locations = state.locations) {
-                is LoadState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(color = PollenTheme.colors.accent)
-                    }
+        OutlinedTextField(
+            value = state.searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = {
+                Text(
+                    stringResource(MR.strings.region_search_placeholder),
+                    color = PollenTheme.colors.ink3,
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = PollenTheme.colors.ink3,
+                    modifier = Modifier.size(18.dp),
+                )
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PollenTheme.colors.accent,
+                unfocusedBorderColor = PollenTheme.colors.line2,
+                focusedContainerColor = PollenTheme.colors.paper2,
+                unfocusedContainerColor = PollenTheme.colors.paper2,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+
+        when (val locations = state.locations) {
+            is LoadState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = PollenTheme.colors.accent)
                 }
-                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
-                is LoadState.Loaded -> {
-                    RegionList(
-                        locations = locations.data,
-                        selectedLocationId = state.selectedLocationId,
-                        onSelect = viewModel::selectLocation,
-                    )
-                }
+            }
+            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
+            is LoadState.Loaded -> {
+                RegionList(
+                    locations = locations.data,
+                    selectedLocationId = state.selectedLocationId,
+                    onSelect = onSelectLocation,
+                )
             }
         }
     }
 }
+
+// region Previews
+
+private val previewLocations = persistentListOf(
+    LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
+    LocationDomain(2, "Санкт-Петербург", "Северо-Западный регион", 59.9343, 30.3351),
+    LocationDomain(3, "Казань", "Поволжье", 55.7961, 49.1089),
+    LocationDomain(4, "Краснодар", "Южный регион", 45.0353, 38.9753),
+)
+
+@Preview
+@Composable
+private fun PreviewRegionSelectorLoaded() {
+    PollenTheme {
+        RegionSelectorScreen(
+            state = RegionSelectorUiState(
+                locations = LoadState.Loaded(previewLocations),
+                selectedLocationId = 1,
+                searchQuery = "",
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewRegionSelectorLoading() {
+    PollenTheme {
+        RegionSelectorScreen(
+            state = RegionSelectorUiState(
+                locations = LoadState.Loading,
+                searchQuery = "",
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewRegionSelectorFailed() {
+    PollenTheme {
+        RegionSelectorScreen(
+            state = RegionSelectorUiState(
+                locations = LoadState.Failed,
+                searchQuery = "",
+            ),
+        )
+    }
+}
+
+// endregion
 
 @Composable
 private fun RegionList(

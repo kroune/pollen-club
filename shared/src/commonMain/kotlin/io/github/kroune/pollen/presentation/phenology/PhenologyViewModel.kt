@@ -19,13 +19,13 @@ import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.domain.usecase.CoordinateResolver
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.math.abs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,24 +56,35 @@ class PhenologyViewModel(
 ) : ViewModel() {
 
     private val _form = MutableStateFlow(PhenologyFormState())
+    private val _refreshTrigger = MutableStateFlow(0)
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    val state: StateFlow<PhenologyUiState> = combine(
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val state: StateFlow<PhenologyUiState> = _refreshTrigger.flatMapLatest {
         combine(
-            phenologyRepository.observeObservations(),
-            userRepository.observeUser(),
-            pollenRepository.observePollens(),
-            localeProvider.currentLocale,
-            locationRepository.observeLocations(),
-        ) { observations, user, pollens, locale, locations ->
-            buildScreenData(observations, user, pollens, locale, locations)
-        },
-        _form,
-    ) { screenData, form ->
-        PhenologyUiState(screenData = LoadState.Loaded(screenData), form = form)
+            combine(
+                phenologyRepository.observeObservations(),
+                userRepository.observeUser(),
+                pollenRepository.observePollens(),
+                localeProvider.currentLocale,
+                locationRepository.observeLocations(),
+            ) { observations, user, pollens, locale, locations ->
+                buildScreenData(observations, user, pollens, locale, locations)
+            },
+            _form,
+        ) { screenData, form ->
+            PhenologyUiState(screenData = LoadState.Loaded(screenData), form = form)
+        }.catch {
+            emit(PhenologyUiState(screenData = LoadState.Failed))
+            _events.send(UiEvent.ShowError(MR.strings.error_load_phenology.desc()))
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PhenologyUiState())
+
+    fun loadData() {
+        _refreshTrigger.value++
+    }
 
     fun showAddDialog() {
         val current = state.value.screenData

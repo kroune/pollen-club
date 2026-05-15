@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -57,10 +58,12 @@ import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlin.math.abs
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
@@ -70,7 +73,7 @@ fun PhenologyScreen(viewModel: PhenologyViewModel = koinViewModel()) {
     val uiState by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    CollectEvents(viewModel.events, snackbarHostState)
+    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
 
     if (uiState.form.showDialog) {
         val screenData = uiState.screenData
@@ -87,31 +90,42 @@ fun PhenologyScreen(viewModel: PhenologyViewModel = koinViewModel()) {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        when (val data = uiState.screenData) {
+    PhenologyScreen(
+        state = uiState,
+        onAddObservation = viewModel::showAddDialog,
+        onRetry = viewModel::loadData,
+        snackbarHostState = snackbarHostState,
+    )
+}
+
+@Composable
+fun PhenologyScreen(
+    state: PhenologyUiState,
+    onAddObservation: () -> Unit,
+    onRetry: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            if (state.screenData is LoadState.Loaded) {
+                FloatingActionButton(
+                    onClick = onAddObservation,
+                    shape = CircleShape,
+                    containerColor = PollenTheme.colors.accent,
+                    contentColor = Color.White,
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(MR.strings.phenology_add_observation))
+                }
+            }
+        },
+        containerColor = PollenTheme.colors.paper,
+    ) { _ ->
+        when (val data = state.screenData) {
             is LoadState.Loading -> PhenologySkeleton()
-            is LoadState.Failed -> FullScreenError(onRetry = {})
+            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
             is LoadState.Loaded -> PhenologyContent(data.data)
         }
-
-        if (uiState.screenData is LoadState.Loaded) {
-            FloatingActionButton(
-                onClick = viewModel::showAddDialog,
-                shape = CircleShape,
-                containerColor = PollenTheme.colors.accent,
-                contentColor = Color.White,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(MR.strings.phenology_add_observation))
-            }
-        }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
     }
 }
 
@@ -430,6 +444,87 @@ private fun formatObservationDate(epochSeconds: Long): String {
     }
 
     return if (relativeStr != null) "$dateStr · $relativeStr" else dateStr
+}
+
+// ── Previews ──
+
+private val previewStages = persistentListOf(
+    PhenologyStageUi(1, "Набухание почек", "Почки начинают увеличиваться", isDone = true, isCurrent = false),
+    PhenologyStageUi(2, "Распускание почек", "Появление первых листочков", isDone = true, isCurrent = false),
+    PhenologyStageUi(3, "Начало пыления", "Появление первой пыльцы", isDone = false, isCurrent = true),
+    PhenologyStageUi(4, "Массовое пыление", "Активное выделение пыльцы", isDone = false, isCurrent = false),
+    PhenologyStageUi(5, "Окончание пыления", "Пыление завершается", isDone = false, isCurrent = false),
+    PhenologyStageUi(6, "Полное облиствение", "Листья полностью развиты", isDone = false, isCurrent = false),
+)
+
+@Preview
+@Composable
+private fun PreviewPhenologyContent() {
+    PollenTheme {
+        PhenologyContent(
+            PhenologyScreenDataUi(
+                allergenName = "Берёза",
+                locationLabel = "Москва · ВДНХ",
+                currentStageLabel = "Начало пыления",
+                currentStageEpochSeconds = 1715700000,
+                stages = previewStages,
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewPhenologySkeleton() {
+    PollenTheme {
+        PhenologySkeleton()
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewPhenologyTimeline() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            StagesTimeline(stages = previewStages)
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewPhenologyScreenLoaded() {
+    PollenTheme {
+        PhenologyScreen(
+            state = PhenologyUiState(
+                screenData = LoadState.Loaded(
+                    PhenologyScreenDataUi(
+                        allergenName = "Берёза",
+                        locationLabel = "Москва · ВДНХ",
+                        currentStageLabel = "№3 · Начало пыления",
+                        currentStageEpochSeconds = 1715700000,
+                        stages = previewStages,
+                    ),
+                ),
+                form = PhenologyFormState(),
+            ),
+            onAddObservation = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewPhenologyScreenLoading() {
+    PollenTheme {
+        PhenologyScreen(
+            state = PhenologyUiState(
+                screenData = LoadState.Loading,
+                form = PhenologyFormState(),
+            ),
+            onAddObservation = {},
+        )
+    }
 }
 
 // ── Add Observation Dialog ──

@@ -44,10 +44,12 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.presentation.common.CollectEvents
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -58,6 +60,7 @@ private fun sensitivityLabel(level: SensitivityLevel): String = when (level) {
     SensitivityLevel.SEVERE -> stringResource(MR.strings.sensitivity_strong)
 }
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun SensitivityScreen(
     viewModel: SensitivityViewModel = koinViewModel(),
@@ -72,45 +75,60 @@ fun SensitivityScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
     ) { _ ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, end = 16.dp, top = 0.dp, bottom = 0.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(MR.strings.back),
-                        tint = PollenTheme.colors.ink2,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Text(
-                    text = stringResource(MR.strings.sensitivity_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = PollenTheme.colors.ink,
+        SensitivityScreen(
+            state = state,
+            onBack = onBack,
+            onRetry = viewModel::loadData,
+            onSetSensitivity = viewModel::setSensitivity,
+        )
+    }
+}
+
+/** State-based overload — previewable and testable. */
+@Composable
+fun SensitivityScreen(
+    state: SensitivityUiState,
+    onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onSetSensitivity: (pollenId: Int, level: SensitivityLevel) -> Unit = { _, _ -> },
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 16.dp, top = 0.dp, bottom = 0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(MR.strings.back),
+                    tint = PollenTheme.colors.ink2,
+                    modifier = Modifier.size(22.dp),
                 )
             }
-
             Text(
-                text = stringResource(MR.strings.sensitivity_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = PollenTheme.colors.ink3,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                text = stringResource(MR.strings.sensitivity_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = PollenTheme.colors.ink,
             )
+        }
 
-            when (val allergens = state.allergens) {
-                is LoadState.Loading -> SensitivitySkeleton()
-                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
-                is LoadState.Loaded -> SensitivityList(
-                    allergens = allergens.data,
-                    onSetLevel = viewModel::setSensitivity,
-                )
-            }
+        Text(
+            text = stringResource(MR.strings.sensitivity_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = PollenTheme.colors.ink3,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        )
+
+        when (val allergens = state.allergens) {
+            is LoadState.Loading -> SensitivitySkeleton()
+            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
+            is LoadState.Loaded -> SensitivityList(
+                allergens = allergens.data,
+                onSetLevel = onSetSensitivity,
+            )
         }
     }
 }
@@ -211,6 +229,48 @@ private fun SensitivityRow(
         )
     }
 }
+
+// region Previews
+
+private val previewAllergens = persistentListOf(
+    SensitivityAllergenUi(1, "Берёза", SensitivityLevel.SEVERE),
+    SensitivityAllergenUi(2, "Орешник", SensitivityLevel.MODERATE),
+    SensitivityAllergenUi(3, "Ольха", SensitivityLevel.LIGHT),
+    SensitivityAllergenUi(4, "Дуб", SensitivityLevel.NONE),
+    SensitivityAllergenUi(5, "Полынь", SensitivityLevel.NONE),
+)
+
+@Preview
+@Composable
+private fun PreviewSensitivityLoaded() {
+    PollenTheme {
+        SensitivityScreen(
+            state = SensitivityUiState(allergens = LoadState.Loaded(previewAllergens)),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSensitivityLoading() {
+    PollenTheme {
+        SensitivityScreen(
+            state = SensitivityUiState(allergens = LoadState.Loading),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSensitivityFailed() {
+    PollenTheme {
+        SensitivityScreen(
+            state = SensitivityUiState(allergens = LoadState.Failed),
+        )
+    }
+}
+
+// endregion
 
 @Composable
 private fun SensitivitySkeleton() {

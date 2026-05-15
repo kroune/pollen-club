@@ -36,12 +36,32 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.presentation.theme.PollenTheme
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun LocationPickerDialog(
-    locations: List<LocationDomain>,
+    locations: ImmutableList<LocationDomain>,
+    selectedLocation: LocationDomain?,
+    onSelect: (LocationDomain) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        LocationPickerContent(
+            locations = locations,
+            selectedLocation = selectedLocation,
+            onSelect = onSelect,
+            onDismiss = onDismiss,
+        )
+    }
+}
+
+@Composable
+internal fun LocationPickerContent(
+    locations: ImmutableList<LocationDomain>,
     selectedLocation: LocationDomain?,
     onSelect: (LocationDomain) -> Unit,
     onDismiss: () -> Unit,
@@ -50,88 +70,104 @@ fun LocationPickerDialog(
     val filtered = if (query.isBlank()) locations
     else locations.filter { it.name.contains(query, ignoreCase = true) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = PollenTheme.colors.card,
-            shadowElevation = 8.dp,
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = stringResource(MR.strings.location_picker_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = PollenTheme.colors.ink,
-                )
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = {
-                        Text(
-                            stringResource(MR.strings.location_picker_search),
-                            color = PollenTheme.colors.ink3,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = PollenTheme.colors.ink3,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PollenTheme.colors.accent,
-                        unfocusedBorderColor = PollenTheme.colors.line2,
-                        focusedContainerColor = PollenTheme.colors.paper2,
-                        unfocusedContainerColor = PollenTheme.colors.paper2,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
-                    items(filtered, key = { it.id }) { location ->
-                        val isSelected = location.id == selectedLocation?.id
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelect(location) }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = location.name,
-                                fontSize = 15.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) PollenTheme.colors.accent2 else PollenTheme.colors.ink,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = PollenTheme.colors.accent,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                        HorizontalDivider(color = PollenTheme.colors.line2)
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End),
-                ) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = PollenTheme.colors.card,
+        shadowElevation = 8.dp,
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = stringResource(MR.strings.location_picker_title),
+                style = MaterialTheme.typography.headlineMedium,
+                color = PollenTheme.colors.ink,
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = {
                     Text(
-                        stringResource(MR.strings.close),
-                        color = PollenTheme.colors.accent2,
-                        fontWeight = FontWeight.Medium,
+                        stringResource(MR.strings.location_picker_search),
+                        color = PollenTheme.colors.ink3,
                     )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = PollenTheme.colors.ink3,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PollenTheme.colors.accent,
+                    unfocusedBorderColor = PollenTheme.colors.line2,
+                    focusedContainerColor = PollenTheme.colors.paper2,
+                    unfocusedContainerColor = PollenTheme.colors.paper2,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                items(filtered, key = { it.id }) { location ->
+                    val isSelected = location.id == selectedLocation?.id
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(location) }
+                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = location.name,
+                            fontSize = 15.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isSelected) PollenTheme.colors.accent2 else PollenTheme.colors.ink,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (isSelected) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = PollenTheme.colors.accent,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = PollenTheme.colors.line2)
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(
+                    stringResource(MR.strings.close),
+                    color = PollenTheme.colors.accent2,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewLocationPickerContent() {
+    val locations = persistentListOf(
+        LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
+        LocationDomain(2, "Санкт-Петербург", "Северо-Западный регион", 59.9343, 30.3351),
+        LocationDomain(3, "Казань", "Поволжье", 55.7961, 49.1089),
+    )
+    PollenTheme {
+        LocationPickerContent(
+            locations = locations,
+            selectedLocation = locations.first(),
+            onSelect = {},
+            onDismiss = {},
+        )
     }
 }

@@ -1,5 +1,6 @@
 package io.github.kroune.pollen.presentation.reference
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -70,12 +71,16 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import androidx.compose.ui.tooling.preview.Preview
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
+import kotlinx.collections.immutable.persistentListOf
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun ReferenceScreen(
     viewModel: ReferenceViewModel = koinViewModel(),
@@ -83,11 +88,38 @@ fun ReferenceScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = PollenTheme.colors.paper,
+    ) { _ ->
+        ReferenceScreen(
+            state = state,
+            onBack = onBack,
+            onSearchQueryChange = viewModel::onSearchQueryChange,
+            onRetry = viewModel::loadData,
+        )
+    }
+}
+
+/** State-based overload — previewable and testable. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReferenceScreen(
+    state: ReferenceUiState,
+    onBack: () -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onRetry: () -> Unit = {},
+) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     var selectedAllergen by remember { mutableStateOf<ReferenceAllergenUi?>(null) }
 
-    CollectEvents(viewModel.events, snackbarHostState)
+    BackHandler(enabled = selectedAllergen != null) {
+        selectedAllergen = null
+    }
 
     // Allergen detail bottom sheet
     if (selectedAllergen != null) {
@@ -104,162 +136,157 @@ fun ReferenceScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = PollenTheme.colors.paper,
-    ) { _ ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header bar
-            Row(
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(PollenTheme.colors.card)
+                .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(PollenTheme.colors.paper2, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(MR.strings.back),
+                    tint = PollenTheme.colors.ink2,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            Text(
+                text = stringResource(MR.strings.reference_title),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.2).sp,
+                color = PollenTheme.colors.ink,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(PollenTheme.colors.paper2, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        showSearch = !showSearch
+                        if (!showSearch) {
+                            onSearchQueryChange("")
+                            keyboardController?.hide()
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (showSearch) Icons.Default.Close else Icons.Default.Search,
+                    contentDescription = if (showSearch) stringResource(MR.strings.close_search) else stringResource(MR.strings.search),
+                    tint = PollenTheme.colors.ink2,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+        }
+
+        HorizontalDivider(color = PollenTheme.colors.line2, thickness = 1.dp)
+
+        // Search bar
+        AnimatedVisibility(
+            visible = showSearch,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(PollenTheme.colors.card)
-                    .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(PollenTheme.colors.paper2, RoundedCornerShape(10.dp))
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(MR.strings.back),
-                        tint = PollenTheme.colors.ink2,
-                        modifier = Modifier.size(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = {
+                    Text(
+                        stringResource(MR.strings.reference_search_placeholder),
+                        color = PollenTheme.colors.ink3,
                     )
-                }
-
-                Text(
-                    text = stringResource(MR.strings.reference_title),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.2).sp,
-                    color = PollenTheme.colors.ink,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(PollenTheme.colors.paper2, RoundedCornerShape(10.dp))
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable {
-                            showSearch = !showSearch
-                            if (!showSearch) {
-                                viewModel.onSearchQueryChange("")
-                                keyboardController?.hide()
-                            }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
+                },
+                leadingIcon = {
                     Icon(
-                        if (showSearch) Icons.Default.Close else Icons.Default.Search,
-                        contentDescription = if (showSearch) stringResource(MR.strings.close_search) else stringResource(MR.strings.search),
-                        tint = PollenTheme.colors.ink2,
-                        modifier = Modifier.size(15.dp),
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = PollenTheme.colors.ink3,
+                        modifier = Modifier.size(18.dp),
                     )
-                }
-            }
-
-            HorizontalDivider(color = PollenTheme.colors.line2, thickness = 1.dp)
-
-            // Search bar
-            AnimatedVisibility(
-                visible = showSearch,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
-            ) {
-                OutlinedTextField(
-                    value = state.searchQuery,
-                    onValueChange = viewModel::onSearchQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = {
-                        Text(
-                            stringResource(MR.strings.reference_search_placeholder),
-                            color = PollenTheme.colors.ink3,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = PollenTheme.colors.ink3,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                    trailingIcon = if (state.searchQuery.isNotEmpty()) {
-                        {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .clickable { viewModel.onSearchQueryChange("") },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = stringResource(MR.strings.clear),
-                                    tint = PollenTheme.colors.ink3,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                            }
-                        }
-                    } else {
-                        null
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = PollenTheme.colors.paper2,
-                        unfocusedContainerColor = PollenTheme.colors.paper2,
-                        focusedBorderColor = PollenTheme.colors.accent,
-                        unfocusedBorderColor = PollenTheme.colors.line2,
-                        cursorColor = PollenTheme.colors.accent,
-                    ),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
-                )
-            }
-
-            // Body
-            when (val allergens = state.allergens) {
-                is LoadState.Loading -> ReferenceSkeleton()
-                is LoadState.Failed -> FullScreenError(onRetry = {})
-                is LoadState.Loaded -> {
-                    val filtered = remember(allergens.data, state.searchQuery) {
-                        if (state.searchQuery.isBlank()) {
-                            allergens.data
-                        } else {
-                            allergens.data.filter {
-                                it.name.contains(state.searchQuery, ignoreCase = true)
-                            }
-                        }
-                    }
-                    if (filtered.isEmpty()) {
+                },
+                trailingIcon = if (state.searchQuery.isNotEmpty()) {
+                    {
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .clickable { onSearchQueryChange("") },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = stringResource(MR.strings.reference_nothing_found),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = PollenTheme.colors.ink3,
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(MR.strings.clear),
+                                tint = PollenTheme.colors.ink3,
+                                modifier = Modifier.size(16.dp),
                             )
                         }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = PollenTheme.colors.paper2,
+                    unfocusedContainerColor = PollenTheme.colors.paper2,
+                    focusedBorderColor = PollenTheme.colors.accent,
+                    unfocusedBorderColor = PollenTheme.colors.line2,
+                    cursorColor = PollenTheme.colors.accent,
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
+            )
+        }
+
+        // Body
+        when (val allergens = state.allergens) {
+            is LoadState.Loading -> ReferenceSkeleton()
+            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
+            is LoadState.Loaded -> {
+                val filtered = remember(allergens.data, state.searchQuery) {
+                    if (state.searchQuery.isBlank()) {
+                        allergens.data
                     } else {
-                        ReferenceGrid(
-                            allergens = filtered,
-                            onAllergenClick = { allergen -> selectedAllergen = allergen },
+                        allergens.data.filter {
+                            it.name.contains(state.searchQuery, ignoreCase = true)
+                        }
+                    }
+                }
+                if (filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(MR.strings.reference_nothing_found),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = PollenTheme.colors.ink3,
                         )
                     }
+                } else {
+                    ReferenceGrid(
+                        allergens = filtered,
+                        onAllergenClick = { allergen -> selectedAllergen = allergen },
+                    )
                 }
             }
         }
@@ -429,6 +456,57 @@ private fun ReferenceAllergenCard(
         }
     }
 }
+
+// region Previews
+
+private val previewAllergens = persistentListOf(
+    ReferenceAllergenUi(1, "Берёза", "Birch", "Один из основных аллергенов в средней полосе.", null, 3, StringDesc.Raw("Высокий")),
+    ReferenceAllergenUi(2, "Ольха", "Alder", "Ранний весенний аллерген.", null, 2, StringDesc.Raw("Средний")),
+    ReferenceAllergenUi(3, "Орешник", "Hazel", "", null, 1, StringDesc.Raw("Низкий")),
+    ReferenceAllergenUi(4, "Дуб", "Oak", "", null, 0, StringDesc.Raw("")),
+)
+
+@Preview
+@Composable
+private fun PreviewReferenceGrid() {
+    PollenTheme {
+        ReferenceGrid(
+            allergens = previewAllergens,
+            onAllergenClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewReferenceAllergenCard() {
+    PollenTheme {
+        Box(Modifier.padding(16.dp)) {
+            ReferenceAllergenCard(
+                allergen = previewAllergens.first(),
+                onClick = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewReferenceAllergenDetail() {
+    PollenTheme {
+        AllergenDetailSheet(allergen = previewAllergens.first())
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewReferenceSkeleton() {
+    PollenTheme {
+        ReferenceSkeleton()
+    }
+}
+
+// endregion
 
 @Composable
 private fun ReferenceSkeleton() {

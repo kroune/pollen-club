@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 
 @Composable
@@ -57,5 +58,13 @@ fun SettingsPlaceholderScreen(
                 color = PollenTheme.colors.ink3,
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSettingsPlaceholder() {
+    PollenTheme {
+        SettingsPlaceholderScreen(title = "Уведомления")
     }
 }
