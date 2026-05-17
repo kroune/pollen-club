@@ -56,6 +56,11 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                if (it.project.hasProperty("excludeScreenshots")) {
+                    it.exclude("**/PreviewScreenshotTest*")
+                }
+            }
         }
         animationsDisabled = true
     }

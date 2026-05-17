@@ -54,7 +54,7 @@ jobs:
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
       - name: Run Android unit tests
-        run: ./gradlew :androidApp:testDebugUnitTest -x verifyRoborazziDebug -x recordRoborazziDebug -x compareRoborazziDebug --no-daemon
+        run: ./gradlew :androidApp:testDebugUnitTest -PexcludeScreenshots --no-daemon
 
   screenshot-test:
     runs-on: ubuntu-latest
