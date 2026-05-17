@@ -12,6 +12,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.kroune.pollen.presentation.common.ProvideShimmer
 
 val PollenTypography = Typography(
     displayLarge = TextStyle(
@@ -108,8 +109,9 @@ fun PollenTheme(content: @Composable () -> Unit) {
             colorScheme = PollenLightColorScheme,
             shapes = PollenM3Shapes,
             typography = PollenTypography,
-            content = content,
-        )
+        ) {
+            ProvideShimmer(content = content)
+        }
     }
 }
 
