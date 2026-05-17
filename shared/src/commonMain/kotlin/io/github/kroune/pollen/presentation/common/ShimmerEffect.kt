@@ -14,13 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.LinearGradientShader
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.PaintingStyle
-import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.invalidateDraw
@@ -109,13 +105,6 @@ private class ShimmerNode(
 ) : Modifier.Node(), DrawModifierNode {
 
     private var colors: List<Color> = buildColors()
-    private val paint = Paint().apply {
-        isAntiAlias = true
-        style = PaintingStyle.Fill
-    }
-    private var cachedShader: Shader? = null
-    private var cachedWidth = 0f
-    private var cachedHeight = 0f
 
     private fun buildColors() = listOf(baseColor, highlightColor, baseColor)
 
@@ -126,7 +115,6 @@ private class ShimmerNode(
             this.baseColor = baseColor
             this.highlightColor = highlightColor
             this.colors = buildColors()
-            cachedShader = null
         }
         if (stateChanged) {
             this.progressState = progressState
@@ -137,40 +125,17 @@ private class ShimmerNode(
     }
 
     override fun ContentDrawScope.draw() {
-        val width = size.width
-        val height = size.height
-
-        if (cachedShader == null || width != cachedWidth || height != cachedHeight) {
-            cachedWidth = width
-            cachedHeight = height
-            cachedShader = LinearGradientShader(
-                from = Offset.Zero,
-                to = Offset(
-                    width + SHIMMER_GRADIENT_WIDTH,
-                    height + SHIMMER_GRADIENT_WIDTH,
-                ),
+        val translateAnim = progressState.value * SHIMMER_TRANSLATE_DISTANCE
+        drawRect(
+            brush = Brush.linearGradient(
                 colors = colors,
-                colorStops = listOf(0f, 0.5f, 1f),
-            )
-        }
-
-        val translate = progressState.value * SHIMMER_TRANSLATE_DISTANCE
-        drawIntoCanvas { canvas ->
-            paint.shader = cachedShader
-            canvas.save()
-            canvas.translate(
-                translate - SHIMMER_GRADIENT_WIDTH,
-                translate - SHIMMER_GRADIENT_WIDTH,
-            )
-            canvas.drawRect(
-                left = 0f,
-                top = 0f,
-                right = width + SHIMMER_GRADIENT_WIDTH * 2,
-                bottom = height + SHIMMER_GRADIENT_WIDTH * 2,
-                paint = paint,
-            )
-            canvas.restore()
-        }
+                start = Offset(
+                    translateAnim - SHIMMER_GRADIENT_WIDTH,
+                    translateAnim - SHIMMER_GRADIENT_WIDTH,
+                ),
+                end = Offset(translateAnim, translateAnim),
+            ),
+        )
         drawContent()
     }
 }
