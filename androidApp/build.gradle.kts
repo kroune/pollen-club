@@ -56,13 +56,17 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
-            all {
-                if (it.project.hasProperty("excludeScreenshots")) {
-                    it.exclude("**/PreviewScreenshotTest*")
-                }
-            }
         }
         animationsDisabled = true
+    }
+}
+
+if (project.hasProperty("excludeScreenshots")) {
+    tasks.withType<Test>().configureEach {
+        filter {
+            excludeTestsMatching("io.github.kroune.pollen.PreviewScreenshotTest")
+            isFailOnNoMatchingTests = false
+        }
     }
 }
 
