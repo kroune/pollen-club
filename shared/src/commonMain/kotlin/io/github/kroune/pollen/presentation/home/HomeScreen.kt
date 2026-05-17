@@ -149,9 +149,7 @@ fun HomeScreen(
                 // Location header
                 item {
                     when (state.locations) {
-                        is LoadState.Loading -> LocationHeaderSkeleton(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
+                        is LoadState.Loading -> LocationHeaderSkeleton()
                         is LoadState.Loaded, is LoadState.Failed -> {
                             LocationRow(
                                 locationName = state.selectedLocation?.name ?: "—",
