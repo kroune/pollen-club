@@ -138,7 +138,7 @@ All in `presentation/common/`:
 - `FullScreenError(onRetry)` — centered error + retry button, use when entire screen fails
 - `ErrorBanner(onRetry)` — inline card-style banner for partial failures
 - `ShimmerEffect` — modifier extension for skeleton shimmer animation
-- Skeleton composables: `LocationHeaderSkeleton`, `WeatherCardSkeleton`, `PollenListSkeleton`, `PollenLevelCardSkeleton`, `FeedCardSkeleton`, `FeedListSkeleton`, `MedicationCardSkeleton`, `MedicationListSkeleton`, `MapChipRowSkeleton`, `MapAreaSkeleton`
+- Skeleton composables: `LocationHeaderSkeleton`, `WeatherCardSkeleton`, `PollenListSkeleton`, `PollenLevelCardSkeleton`, `FeedCardSkeleton`, `FeedListSkeleton`, `MedicationCardSkeleton`, `MedicationListSkeleton`, `CategoriesCardSkeleton`, `FriendsListSkeleton`, `MapChipRowSkeleton`, `MapAreaSkeleton`, `DayStripSkeleton`, `PersonalIndexCardSkeleton`, `ForecastDetailHeaderSkeleton`, `ForecastDetailChartSkeleton`, `ForecastDetailStatsSkeleton`
 
 Before writing any new common component, check this directory first.
 

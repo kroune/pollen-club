@@ -52,6 +52,7 @@ import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.CategoriesCardSkeleton
 import io.github.kroune.pollen.presentation.common.MedicationListSkeleton
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
@@ -129,8 +130,8 @@ fun MedicationsScreen(
                 SectionHeader(stringResource(MR.strings.medications_categories))
                 Spacer(Modifier.height(8.dp))
                 when (val cats = state.categories) {
-                    is LoadState.Loading -> MedicationListSkeleton(count = 3)
-                    is LoadState.Failed -> MedicationListSkeleton(count = 3)
+                    is LoadState.Loading -> CategoriesCardSkeleton()
+                    is LoadState.Failed -> CategoriesCardSkeleton()
                     is LoadState.Loaded -> CategoriesCard(categories = cats.data)
                 }
             }

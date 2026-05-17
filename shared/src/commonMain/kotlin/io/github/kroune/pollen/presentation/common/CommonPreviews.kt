@@ -178,3 +178,23 @@ private fun PreviewForecastDetailStatsSkeleton() {
         }
     }
 }
+
+@Preview
+@Composable
+private fun PreviewCategoriesCardSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            CategoriesCardSkeleton()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFriendsListSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            FriendsListSkeleton()
+        }
+    }
+}

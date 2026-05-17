@@ -57,7 +57,7 @@ import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.Feeling
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
-import io.github.kroune.pollen.presentation.common.FeedListSkeleton
+import io.github.kroune.pollen.presentation.common.FriendsListSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.theme.PollenTheme
@@ -165,7 +165,7 @@ private fun FriendsListBody(
 ) {
     when (val friends = state.friends) {
         is LoadState.Loading -> {
-            FeedListSkeleton(modifier = Modifier.padding(16.dp))
+            FriendsListSkeleton(modifier = Modifier.padding(16.dp))
         }
         is LoadState.Failed -> {
             FullScreenError(onRetry = onRetry)

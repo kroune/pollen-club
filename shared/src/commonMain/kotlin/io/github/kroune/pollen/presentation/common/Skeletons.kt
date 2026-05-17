@@ -1,6 +1,7 @@
 package io.github.kroune.pollen.presentation.common
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -31,34 +33,84 @@ import io.github.kroune.pollen.presentation.theme.PollenTheme
 
 @Composable
 fun LocationHeaderSkeleton(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Box(
-            Modifier
-                .fillMaxWidth(0.5f)
-                .height(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .shimmerEffect(),
-        )
-        Spacer(Modifier.height(6.dp))
-        Box(
-            Modifier
-                .fillMaxWidth(0.3f)
-                .height(16.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .shimmerEffect(),
-        )
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+    val textSize = remember(textStyle) {
+        val result = textMeasurer.measure("Москва, ЦАО", textStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            Spacer(Modifier.width(6.dp))
+            Box(
+                Modifier
+                    .width(textSize.first)
+                    .height(textSize.second)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect(),
+            )
+            Spacer(Modifier.width(2.dp))
+            Box(Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+        }
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.size(20.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
     }
 }
 
 @Composable
 fun WeatherCardSkeleton(modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .shimmerEffect(),
-    )
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val displaySmallStyle = MaterialTheme.typography.displaySmall
+    val titleMediumStyle = MaterialTheme.typography.titleMedium
+
+    val tempSize = remember(displaySmallStyle) {
+        val result = textMeasurer.measure("24°", displaySmallStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val weatherSize = remember(titleMediumStyle) {
+        val result = textMeasurer.measure("Облачно", titleMediumStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = PollenTheme.colors.card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .width(tempSize.first)
+                    .height(tempSize.second)
+                    .clip(RoundedCornerShape(6.dp))
+                    .shimmerEffect(),
+            )
+            Spacer(Modifier.width(20.dp))
+            Box(
+                Modifier
+                    .width(weatherSize.first)
+                    .height(weatherSize.second)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect(),
+            )
+        }
+    }
 }
 
 @Composable
@@ -122,33 +174,145 @@ fun PersonalIndexCardSkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 fun PollenLevelCardSkeleton(modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .shimmerEffect(),
-    )
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = PollenTheme.colors.card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .width(80.dp)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect(),
+            )
+            Spacer(Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                repeat(5) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).shimmerEffect())
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier
+                    .size(14.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .shimmerEffect(),
+            )
+        }
+    }
 }
 
 @Composable
-fun PollenListSkeleton(count: Int = 5, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        repeat(count) {
-            PollenLevelCardSkeleton()
+fun PollenListSkeleton(count: Int = 3, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = PollenTheme.colors.card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column {
+            repeat(count) { index ->
+                if (index > 0) {
+                    HorizontalDivider(color = PollenTheme.colors.line2)
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .width(80.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .shimmerEffect(),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        repeat(5) {
+                            Box(Modifier.size(8.dp).clip(CircleShape).shimmerEffect())
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        Modifier
+                            .size(14.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .shimmerEffect(),
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
 fun FeedCardSkeleton(modifier: Modifier = Modifier) {
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .shimmerEffect(),
-    )
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clip(CircleShape).shimmerEffect())
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Box(
+                        Modifier
+                            .width(120.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .shimmerEffect(),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        Modifier
+                            .width(72.dp)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .shimmerEffect(),
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .shimmerEffect(),
+            )
+            Spacer(Modifier.height(6.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .shimmerEffect(),
+            )
+            Spacer(Modifier.height(6.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .shimmerEffect(),
+            )
+        }
+    }
 }
 
 @Composable
@@ -162,27 +326,60 @@ fun FeedListSkeleton(count: Int = 4, modifier: Modifier = Modifier) {
 
 @Composable
 fun MedicationCardSkeleton(modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(12.dp)
     Box(
-        modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .shimmerEffect(),
-    )
+            .clip(shape)
+            .background(PollenTheme.colors.card, shape)
+            .border(1.dp, PollenTheme.colors.line2, shape),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(34.dp).clip(CircleShape).shimmerEffect())
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    Modifier
+                        .width(90.dp)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .shimmerEffect(),
+                )
+                Spacer(Modifier.height(3.dp))
+                Box(
+                    Modifier
+                        .width(70.dp)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .shimmerEffect(),
+                )
+                Spacer(Modifier.height(3.dp))
+                Box(
+                    Modifier
+                        .width(100.dp)
+                        .height(11.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .shimmerEffect(),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier
+                    .width(52.dp)
+                    .height(26.dp)
+                    .clip(RoundedCornerShape(100.dp))
+                    .shimmerEffect(),
+            )
+        }
+    }
 }
 
 @Composable
 fun MedicationListSkeleton(count: Int = 4, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Title placeholder
-        Box(
-            Modifier
-                .fillMaxWidth(0.4f)
-                .height(24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .shimmerEffect(),
-        )
-        Spacer(Modifier.height(4.dp))
         repeat(count) {
             MedicationCardSkeleton()
         }
@@ -190,17 +387,151 @@ fun MedicationListSkeleton(count: Int = 4, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun MapChipRowSkeleton(count: Int = 5, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+fun CategoriesCardSkeleton(count: Int = 3, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = PollenTheme.colors.card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        repeat(count) {
+        repeat(count) { index ->
+            if (index > 0) {
+                HorizontalDivider(color = PollenTheme.colors.line2)
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier
+                        .width(100.dp)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .shimmerEffect(),
+                )
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .shimmerEffect(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FriendsListSkeleton(count: Int = 3, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Box(
                 Modifier
-                    .width(72.dp)
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .width(100.dp)
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .shimmerEffect(),
+            )
+            Box(
+                Modifier
+                    .width(60.dp)
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .shimmerEffect(),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = PollenTheme.colors.card),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        ) {
+            Column {
+                repeat(count) { index ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            color = PollenTheme.colors.line2,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(34.dp).clip(CircleShape).shimmerEffect())
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Box(
+                                Modifier
+                                    .width(100.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .shimmerEffect(),
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Box(
+                                Modifier
+                                    .width(60.dp)
+                                    .height(11.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .shimmerEffect(),
+                            )
+                        }
+                        Box(
+                            Modifier
+                                .width(50.dp)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .shimmerEffect(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MapChipRowSkeleton(count: Int = 5, modifier: Modifier = Modifier) {
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val chipStyle = MaterialTheme.typography.labelLarge.copy(
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+    )
+    val chipLabels = listOf("Берёза", "Ольха", "Злаки", "Полынь", "Амброзия")
+    val chipWidths = remember(chipStyle) {
+        chipLabels.map { label ->
+            val result = textMeasurer.measure(label, chipStyle)
+            with(density) { result.size.width.toDp() + 22.dp }
+        }
+    }
+    val chipHeight = remember(chipStyle) {
+        val result = textMeasurer.measure("X", chipStyle)
+        with(density) { result.size.height.toDp() + 10.dp }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        repeat(count.coerceAtMost(chipWidths.size)) { i ->
+            Box(
+                Modifier
+                    .width(chipWidths[i])
+                    .height(chipHeight)
+                    .clip(RoundedCornerShape(12.dp))
                     .shimmerEffect(),
             )
         }
@@ -220,42 +551,85 @@ fun MapAreaSkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 fun DayStripSkeleton(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        repeat(7) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .padding(vertical = 7.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    Modifier
-                        .width(24.dp)
-                        .height(12.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .shimmerEffect(),
-                )
-                Spacer(Modifier.height(6.dp))
-                Box(
-                    Modifier
-                        .width(16.dp)
-                        .height(16.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .shimmerEffect(),
-                )
-                Spacer(Modifier.height(5.dp))
-                Box(
-                    Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .shimmerEffect(),
-                )
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val weekLabelStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+    val dayNameStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium)
+    val dayNumberStyle = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium)
+
+    val weekLabelSize = remember(weekLabelStyle) {
+        val result = textMeasurer.measure("21 – 27 Apr", weekLabelStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val dayNameSize = remember(dayNameStyle) {
+        val result = textMeasurer.measure("СР", dayNameStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val dayNumberSize = remember(dayNumberStyle) {
+        val result = textMeasurer.measure("28", dayNumberStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            }
+            Box(
+                Modifier
+                    .width(weekLabelSize.first)
+                    .height(weekLabelSize.second)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerEffect(),
+            )
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp, end = 10.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            repeat(7) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .padding(vertical = 7.dp, horizontal = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        Modifier
+                            .width(dayNameSize.first)
+                            .height(dayNameSize.second)
+                            .clip(RoundedCornerShape(3.dp))
+                            .shimmerEffect(),
+                    )
+                    Box(
+                        Modifier
+                            .padding(top = 3.dp)
+                            .width(dayNumberSize.first)
+                            .height(dayNumberSize.second)
+                            .clip(RoundedCornerShape(3.dp))
+                            .shimmerEffect(),
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Box(
+                        Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .shimmerEffect(),
+                    )
+                }
             }
         }
     }
@@ -263,54 +637,81 @@ fun DayStripSkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 fun ForecastDetailHeaderSkeleton(modifier: Modifier = Modifier) {
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val titleStyle = MaterialTheme.typography.displaySmall
+    val scoreStyle = TextStyle(fontSize = 46.sp, fontWeight = FontWeight.Normal)
+    val subtitleStyle = TextStyle(fontSize = 15.sp)
+    val severityStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+    val titleSize = remember(titleStyle) {
+        val result = textMeasurer.measure("Берёза", titleStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val scoreSize = remember(scoreStyle) {
+        val result = textMeasurer.measure("3", scoreStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val subtitleSize = remember(subtitleStyle) {
+        val result = textMeasurer.measure("/ 10 · today", subtitleStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val severitySize = remember(severityStyle) {
+        val result = textMeasurer.measure("Средний", severityStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(start = 4.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(24.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            }
             Box(
                 Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .shimmerEffect(),
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier
-                    .width(140.dp)
-                    .height(32.dp)
+                    .width(titleSize.first)
+                    .height(titleSize.second)
                     .clip(RoundedCornerShape(6.dp))
                     .shimmerEffect(),
             )
         }
-        Spacer(Modifier.height(8.dp))
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
                 Modifier
-                    .width(64.dp)
-                    .height(44.dp)
+                    .width(scoreSize.first)
+                    .height(scoreSize.second)
                     .clip(RoundedCornerShape(6.dp))
                     .shimmerEffect(),
             )
             Spacer(Modifier.width(8.dp))
             Box(
                 Modifier
-                    .width(40.dp)
-                    .height(16.dp)
+                    .padding(bottom = 5.dp)
+                    .width(subtitleSize.first)
+                    .height(subtitleSize.second)
                     .clip(RoundedCornerShape(4.dp))
                     .shimmerEffect(),
             )
             Spacer(Modifier.weight(1f))
-            Box(
-                Modifier
-                    .width(72.dp)
-                    .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .shimmerEffect(),
-            )
+            Row(
+                modifier = Modifier.padding(bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(Modifier.size(8.dp).clip(CircleShape).shimmerEffect())
+                Box(
+                    Modifier
+                        .width(severitySize.first)
+                        .height(severitySize.second)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerEffect(),
+                )
+            }
         }
     }
 }
