@@ -456,7 +456,10 @@ fun FriendsListSkeleton(count: Int = 3, modifier: Modifier = Modifier) {
             Column {
                 repeat(count) { index ->
                     if (index > 0) {
-                        HorizontalDivider(color = PollenTheme.colors.line2)
+                        HorizontalDivider(
+                            color = PollenTheme.colors.line2,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
                     }
                     Row(
                         modifier = Modifier

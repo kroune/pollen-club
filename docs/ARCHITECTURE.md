@@ -270,3 +270,13 @@ All in `shared/.../presentation/common/` — **use these, don't create new ones*
 | `WeatherCardSkeleton`                                | Skeleton for weather card                                        |
 | `PollenLevelCardSkeleton`                            | Skeleton for a single pollen card                                |
 | `PollenListSkeleton`                                 | Skeleton for the full pollen list                                |
+| `FeedCardSkeleton` / `FeedListSkeleton`              | Skeleton for feed/news cards                                     |
+| `MedicationCardSkeleton` / `MedicationListSkeleton`  | Skeleton for medication rows                                     |
+| `CategoriesCardSkeleton`                             | Skeleton for medication categories card                          |
+| `FriendsListSkeleton`                                | Skeleton for friends list with avatar rows                       |
+| `DayStripSkeleton`                                   | Skeleton for day forecast strip with navigation                  |
+| `PersonalIndexCardSkeleton`                          | Skeleton for personal pollen index card                          |
+| `MapChipRowSkeleton` / `MapAreaSkeleton`             | Skeleton for map filter chips and map area                       |
+| `ForecastDetailHeaderSkeleton`                       | Skeleton for forecast detail header                              |
+| `ForecastDetailChartSkeleton`                        | Skeleton for forecast detail chart                               |
+| `ForecastDetailStatsSkeleton`                        | Skeleton for forecast detail stats card                          |
