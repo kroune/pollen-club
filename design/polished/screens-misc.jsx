@@ -284,12 +284,11 @@ function PSettings() {
             <PIcon d={P_ICONS.back} size={18} stroke="var(--ink-2)" sw={1.6} />
             <div className="p-display" style={{ fontSize: 22 }}>Настройки</div>
           </div>
-          <div className="p-card" style={{ padding: 16, marginBottom: 20 }}>
-            <div className="p-annot" style={{ fontSize: 9 }}>КОД УЧАСТНИКА</div>
-            <div className="row" style={{ alignItems: 'baseline', marginTop: 6 }}>
-              <div className="p-num" style={{ fontSize: 24, fontWeight: 600, letterSpacing: 1 }}>1126105</div>
-              <div className="spacer" />
-              <span style={{ fontSize: 11, color: 'var(--accent-2)', fontWeight: 500 }}>копировать</span>
+          <div className="p-card" style={{ padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <PQrCode size={64} />
+            <div>
+              <div className="p-annot" style={{ fontSize: 9, marginBottom: 4 }}>ВАШ ID</div>
+              <PCopyableId id="1126105" size={22} />
             </div>
           </div>
 
