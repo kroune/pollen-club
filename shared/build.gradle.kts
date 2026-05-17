@@ -31,6 +31,8 @@ kotlin {
         androidResources.enable = true
     }
 
+    jvm()
+
     iosArm64()
     iosSimulatorArm64()
 
@@ -43,6 +45,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
+            implementation(libs.compose.ui.backhandler)
 
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
@@ -62,7 +65,7 @@ kotlin {
             implementation(libs.androidx.datastore.preferences)
 
             implementation(libs.androidx.room.runtime)
-            implementation(libs.androidx.sqlite.framework)
+            implementation(libs.androidx.sqlite.bundled)
 
             implementation(libs.kermit)
 
@@ -88,6 +91,9 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
+        jvmMain.dependencies {
+            implementation(libs.ktor.client.cio)
+        }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.cio)
@@ -102,6 +108,7 @@ kotlin {
 
 dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
+    add("kspJvm", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
 }

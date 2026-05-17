@@ -77,6 +77,6 @@ fun PinDto.toDomain(): MapPinDomain = MapPinDomain(
     latitude = latitude,
     longitude = longitude,
     pollenType = pollenType,
-    tags = tags,
+    tags = tags.split(' ').filterTo(mutableSetOf()) { it.isNotEmpty() },
     friendId = friendId,
 )

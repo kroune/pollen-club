@@ -31,7 +31,7 @@ kermit = "2.0.8"
 vico = "3.1.0"
 
 roborazzi = "1.59.0"
-composable-preview-scanner = "0.8.2"
+composable-preview-scanner = "0.9.0"
 robolectric = "4.16.1"
 uiTestJunit4 = "1.10.5"
 
@@ -43,7 +43,7 @@ playServicesCodeScanner = "16.1.0"
 mlkitBarcodeScanning = "17.3.0"
 camerax = "1.5.0-beta01"
 
-googleMaps = "6.4.0"
+googleMaps = "8.3.0"
 playServicesMaps = "19.2.0"
 playServicesLocation = "21.3.0"
 
@@ -58,6 +58,7 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMul
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiTooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+compose-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "composeMultiplatform" }
 
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
@@ -69,6 +70,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version.ref = "sqlite" }
+androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koinCore" }
 koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koinCompose" }

@@ -18,6 +18,7 @@ kotlin {
             .toInt()
     }
 
+    jvm()
     iosArm64()
     iosSimulatorArm64()
 

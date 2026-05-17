@@ -47,17 +47,22 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.HashTagDomain
 import io.github.kroune.pollen.domain.model.LocationAvailability
 import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.domain.model.PollenDomain
+import io.github.kroune.pollen.domain.model.TileRingQuery
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MapAreaSkeleton
 import io.github.kroune.pollen.presentation.common.rememberLocationPermissionLauncher
-import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlin.math.absoluteValue
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -75,24 +80,23 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent,
     ) { _ ->
-        val allFailed = state.pollens is LoadState.Failed && state.pins is LoadState.Failed
-        if (allFailed) {
-            FullScreenError(onRetry = viewModel::loadData)
-            return@Scaffold
-        }
-
         val density = LocalDensity.current
         var overlayBottom by remember { mutableStateOf(0.dp) }
         var bearing by remember { mutableStateOf(0f) }
         var resetTrigger by remember { mutableStateOf(0) }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            when (state.pins) {
+            when (val pins = state.pins) {
                 is LoadState.Loading -> MapAreaSkeleton(modifier = Modifier.fillMaxSize())
+                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
                 is LoadState.Loaded -> {
+                    val ringQuery = when (val rq = state.ringQuery) {
+                        is LoadState.Loaded -> rq.data
+                        else -> TileRingQuery.EMPTY
+                    }
                     PlatformMapView(
-                        pins = (state.pins as LoadState.Loaded).data,
-                        polygons = (state.polygons as? LoadState.Loaded)?.data ?: emptyList(),
+                        pins = pins.data,
+                        ringQuery = ringQuery,
                         onPinClick = {},
                         modifier = Modifier.fillMaxSize(),
                         overlayBottomY = overlayBottom,
@@ -105,7 +109,6 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
                         centerOnUserTrigger = state.centerOnUserTrigger,
                     )
                 }
-                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
             }
 
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
@@ -308,7 +311,6 @@ private fun SeverityLegend(modifier: Modifier = Modifier) {
                     )
                     Spacer(Modifier.width(6.dp))
                     val severityLabel = when (level) {
-                        0 -> stringResource(MR.strings.severity_none_short)
                         1 -> stringResource(MR.strings.severity_low_short)
                         2 -> stringResource(MR.strings.severity_medium_short)
                         3 -> stringResource(MR.strings.severity_high_short)
@@ -382,3 +384,53 @@ private fun MapCompass(
         }
     }
 }
+
+// ── Previews ────────────────────────────────────────────────────────
+
+private val previewHashtags = persistentListOf(
+    HashTagDomain(id = "1", value = "#берёза", name = "Birch"),
+    HashTagDomain(id = "2", value = "#ольха", name = "Alder"),
+    HashTagDomain(id = "3", value = "#злаки", name = "Grasses"),
+)
+
+private val previewPollens = persistentListOf(
+    PollenDomain(id = 1, name = "Берёза", description = "", maxLevel = 4, levels = emptyList()),
+    PollenDomain(id = 2, name = "Ольха", description = "", maxLevel = 4, levels = emptyList()),
+    PollenDomain(id = 3, name = "Злаки", description = "", maxLevel = 3, levels = emptyList()),
+)
+
+@Preview
+@Composable
+private fun PreviewHashtagFilterRow() {
+    PollenTheme {
+        Box(Modifier.background(Color.White)) {
+            HashtagFilterRow(
+                state = MapUiState(
+                    hashtags = LoadState.Loaded(previewHashtags),
+                    activeHashtagIndices = persistentSetOf(1),
+                ),
+                onToggle = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewAllergenSelectorChip() {
+    PollenTheme {
+        Box(Modifier.background(Color.White).padding(16.dp)) {
+            AllergenSelectorChip(
+                state = MapUiState(
+                    pollens = LoadState.Loaded(previewPollens),
+                    selectedAllergenIndex = 0,
+                ),
+                onToggleDropdown = {},
+                onDismissDropdown = {},
+                onSelectAllergen = {},
+            )
+        }
+    }
+}
+
+
