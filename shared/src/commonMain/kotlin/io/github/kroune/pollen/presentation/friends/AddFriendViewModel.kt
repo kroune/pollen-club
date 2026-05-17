@@ -3,13 +3,13 @@ package io.github.kroune.pollen.presentation.friends
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import co.touchlab.kermit.Logger
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.repository.FriendsRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.qr.QrScanResult
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class AddFriendTab { QR, MANUAL }
+
 @Stable
 data class AddFriendUiState(
     val friendIdInput: String = "",
@@ -26,6 +28,7 @@ data class AddFriendUiState(
     val myServerId: String = "",
     val isSubmitting: Boolean = false,
     val isSuccess: Boolean = false,
+    val selectedTab: AddFriendTab = AddFriendTab.QR,
 )
 
 class AddFriendViewModel(
@@ -47,9 +50,32 @@ class AddFriendViewModel(
                 _state.update { it.copy(myServerId = serverId) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
-                Logger.withTag("AddFriendVM").w(e) { "Failed to load user ID" }
+            } catch (_: Exception) {
+                _events.send(UiEvent.ShowError(MR.strings.error_load_friends.desc()))
             }
+        }
+    }
+
+    fun onTabSelected(tab: AddFriendTab) {
+        _state.update { it.copy(selectedTab = tab) }
+    }
+
+    fun onQrScanned(result: QrScanResult) {
+        when (result) {
+            is QrScanResult.Success -> {
+                val scannedId = result.value.filter { it.isDigit() }.take(MAX_FRIEND_ID_LENGTH)
+                if (scannedId.isNotBlank()) {
+                    _state.update {
+                        it.copy(friendIdInput = scannedId, selectedTab = AddFriendTab.MANUAL)
+                    }
+                }
+            }
+            is QrScanResult.Error -> {
+                viewModelScope.launch {
+                    _events.send(UiEvent.ShowError(MR.strings.error_qr_scan.desc()))
+                }
+            }
+            is QrScanResult.Cancelled -> { /* no-op */ }
         }
     }
 

@@ -46,8 +46,10 @@ import io.github.kroune.pollen.presentation.reference.ReferenceScreen
 import io.github.kroune.pollen.presentation.sensitivity.SensitivityScreen
 import io.github.kroune.pollen.presentation.settings.SettingsLanguageScreen
 import io.github.kroune.pollen.presentation.AddFriendRoute
+import io.github.kroune.pollen.presentation.MyQrRoute
 import io.github.kroune.pollen.presentation.friends.AddFriendScreen
 import io.github.kroune.pollen.presentation.friends.FriendsListScreen
+import io.github.kroune.pollen.presentation.friends.MyQrScreen
 import io.github.kroune.pollen.presentation.settings.RegionSelectorScreen
 import io.github.kroune.pollen.presentation.settings.SettingsScreen
 import org.koin.compose.viewmodel.koinViewModel
@@ -189,6 +191,14 @@ fun App() {
                     entry<AddFriendRoute> {
                         Box(Modifier.padding(innerPadding).fillMaxSize()) {
                             AddFriendScreen(
+                                onBack = { backStack.removeLastOrNull() },
+                                onNavigateToMyQr = { backStack.add(MyQrRoute) },
+                            )
+                        }
+                    }
+                    entry<MyQrRoute> {
+                        Box(Modifier.padding(innerPadding).fillMaxSize()) {
+                            MyQrScreen(
                                 onBack = { backStack.removeLastOrNull() },
                             )
                         }

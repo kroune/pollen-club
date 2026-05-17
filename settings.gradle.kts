@@ -35,3 +35,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":androidApp")
 include(":shared")
+include(":theme")
+include(":qr-api")
+include(":qr-gms")
+include(":qr-foss")

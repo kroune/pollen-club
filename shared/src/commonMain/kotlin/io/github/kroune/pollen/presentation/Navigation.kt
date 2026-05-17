@@ -69,6 +69,10 @@ data object SettingsFriendsRoute : NavKey
 data object AddFriendRoute : NavKey
 
 @Serializable
+@SerialName("my_qr")
+data object MyQrRoute : NavKey
+
+@Serializable
 @SerialName("reference")
 data object ReferenceRoute : NavKey
 
@@ -105,6 +109,7 @@ val navSerializersModule = SerializersModule {
         subclass(SettingsLanguageRoute::class, SettingsLanguageRoute.serializer())
         subclass(SettingsFriendsRoute::class, SettingsFriendsRoute.serializer())
         subclass(AddFriendRoute::class, AddFriendRoute.serializer())
+        subclass(MyQrRoute::class, MyQrRoute.serializer())
         subclass(ReferenceRoute::class, ReferenceRoute.serializer())
         subclass(ForecastDetailRoute::class, ForecastDetailRoute.serializer())
     }

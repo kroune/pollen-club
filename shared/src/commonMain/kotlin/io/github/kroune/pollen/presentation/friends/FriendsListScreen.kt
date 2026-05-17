@@ -1,7 +1,6 @@
 package io.github.kroune.pollen.presentation.friends
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +55,8 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.Feeling
 import io.github.kroune.pollen.domain.model.LoadState
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FriendsListSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
@@ -344,40 +345,39 @@ private fun FriendRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val name = friend.name
-            val monogram = name?.first()?.uppercase() ?: "ID"
-            val displayName = name ?: "ID: ${friend.friendId}"
-
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(PollenTheme.colors.paper2)
-                    .border(1.dp, PollenTheme.colors.line2, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = monogram,
-                    fontSize = if (name != null) 15.sp else 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = PollenTheme.colors.ink2,
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
+            val clipboardManager = LocalClipboardManager.current
+            val displayName = friend.name ?: "ID ${friend.friendId}"
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = displayName,
-                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     color = PollenTheme.colors.ink,
                 )
-                Text(
-                    text = "ID: ${friend.friendId}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = PollenTheme.colors.ink3,
-                )
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${friend.friendId}",
+                        fontSize = 12.sp,
+                        color = PollenTheme.colors.ink3,
+                        letterSpacing = 0.3.sp,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(MR.strings.friends_copy),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = PollenTheme.colors.accent2,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(PollenTheme.colors.accentLight)
+                            .clickable {
+                                clipboardManager.setText(AnnotatedString("${friend.friendId}"))
+                            }
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             }
 
             if (friend.lastPinFeeling != null) {
@@ -495,7 +495,7 @@ private fun FriendsEmptyState(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = stringResource(MR.strings.friends_empty_body),
+            text = stringResource(MR.strings.friends_empty_body_qr),
             style = MaterialTheme.typography.bodySmall,
             color = PollenTheme.colors.ink3,
             lineHeight = 18.sp,
@@ -533,23 +533,13 @@ private fun FriendsEmptyState(
 
         if (myServerId.isNotBlank()) {
             HorizontalDivider(color = PollenTheme.colors.line2)
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = stringResource(MR.strings.friends_your_id_for_friends),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = PollenTheme.colors.ink3,
-                letterSpacing = 1.2.sp,
+            Spacer(Modifier.height(16.dp))
+            YourCodeForFriends(
+                myServerId = myServerId,
+                qrSize = 60.dp,
+                modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = myServerId,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = PollenTheme.colors.ink,
-                letterSpacing = 1.sp,
-            )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
