@@ -55,6 +55,7 @@ import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MapAreaSkeleton
 import io.github.kroune.pollen.presentation.common.rememberLocationPermissionLauncher
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlin.math.absoluteValue
 import org.koin.compose.viewmodel.koinViewModel
@@ -324,6 +325,33 @@ private fun SeverityLegend(modifier: Modifier = Modifier) {
         }
     }
 }
+
+// region Previews
+
+@Preview
+@Composable
+private fun PreviewSeverityLegend() {
+    PollenTheme {
+        Box(Modifier.padding(16.dp)) {
+            SeverityLegend()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewMapCompass() {
+    PollenTheme {
+        Box(Modifier.padding(16.dp)) {
+            MapCompass(
+                bearingProvider = { 45f },
+                onClick = {},
+            )
+        }
+    }
+}
+
+// endregion
 
 @Composable
 private fun MapCompass(

@@ -55,6 +55,7 @@ import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.DayStripSkeleton
@@ -67,6 +68,7 @@ import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import org.koin.compose.viewmodel.koinViewModel
 
+/** ViewModel convenience overload — used by navigation. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -80,14 +82,49 @@ fun HomeScreen(
 
     CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
 
+    HomeScreen(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onRefresh = viewModel::loadData,
+        onLocationClick = viewModel::showLocationPicker,
+        onSelectLocation = viewModel::selectLocation,
+        onDismissLocationPicker = viewModel::dismissLocationPicker,
+        onDaySelected = viewModel::selectDay,
+        onPreviousWeek = { viewModel.shiftWeek(-1) },
+        onNextWeek = { viewModel.shiftWeek(1) },
+        onAllergenAdd = viewModel::addAllergen,
+        onNavigateToForecast = onNavigateToForecast,
+        onNavigateToAllergenSettings = onNavigateToAllergenSettings,
+        onNavigateToSettings = onNavigateToSettings,
+    )
+}
+
+/** State-based overload — previewable and testable without a ViewModel. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    state: HomeUiState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onRefresh: () -> Unit = {},
+    onLocationClick: () -> Unit = {},
+    onSelectLocation: (LocationDomain) -> Unit = {},
+    onDismissLocationPicker: () -> Unit = {},
+    onDaySelected: (Int) -> Unit = {},
+    onPreviousWeek: () -> Unit = {},
+    onNextWeek: () -> Unit = {},
+    onAllergenAdd: (pollenId: Int) -> Unit = {},
+    onNavigateToForecast: (pollenId: Int) -> Unit = {},
+    onNavigateToAllergenSettings: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+) {
     if (state.showLocationPicker) {
         val locations = state.locations
         if (locations is LoadState.Loaded) {
             LocationPickerDialog(
                 locations = locations.data,
                 selectedLocation = state.selectedLocation,
-                onSelect = viewModel::selectLocation,
-                onDismiss = viewModel::dismissLocationPicker,
+                onSelect = onSelectLocation,
+                onDismiss = onDismissLocationPicker,
             )
         }
     }
@@ -97,13 +134,13 @@ fun HomeScreen(
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
         if (allFailed) {
-            FullScreenError(onRetry = viewModel::loadData)
+            FullScreenError(onRetry = onRefresh)
             return@Scaffold
         }
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
-            onRefresh = viewModel::loadData,
+            onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize(),
         ) {
             LazyColumn(
@@ -118,7 +155,7 @@ fun HomeScreen(
                         is LoadState.Loaded, is LoadState.Failed -> {
                             LocationRow(
                                 locationName = state.selectedLocation?.name ?: "—",
-                                onLocationClick = viewModel::showLocationPicker,
+                                onLocationClick = onLocationClick,
                                 onSettingsClick = onNavigateToSettings,
                             )
                         }
@@ -139,14 +176,14 @@ fun HomeScreen(
                                     days = forecasts.data,
                                     activeDayIndex = state.activeDayIndex,
                                     weekLabel = state.weekLabel.localized(),
-                                    onDaySelected = viewModel::selectDay,
-                                    onPreviousWeek = { viewModel.shiftWeek(-1) },
-                                    onNextWeek = { viewModel.shiftWeek(1) },
+                                    onDaySelected = onDaySelected,
+                                    onPreviousWeek = onPreviousWeek,
+                                    onNextWeek = onNextWeek,
                                 )
                             }
                         }
                         is LoadState.Failed -> {
-                            ErrorBanner(onRetry = viewModel::loadData)
+                            ErrorBanner(onRetry = onRefresh)
                         }
                     }
                 }
@@ -176,7 +213,7 @@ fun HomeScreen(
                             }
                         }
                         is LoadState.Failed -> {
-                            ErrorBanner(onRetry = viewModel::loadData)
+                            ErrorBanner(onRetry = onRefresh)
                         }
                     }
                 }
@@ -221,7 +258,7 @@ fun HomeScreen(
                                 item {
                                     OtherAllergensSection(
                                         allergens = state.otherAllergens,
-                                        onAllergenAdd = viewModel::addAllergen,
+                                        onAllergenAdd = onAllergenAdd,
                                         modifier = Modifier.padding(horizontal = 16.dp),
                                     )
                                 }
@@ -229,7 +266,7 @@ fun HomeScreen(
                         }
                     }
                     is LoadState.Failed -> {
-                        item { ErrorBanner(onRetry = viewModel::loadData) }
+                        item { ErrorBanner(onRetry = onRefresh) }
                     }
                 }
 

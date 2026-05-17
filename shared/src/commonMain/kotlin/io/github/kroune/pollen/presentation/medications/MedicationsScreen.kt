@@ -51,9 +51,11 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.presentation.common.CollectEvents
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.common.MedicationListSkeleton
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -72,66 +74,85 @@ fun MedicationsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
     ) { _ ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                TopBar(onBack = onBack)
+        MedicationsScreen(
+            state = state,
+            onBack = onBack,
+            onSearchQueryChanged = viewModel::onSearchQueryChanged,
+            onToggleTaken = viewModel::toggleTakenToday,
+            onToggleSheetExpanded = viewModel::toggleSheetExpanded,
+            onRemoveDose = viewModel::removeTodayDose,
+        )
+    }
+}
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 14.dp, bottom = 64.dp),
-                ) {
-                    SearchField(
-                        query = state.searchQuery,
-                        onQueryChanged = viewModel::onSearchQueryChanged,
+@Composable
+fun MedicationsScreen(
+    state: MedicationsUiState,
+    onBack: () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
+    onToggleTaken: (Long) -> Unit,
+    onToggleSheetExpanded: () -> Unit,
+    onRemoveDose: (Long) -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopBar(onBack = onBack)
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 14.dp, bottom = 64.dp),
+            ) {
+                SearchField(
+                    query = state.searchQuery,
+                    onQueryChanged = onSearchQueryChanged,
+                )
+                Spacer(Modifier.height(18.dp))
+
+                SectionHeader(stringResource(MR.strings.medications_your_meds))
+                Spacer(Modifier.height(8.dp))
+                when (val meds = state.recentMeds) {
+                    is LoadState.Loading -> MedicationListSkeleton()
+                    is LoadState.Failed -> MedicationListSkeleton(count = 2)
+                    is LoadState.Loaded -> RecentMedsList(
+                        meds = meds.data,
+                        onToggleTaken = onToggleTaken,
                     )
-                    Spacer(Modifier.height(18.dp))
+                }
 
-                    SectionHeader(stringResource(MR.strings.medications_your_meds))
-                    Spacer(Modifier.height(8.dp))
-                    when (val meds = state.recentMeds) {
-                        is LoadState.Loading -> MedicationListSkeleton()
-                        is LoadState.Failed -> MedicationListSkeleton(count = 2)
-                        is LoadState.Loaded -> RecentMedsList(
-                            meds = meds.data,
-                            onToggleTaken = viewModel::toggleTakenToday,
-                        )
-                    }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = PollenTheme.colors.line2)
+                Spacer(Modifier.height(12.dp))
 
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = PollenTheme.colors.line2)
-                    Spacer(Modifier.height(12.dp))
-
-                    SectionHeader(stringResource(MR.strings.medications_categories))
-                    Spacer(Modifier.height(8.dp))
-                    when (val cats = state.categories) {
-                        is LoadState.Loading -> MedicationListSkeleton(count = 3)
-                        is LoadState.Failed -> MedicationListSkeleton(count = 3)
-                        is LoadState.Loaded -> CategoriesCard(categories = cats.data)
-                    }
+                SectionHeader(stringResource(MR.strings.medications_categories))
+                Spacer(Modifier.height(8.dp))
+                when (val cats = state.categories) {
+                    is LoadState.Loading -> MedicationListSkeleton(count = 3)
+                    is LoadState.Failed -> MedicationListSkeleton(count = 3)
+                    is LoadState.Loaded -> CategoriesCard(categories = cats.data)
                 }
             }
+        }
 
-            if (state.isSheetExpanded) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .clickable(onClick = viewModel::toggleSheetExpanded),
-                )
-            }
-
-            TodaySheet(
-                doses = state.todayDoses,
-                todayCount = state.todayCount,
-                isExpanded = state.isSheetExpanded,
-                onToggleExpand = viewModel::toggleSheetExpanded,
-                onRemoveDose = viewModel::removeTodayDose,
-                modifier = Modifier.align(Alignment.BottomCenter),
+        if (state.isSheetExpanded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .clickable(onClick = onToggleSheetExpanded),
             )
         }
+
+        TodaySheet(
+            doses = state.todayDoses,
+            todayCount = state.todayCount,
+            isExpanded = state.isSheetExpanded,
+            onToggleExpand = onToggleSheetExpanded,
+            onRemoveDose = onRemoveDose,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -361,6 +382,101 @@ private fun CategoriesCard(categories: ImmutableList<MedCategoryUi>) {
         }
     }
 }
+
+// region Previews
+
+private val previewMeds = persistentListOf(
+    RecentMedUi(1, "Цетрин", "Цетиризин", "вчера", 12, true),
+    RecentMedUi(2, "Назонекс", "Мометазон", "3 дня назад", 5, false),
+    RecentMedUi(3, "Кромогексал", "Кромоглициевая к-та", "неделю назад", 2, false),
+)
+
+private val previewCategories = persistentListOf(
+    MedCategoryUi(1, "Антигистаминные"),
+    MedCategoryUi(2, "Назальные спреи"),
+    MedCategoryUi(3, "Глазные капли"),
+)
+
+private val previewDoses = persistentListOf(
+    TodayDoseUi(1, "Цетрин", "10 мг", 'Ц'),
+    TodayDoseUi(2, "Назонекс", "50 мкг", 'Н'),
+)
+
+@Preview
+@Composable
+private fun PreviewMedicationsRecentMeds() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            SectionHeader(stringResource(MR.strings.medications_your_meds))
+            Spacer(Modifier.height(8.dp))
+            RecentMedsList(meds = previewMeds, onToggleTaken = {})
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewMedicationsCategories() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            SectionHeader(stringResource(MR.strings.medications_categories))
+            Spacer(Modifier.height(8.dp))
+            CategoriesCard(categories = previewCategories)
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewMedicationsTodaySheetCollapsed() {
+    PollenTheme {
+        TodaySheet(
+            doses = previewDoses,
+            todayCount = 2,
+            isExpanded = false,
+            onToggleExpand = {},
+            onRemoveDose = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewMedicationsTodaySheetExpanded() {
+    PollenTheme {
+        TodaySheet(
+            doses = previewDoses,
+            todayCount = 2,
+            isExpanded = true,
+            onToggleExpand = {},
+            onRemoveDose = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewMedicationsFull() {
+    PollenTheme {
+        MedicationsScreen(
+            state = MedicationsUiState(
+                recentMeds = LoadState.Loaded(previewMeds),
+                categories = LoadState.Loaded(previewCategories),
+                todayDoses = previewDoses,
+                todayCount = previewDoses.size,
+                searchQuery = "",
+                isSheetExpanded = false,
+            ),
+            onBack = {},
+            onSearchQueryChanged = {},
+            onToggleTaken = {},
+            onToggleSheetExpanded = {},
+            onRemoveDose = {},
+        )
+    }
+}
+
+// endregion
 
 // region Bottom sheet
 

@@ -63,18 +63,25 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.ExpertRegistry
 import io.github.kroune.pollen.domain.model.FeedDataDomain
+import io.github.kroune.pollen.domain.model.ExpertInfoDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.MediaType
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FeedListSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.domain.model.CommentDomain
+import io.github.kroune.pollen.domain.model.VkPostDomain
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.friends.FriendsListContent
+import io.github.kroune.pollen.presentation.theme.PollenTheme
 import io.github.kroune.pollen.util.formatDateLocalized
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun FeedScreen(
     onNavigateToAddFriend: () -> Unit = {},
@@ -83,10 +90,33 @@ fun FeedScreen(
     val uiState by viewModel.uiState.collectAsState()
     val locale by viewModel.locale.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::refresh)
 
+    FeedScreen(
+        state = uiState,
+        locale = locale,
+        onRefresh = viewModel::refresh,
+        snackbarHostState = snackbarHostState,
+        friendsTabContent = {
+            FriendsListContent(
+                onNavigateToAddFriend = onNavigateToAddFriend,
+                snackbarHostState = snackbarHostState,
+            )
+        },
+    )
+}
+
+/** State-based overload — previewable and testable. */
+@Composable
+fun FeedScreen(
+    state: FeedUiState,
+    locale: AppLocale,
+    onRefresh: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    friendsTabContent: @Composable (() -> Unit)? = null,
+) {
+    val scope = rememberCoroutineScope()
     val tabTitles = listOf(
         stringResource(MR.strings.feed_tab_news),
         stringResource(MR.strings.feed_tab_feed),
@@ -112,15 +142,12 @@ fun FeedScreen(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (page) {
-                    2 -> FriendsListContent(
-                        onNavigateToAddFriend = onNavigateToAddFriend,
-                        snackbarHostState = snackbarHostState,
-                    )
+                    2 -> friendsTabContent?.invoke() ?: Box(Modifier.fillMaxSize())
                     else -> FeedTabPage(
-                        feed = uiState.feed,
+                        feed = state.feed,
                         page = page,
                         locale = locale,
-                        onRetry = viewModel::refresh,
+                        onRetry = onRefresh,
                     )
                 }
             }
@@ -410,3 +437,138 @@ private fun MediaVideo(
         )
     }
 }
+
+// region Previews
+
+@Preview
+@Composable
+private fun PreviewFeedScreenLoading() {
+    PollenTheme {
+        FeedScreen(
+            state = FeedUiState(feed = LoadState.Loading),
+            locale = AppLocale.RU,
+            onRefresh = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFeedScreenLoaded() {
+    val feed = FeedDataDomain(
+        comments = persistentListOf(
+            CommentDomain(
+                id = 1,
+                date = "2026-05-14",
+                expertId = 1,
+                expert = ExpertInfoDomain(name = "Ирина", title = "к.м.н."),
+                text = "Концентрация пыльцы берёзы достигла средних значений.",
+                locationId = 1,
+                pinned = true,
+            ),
+        ),
+        vkPosts = persistentListOf(
+            VkPostDomain(
+                id = 1,
+                date = "2026-05-14",
+                location = "Москва",
+                content = "Сегодня зафиксировано повышенное содержание пыльцы.",
+            ),
+        ),
+    )
+    PollenTheme {
+        FeedScreen(
+            state = FeedUiState(feed = LoadState.Loaded(feed)),
+            locale = AppLocale.RU,
+            onRefresh = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFeedScreenFailed() {
+    PollenTheme {
+        FeedScreen(
+            state = FeedUiState(feed = LoadState.Failed),
+            locale = AppLocale.RU,
+            onRefresh = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFeedTabLoading() {
+    PollenTheme {
+        FeedTabPage(
+            feed = LoadState.Loading,
+            page = 0,
+            locale = AppLocale.RU,
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFeedTabFailed() {
+    PollenTheme {
+        FeedTabPage(
+            feed = LoadState.Failed,
+            page = 0,
+            locale = AppLocale.RU,
+            onRetry = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewNewsPageLoaded() {
+    val feed = FeedDataDomain(
+        comments = persistentListOf(
+            CommentDomain(
+                id = 1,
+                date = "2026-05-14",
+                expertId = 1,
+                expert = ExpertInfoDomain(name = "Ирина", title = "к.м.н."),
+                text = "Концентрация пыльцы берёзы достигла средних значений. Аллергикам рекомендуется носить маску на улице.",
+                locationId = 1,
+                pinned = true,
+            ),
+            CommentDomain(
+                id = 2,
+                date = "2026-05-13",
+                expertId = 2,
+                expert = ExpertInfoDomain(name = "Алексей", title = "аллерголог"),
+                text = "Орешник закончил пыление. Ольха на спаде.",
+                locationId = 1,
+                pinned = false,
+            ),
+        ),
+    )
+    PollenTheme {
+        NewsPage(feed = feed, locale = AppLocale.RU)
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewFeedPageLoaded() {
+    val feed = FeedDataDomain(
+        vkPosts = persistentListOf(
+            VkPostDomain(
+                id = 1,
+                date = "2026-05-14",
+                location = "Москва",
+                content = "Сегодня на станции мониторинга зафиксировано повышенное содержание пыльцы.",
+            ),
+        ),
+    )
+    PollenTheme {
+        FeedPage(feed = feed, locale = AppLocale.RU)
+    }
+}
+
+// endregion

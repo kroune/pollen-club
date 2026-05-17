@@ -20,6 +20,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -49,59 +50,69 @@ class ReferenceViewModel(
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
+    private val _refreshTrigger = MutableStateFlow(0)
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val state: StateFlow<ReferenceUiState> = combine(
-        pollenRepository.observePollens(),
-        pollenRepository.observeEnglishNames(),
-        userRepository.observeUser().flatMapLatest { user ->
-            val locationId = user?.location?.takeIf { it > 0 }
-            if (locationId != null) {
-                combine(
-                    pollenRepository.observeLevelsForLocation(locationId),
-                    pollenRepository.observeForecastsForLocation(locationId),
-                ) { levels, forecasts ->
-                    val levelMap = levels.associateBy { it.pollenId }
-                    val forecastMap = forecasts.associateBy { it.pollenId }
-                    levelMap.keys.union(forecastMap.keys).associateWith { pid ->
-                        levelMap[pid] ?: forecastMap[pid]!!
+    val state: StateFlow<ReferenceUiState> = _refreshTrigger.flatMapLatest {
+        combine(
+            pollenRepository.observePollens(),
+            pollenRepository.observeEnglishNames(),
+            userRepository.observeUser().flatMapLatest { user ->
+                val locationId = user?.location?.takeIf { it > 0 }
+                if (locationId != null) {
+                    combine(
+                        pollenRepository.observeLevelsForLocation(locationId),
+                        pollenRepository.observeForecastsForLocation(locationId),
+                    ) { levels, forecasts ->
+                        val levelMap = levels.associateBy { it.pollenId }
+                        val forecastMap = forecasts.associateBy { it.pollenId }
+                        levelMap.keys.union(forecastMap.keys).associateWith { pid ->
+                            levelMap[pid] ?: forecastMap[pid]!!
+                        }
                     }
+                } else {
+                    kotlinx.coroutines.flow.flowOf(emptyMap())
                 }
-            } else {
-                kotlinx.coroutines.flow.flowOf(emptyMap())
-            }
-        },
-        _searchQuery,
-    ) { pollens, engNames, levelMap, query ->
-        val allergens = pollens.map { pollen ->
-            val currentLevel = levelMap[pollen.id]?.value ?: 0
-            val engName = engNames[pollen.id] ?: ""
-            val label: StringDesc = if (currentLevel > 0) {
-                pollen.levels.firstOrNull { it.level == currentLevel }?.name
-                    ?.let { StringDesc.Raw(it) }
-                    ?: MR.strings.status_not_active.desc()
-            } else {
-                MR.strings.status_not_active.desc()
-            }
-            ReferenceAllergenUi(
-                pollenId = pollen.id,
-                name = pollen.name,
-                nameEng = engName,
-                description = pollen.description,
-                iconRes = PollenIconRegistry.iconFor(pollen.id),
-                severityLevel = currentLevel,
-                severityLabel = label,
-            )
-        }.toImmutableList()
+            },
+            _searchQuery,
+        ) { pollens, engNames, levelMap, query ->
+            val allergens = pollens.map { pollen ->
+                val currentLevel = levelMap[pollen.id]?.value ?: 0
+                val engName = engNames[pollen.id] ?: ""
+                val label: StringDesc = if (currentLevel > 0) {
+                    pollen.levels.firstOrNull { it.level == currentLevel }?.name
+                        ?.let { StringDesc.Raw(it) }
+                        ?: MR.strings.status_not_active.desc()
+                } else {
+                    MR.strings.status_not_active.desc()
+                }
+                ReferenceAllergenUi(
+                    pollenId = pollen.id,
+                    name = pollen.name,
+                    nameEng = engName,
+                    description = pollen.description,
+                    iconRes = PollenIconRegistry.iconFor(pollen.id),
+                    severityLevel = currentLevel,
+                    severityLabel = label,
+                )
+            }.toImmutableList()
 
-        ReferenceUiState(
-            allergens = LoadState.Loaded(allergens),
-            searchQuery = query,
-        )
+            ReferenceUiState(
+                allergens = LoadState.Loaded(allergens),
+                searchQuery = query,
+            )
+        }.catch {
+            emit(ReferenceUiState(allergens = LoadState.Failed))
+            _events.send(UiEvent.ShowError(MR.strings.error_load_reference.desc()))
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReferenceUiState())
+
+    fun loadData() {
+        _refreshTrigger.value++
+    }
 
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query

@@ -28,9 +28,11 @@ import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import org.koin.compose.viewmodel.koinViewModel
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun SettingsLanguageScreen(
     viewModel: SettingsLanguageViewModel = koinViewModel(),
@@ -38,6 +40,20 @@ fun SettingsLanguageScreen(
 ) {
     val currentLocale by viewModel.locale.collectAsState()
 
+    SettingsLanguageScreen(
+        currentLocale = currentLocale,
+        onBack = onBack,
+        onSetLocale = viewModel::setLocale,
+    )
+}
+
+/** State-based overload — previewable and testable. */
+@Composable
+fun SettingsLanguageScreen(
+    currentLocale: AppLocale,
+    onBack: () -> Unit = {},
+    onSetLocale: (AppLocale) -> Unit = {},
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -74,18 +90,38 @@ fun SettingsLanguageScreen(
                 LanguageRow(
                     label = stringResource(MR.strings.language_russian),
                     isSelected = currentLocale == AppLocale.RU,
-                    onClick = { viewModel.setLocale(AppLocale.RU) },
+                    onClick = { onSetLocale(AppLocale.RU) },
                 )
                 HorizontalDivider(color = PollenTheme.colors.line2)
                 LanguageRow(
                     label = stringResource(MR.strings.language_english),
                     isSelected = currentLocale == AppLocale.EN,
-                    onClick = { viewModel.setLocale(AppLocale.EN) },
+                    onClick = { onSetLocale(AppLocale.EN) },
                 )
             }
         }
     }
 }
+
+// region Previews
+
+@Preview
+@Composable
+private fun PreviewSettingsLanguageRu() {
+    PollenTheme {
+        SettingsLanguageScreen(currentLocale = AppLocale.RU)
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSettingsLanguageEn() {
+    PollenTheme {
+        SettingsLanguageScreen(currentLocale = AppLocale.EN)
+    }
+}
+
+// endregion
 
 @Composable
 private fun LanguageRow(

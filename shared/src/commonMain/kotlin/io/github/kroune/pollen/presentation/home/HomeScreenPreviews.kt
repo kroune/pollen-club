@@ -12,12 +12,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.domain.model.LevelDomain
+import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.PollenLevelDomain
 import io.github.kroune.pollen.domain.model.WeatherDomain
-import dev.icerock.moko.resources.desc.Raw
-import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -152,7 +154,37 @@ private fun PreviewOtherAllergenPills() {
 
 @Preview
 @Composable
-private fun PreviewHomeScreenFull() {
+private fun PreviewConfigureAllergensCard() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            ConfigureAllergensCard(onClick = {})
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSectionHeader() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            SectionHeader(title = "ВАШИ АЛЛЕРГЕНЫ", actionLabel = "настроить")
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewAllergenPill() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            AllergenPill(name = "Берёза")
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewHomeScreenLoaded() {
     val days = persistentListOf(
         HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, "2026-04-23"),
         HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, "2026-04-24"),
@@ -176,43 +208,34 @@ private fun PreviewHomeScreenFull() {
         previewPollen.copy(id = 9, name = "Кладоспориум"),
         previewPollen.copy(id = 10, name = "Альтернария"),
     )
+    val state = HomeUiState(
+        selectedLocation = LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
+        locations = LoadState.Loaded(
+            persistentListOf(
+                LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
+            ),
+        ),
+        pollens = LoadState.Loaded(
+            (allergens.map { it.pollen } + others).toImmutableList(),
+        ),
+        dayForecasts = LoadState.Loaded(days),
+        personalIndex = LoadState.Loaded(
+            HomePersonalIndexUi(score = "5,2", severityLevel = 2, label = StringDesc.Raw("Средний")),
+        ),
+        userAllergens = allergens,
+        otherAllergens = others,
+        activeDayIndex = 3,
+        weekLabel = StringDesc.Raw("21–27 Apr"),
+    )
     PollenTheme {
-        Column(
-            Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxWidth(),
-        ) {
-            LocationRow(locationName = "Москва", onLocationClick = {}, onSettingsClick = {})
-            DayStrip(
-                days = days,
-                activeDayIndex = 3,
-                weekLabel = "21–27 Apr",
-                onDaySelected = {},
-                onPreviousWeek = {},
-                onNextWeek = {},
-            )
-            PersonalIndexCard(
-                score = "5,2",
-                severityLevel = 2,
-                label = "Средний",
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            SectionHeader(
-                title = "ВАШИ АЛЛЕРГЕНЫ",
-                actionLabel = "настроить",
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            AllergenListCard(
-                allergens = allergens,
-                onAllergenClick = {},
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            OtherAllergensSection(
-                allergens = others,
-                onAllergenAdd = {},
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            Spacer(Modifier.height(16.dp))
-        }
+        HomeScreen(state = state)
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewHomeScreenLoading() {
+    PollenTheme {
+        HomeScreen(state = HomeUiState())
     }
 }

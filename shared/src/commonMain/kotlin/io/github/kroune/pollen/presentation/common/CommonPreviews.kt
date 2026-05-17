@@ -128,3 +128,53 @@ private fun PreviewMapAreaSkeleton() {
         }
     }
 }
+
+@Preview
+@Composable
+private fun PreviewPersonalIndexCardSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            PersonalIndexCardSkeleton()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewDayStripSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background)) {
+            DayStripSkeleton()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewForecastDetailHeaderSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            ForecastDetailHeaderSkeleton()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewForecastDetailChartSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background)) {
+            ForecastDetailChartSkeleton()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewForecastDetailStatsSkeleton() {
+    PollenTheme {
+        Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
+            ForecastDetailStatsSkeleton()
+        }
+    }
+}

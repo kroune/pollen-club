@@ -50,6 +50,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
@@ -94,8 +95,10 @@ import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.detail.DetailStatsUi
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDate
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun ForecastDetailScreen(
     viewModel: ForecastDetailViewModel,
@@ -105,6 +108,24 @@ fun ForecastDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
 
+    ForecastDetailScreen(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onBack = onBack,
+        onToggleFeeling = viewModel::toggleFeelingLine,
+        onRetry = viewModel::loadData,
+    )
+}
+
+/** State-based overload — previewable and testable without a ViewModel. */
+@Composable
+fun ForecastDetailScreen(
+    state: ForecastDetailUiState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onBack: () -> Unit = {},
+    onToggleFeeling: () -> Unit = {},
+    onRetry: () -> Unit = {},
+) {
     val pollenState = state.pollen
 
     Scaffold(
@@ -125,7 +146,7 @@ fun ForecastDetailScreen(
             }
             is LoadState.Failed -> {
                 Box(Modifier.padding(innerPadding)) {
-                    FullScreenError(onRetry = viewModel::loadData)
+                    FullScreenError(onRetry = onRetry)
                 }
             }
             is LoadState.Loaded -> {
@@ -134,8 +155,8 @@ fun ForecastDetailScreen(
                     pollenName = pollenState.data.name,
                     pollenIcon = state.pollenIconRes,
                     onBack = onBack,
-                    onToggleFeeling = viewModel::toggleFeelingLine,
-                    onRetry = viewModel::loadData,
+                    onToggleFeeling = onToggleFeeling,
+                    onRetry = onRetry,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -806,3 +827,67 @@ private class EdgeAwareItemPlacer(
         maxLabelWidth: Float,
     ) = delegate.getEndLayerMargin(context, layerDimensions, tickThickness, maxLabelWidth)
 }
+
+// region Previews
+
+@Preview
+@Composable
+private fun PreviewForecastDetailLoading() {
+    PollenTheme {
+        ForecastDetailScreen(
+            state = ForecastDetailUiState(
+                pollen = LoadState.Loading,
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewForecastDetailLoaded() {
+    PollenTheme {
+        ForecastDetailScreen(
+            state = ForecastDetailUiState(
+                pollen = LoadState.Loaded(
+                    ForecastDetailPollenUi(
+                        name = "Берёза",
+                        maxLevel = 4,
+                        severityLabels = mapOf(
+                            0 to "Нулевой",
+                            1 to "Низкий",
+                            2 to "Средний",
+                            3 to "Высокий",
+                            4 to "Очень высокий",
+                        ),
+                    ),
+                ),
+                timeline = LoadState.Loaded(persistentListOf()),
+                today = LocalDate(2026, 5, 14),
+                currentScore = "3",
+                currentScoreMax = "10",
+                severityLevel = 2,
+                severityLabel = "Средний",
+                stats = DetailStatsUi(
+                    peakDate = "2026-05-10",
+                    declineDate = "2026-05-20",
+                    symptomCount = 5,
+                ),
+                aboutText = "Берёза — один из основных аллергенов в средней полосе России.",
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewForecastDetailFailed() {
+    PollenTheme {
+        ForecastDetailScreen(
+            state = ForecastDetailUiState(
+                pollen = LoadState.Failed,
+            ),
+        )
+    }
+}
+
+// endregion

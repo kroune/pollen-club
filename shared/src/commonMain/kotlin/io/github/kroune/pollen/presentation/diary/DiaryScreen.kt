@@ -59,9 +59,13 @@ import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.BodyZone
 import io.github.kroune.pollen.domain.model.Feeling
+import androidx.compose.ui.tooling.preview.Preview
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -93,52 +97,80 @@ fun DiaryScreen(
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            DateHeader(
-                monthLabel = state.monthName?.localized() ?: "",
-                dates = state.dates,
-                onDateSelected = viewModel::selectDate,
-                onPreviousWeek = { viewModel.navigateWeek(forward = false) },
-                onNextWeek = { viewModel.navigateWeek(forward = true) },
-                onCalendarClick = { showDatePicker = true },
-            )
+        DiaryScreen(
+            state = state,
+            onDateSelected = viewModel::selectDate,
+            onPreviousWeek = { viewModel.navigateWeek(forward = false) },
+            onNextWeek = { viewModel.navigateWeek(forward = true) },
+            onCalendarClick = { showDatePicker = true },
+            onMoodSelected = viewModel::selectFeeling,
+            onZoneSelected = viewModel::selectZone,
+            onTagToggled = viewModel::toggleTag,
+            onToggleMedicationTaken = viewModel::toggleMedicationTaken,
+            onAddMedication = onNavigateToMedications,
+        )
+    }
+}
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 14.dp, bottom = 16.dp),
-            ) {
-                MoodSection(state.moodOptions, viewModel::selectFeeling)
+/** State-based overload — previewable and testable. */
+@Composable
+fun DiaryScreen(
+    state: DiaryUiState,
+    onDateSelected: (String) -> Unit,
+    onPreviousWeek: () -> Unit,
+    onNextWeek: () -> Unit,
+    onCalendarClick: () -> Unit,
+    onMoodSelected: (Feeling) -> Unit,
+    onZoneSelected: (BodyZone) -> Unit,
+    onTagToggled: (String) -> Unit,
+    onToggleMedicationTaken: (Long) -> Unit,
+    onAddMedication: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        DateHeader(
+            monthLabel = state.monthName?.localized() ?: "",
+            dates = state.dates,
+            onDateSelected = onDateSelected,
+            onPreviousWeek = onPreviousWeek,
+            onNextWeek = onNextWeek,
+            onCalendarClick = onCalendarClick,
+        )
 
-                val hasMood = state.moodOptions.any { it.isSelected }
-                if (hasMood) {
-                    Spacer(Modifier.height(16.dp))
-                    BodySymptomsSection(
-                        bodyZones = state.bodyZones,
-                        selectedZoneLabel = state.selectedZoneLabel?.let {
-                            stringResource(MR.strings.section_symptoms, it.localized())
-                        },
-                        selectedZoneTags = state.selectedZoneTags,
-                        onZoneSelected = viewModel::selectZone,
-                        onTagToggled = viewModel::toggleTag,
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        color = PollenTheme.colors.line2,
-                    )
-                } else {
-                    Spacer(Modifier.height(20.dp))
-                }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(top = 14.dp, bottom = 16.dp),
+        ) {
+            MoodSection(state.moodOptions, onMoodSelected)
 
-                TherapySection(
-                    items = state.therapyItems,
-                    onToggleTaken = viewModel::toggleMedicationTaken,
-                    onAddMedication = onNavigateToMedications,
+            val hasMood = state.moodOptions.any { it.isSelected }
+            if (hasMood) {
+                Spacer(Modifier.height(16.dp))
+                BodySymptomsSection(
+                    bodyZones = state.bodyZones,
+                    selectedZoneLabel = state.selectedZoneLabel?.let {
+                        stringResource(MR.strings.section_symptoms, it.localized())
+                    },
+                    selectedZoneTags = state.selectedZoneTags,
+                    onZoneSelected = onZoneSelected,
+                    onTagToggled = onTagToggled,
                 )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = PollenTheme.colors.line2,
+                )
+            } else {
+                Spacer(Modifier.height(20.dp))
             }
+
+            TherapySection(
+                items = state.therapyItems,
+                onToggleTaken = onToggleMedicationTaken,
+                onAddMedication = onAddMedication,
+            )
         }
     }
 }
@@ -523,6 +555,143 @@ private fun DiaryDatePickerDialog(
             state = datePickerState,
             colors = pickerColors,
             showModeToggle = false,
+        )
+    }
+}
+
+// endregion
+
+// region Previews
+
+private val previewDates = persistentListOf(
+    DiaryDateUi(12, StringDesc.Raw("пн"), false, "2026-05-12"),
+    DiaryDateUi(13, StringDesc.Raw("вт"), false, "2026-05-13"),
+    DiaryDateUi(14, StringDesc.Raw("ср"), true, "2026-05-14"),
+    DiaryDateUi(15, StringDesc.Raw("чт"), false, "2026-05-15"),
+    DiaryDateUi(16, StringDesc.Raw("пт"), false, "2026-05-16"),
+    DiaryDateUi(17, StringDesc.Raw("сб"), false, "2026-05-17"),
+    DiaryDateUi(18, StringDesc.Raw("вс"), false, "2026-05-18"),
+)
+
+private val previewMoodOptions = persistentListOf(
+    DiaryMoodOptionUi(Feeling.GOOD, StringDesc.Raw("Хорошо"), false),
+    DiaryMoodOptionUi(Feeling.MIDDLE, StringDesc.Raw("Средне"), true),
+    DiaryMoodOptionUi(Feeling.BAD, StringDesc.Raw("Плохо"), false),
+)
+
+private val previewBodyZones = persistentListOf(
+    DiaryBodyZoneUi(BodyZone.EYES, StringDesc.Raw("Глаза"), 2, true),
+    DiaryBodyZoneUi(BodyZone.NOSE, StringDesc.Raw("Нос"), 0, false),
+    DiaryBodyZoneUi(BodyZone.THROAT, StringDesc.Raw("Горло"), 0, false),
+    DiaryBodyZoneUi(BodyZone.CHEST, StringDesc.Raw("Грудь"), 0, false),
+    DiaryBodyZoneUi(BodyZone.SKIN, StringDesc.Raw("Кожа"), 1, false),
+)
+
+private val previewTags = persistentListOf(
+    DiarySymptomTagUi("itch", "Зуд", true),
+    DiarySymptomTagUi("redness", "Покраснение", true),
+    DiarySymptomTagUi("tearing", "Слезотечение", false),
+    DiarySymptomTagUi("swelling", "Отёк", false),
+)
+
+private val previewTherapy = persistentListOf(
+    DiaryTherapyItemUi(1, "Цетрин", "10 мг", "08:00", true),
+    DiaryTherapyItemUi(2, "Назонекс", "50 мкг", "08:00", false),
+)
+
+@Preview
+@Composable
+private fun PreviewDiaryDateHeader() {
+    PollenTheme {
+        DateHeader(
+            monthLabel = "Май 2026",
+            dates = previewDates,
+            onDateSelected = {},
+            onPreviousWeek = {},
+            onNextWeek = {},
+            onCalendarClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewDiaryMoodSection() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            MoodSection(previewMoodOptions, onMoodSelected = {})
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewDiaryBodySymptoms() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            BodySymptomsSection(
+                bodyZones = previewBodyZones,
+                selectedZoneLabel = "Симптомы: Глаза",
+                selectedZoneTags = previewTags,
+                onZoneSelected = {},
+                onTagToggled = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewDiaryTherapySection() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            TherapySection(
+                items = previewTherapy,
+                onToggleTaken = {},
+                onAddMedication = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewDiaryTherapyEmpty() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            TherapySection(
+                items = persistentListOf(),
+                onToggleTaken = {},
+                onAddMedication = {},
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewDiaryFull() {
+    PollenTheme {
+        DiaryScreen(
+            state = DiaryUiState(
+                monthName = StringDesc.Raw("Май 2026"),
+                selectedIsoDate = "2026-05-14",
+                dates = previewDates,
+                moodOptions = previewMoodOptions,
+                bodyZones = previewBodyZones,
+                selectedZoneLabel = StringDesc.Raw("Глаза"),
+                selectedZoneTags = previewTags,
+                therapyItems = previewTherapy,
+            ),
+            onDateSelected = {},
+            onPreviousWeek = {},
+            onNextWeek = {},
+            onCalendarClick = {},
+            onMoodSelected = {},
+            onZoneSelected = {},
+            onTagToggled = {},
+            onToggleMedicationTaken = {},
+            onAddMedication = {},
         )
     }
 }

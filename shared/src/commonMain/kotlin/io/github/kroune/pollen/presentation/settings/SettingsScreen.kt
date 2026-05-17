@@ -40,14 +40,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import org.koin.compose.viewmodel.koinViewModel
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
@@ -67,40 +71,64 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
     ) { _ ->
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(MR.strings.back),
-                        tint = PollenTheme.colors.ink2,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Text(
-                    text = stringResource(MR.strings.settings_title),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = PollenTheme.colors.ink,
-                )
-            }
+        SettingsScreen(
+            state = state,
+            onBack = onBack,
+            onRetry = viewModel::loadData,
+            onNavigateToLanguage = onNavigateToLanguage,
+            onNavigateToLocations = onNavigateToLocations,
+            onNavigateToAllergens = onNavigateToAllergens,
+            onNavigateToFriends = onNavigateToFriends,
+            onNavigateToReference = onNavigateToReference,
+        )
+    }
+}
 
-            when (val data = state.data) {
-                is LoadState.Loading -> SettingsSkeleton()
-                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
-                is LoadState.Loaded -> SettingsContent(
-                    data = data.data,
-                    onNavigateToLanguage = onNavigateToLanguage,
-                    onNavigateToLocations = onNavigateToLocations,
-                    onNavigateToAllergens = onNavigateToAllergens,
-                    onNavigateToFriends = onNavigateToFriends,
-                    onNavigateToReference = onNavigateToReference,
+/** State-based overload — previewable and testable. */
+@Composable
+fun SettingsScreen(
+    state: SettingsUiState,
+    onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onNavigateToLanguage: () -> Unit = {},
+    onNavigateToLocations: () -> Unit = {},
+    onNavigateToAllergens: () -> Unit = {},
+    onNavigateToFriends: () -> Unit = {},
+    onNavigateToReference: () -> Unit = {},
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(MR.strings.back),
+                    tint = PollenTheme.colors.ink2,
+                    modifier = Modifier.size(22.dp),
                 )
             }
+            Text(
+                text = stringResource(MR.strings.settings_title),
+                style = MaterialTheme.typography.displaySmall,
+                color = PollenTheme.colors.ink,
+            )
+        }
+
+        when (val data = state.data) {
+            is LoadState.Loading -> SettingsSkeleton()
+            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
+            is LoadState.Loaded -> SettingsContent(
+                data = data.data,
+                onNavigateToLanguage = onNavigateToLanguage,
+                onNavigateToLocations = onNavigateToLocations,
+                onNavigateToAllergens = onNavigateToAllergens,
+                onNavigateToFriends = onNavigateToFriends,
+                onNavigateToReference = onNavigateToReference,
+            )
         }
     }
 }
@@ -272,6 +300,50 @@ private fun SettingsRow(
         )
     }
 }
+
+// region Previews
+
+@Preview
+@Composable
+private fun PreviewSettingsLoaded() {
+    PollenTheme {
+        SettingsScreen(
+            state = SettingsUiState(
+                data = LoadState.Loaded(
+                    SettingsData(
+                        participantCode = "12345",
+                        languageLabel = StringDesc.Raw("Русский"),
+                        regionLabel = "Москва",
+                        mainAllergenLabel = "Берёза",
+                        friendsLabel = StringDesc.Raw("3 друга"),
+                    ),
+                ),
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSettingsLoading() {
+    PollenTheme {
+        SettingsScreen(
+            state = SettingsUiState(data = LoadState.Loading),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewSettingsFailed() {
+    PollenTheme {
+        SettingsScreen(
+            state = SettingsUiState(data = LoadState.Failed),
+        )
+    }
+}
+
+// endregion
 
 @Composable
 private fun SettingsSkeleton() {

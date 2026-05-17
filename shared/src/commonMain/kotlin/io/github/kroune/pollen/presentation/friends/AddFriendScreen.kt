@@ -48,10 +48,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.common.CollectEvents
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import org.koin.compose.viewmodel.koinViewModel
 
+/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun AddFriendScreen(
     onBack: () -> Unit = {},
@@ -59,7 +61,6 @@ fun AddFriendScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val clipboardManager = LocalClipboardManager.current
     CollectEvents(viewModel.events, snackbarHostState)
 
     LaunchedEffect(state.isSuccess) {
@@ -67,6 +68,28 @@ fun AddFriendScreen(
             onBack()
         }
     }
+
+    AddFriendScreen(
+        state = state,
+        onBack = onBack,
+        onFriendIdChanged = viewModel::onFriendIdChanged,
+        onNameChanged = viewModel::onNameChanged,
+        onSubmit = viewModel::submit,
+        snackbarHostState = snackbarHostState,
+    )
+}
+
+/** State-based overload — previewable and testable. */
+@Composable
+fun AddFriendScreen(
+    state: AddFriendUiState,
+    onBack: () -> Unit,
+    onFriendIdChanged: (String) -> Unit,
+    onNameChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+) {
+    val clipboardManager = LocalClipboardManager.current
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -85,7 +108,7 @@ fun AddFriendScreen(
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
                     value = state.friendIdInput,
-                    onValueChange = viewModel::onFriendIdChanged,
+                    onValueChange = onFriendIdChanged,
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.SemiBold,
@@ -108,7 +131,7 @@ fun AddFriendScreen(
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
                     value = state.nameInput,
-                    onValueChange = viewModel::onNameChanged,
+                    onValueChange = onNameChanged,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
@@ -135,7 +158,7 @@ fun AddFriendScreen(
                         .clip(RoundedCornerShape(14.dp))
                         .background(PollenTheme.colors.accent)
                         .clickable(enabled = !state.isSubmitting && state.friendIdInput.isNotBlank()) {
-                            viewModel.submit()
+                            onSubmit()
                         }
                         .padding(vertical = 14.dp),
                     contentAlignment = Alignment.Center,
@@ -240,3 +263,76 @@ private fun EyebrowLabel(text: String) {
         color = PollenTheme.colors.ink3,
     )
 }
+
+// region Previews
+
+@Preview
+@Composable
+private fun PreviewAddFriendScreenEmpty() {
+    PollenTheme {
+        AddFriendScreen(
+            state = AddFriendUiState(myServerId = "54321"),
+            onBack = {},
+            onFriendIdChanged = {},
+            onNameChanged = {},
+            onSubmit = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewAddFriendScreenFilled() {
+    PollenTheme {
+        AddFriendScreen(
+            state = AddFriendUiState(
+                friendIdInput = "12345",
+                nameInput = "Алексей",
+                myServerId = "54321",
+            ),
+            onBack = {},
+            onFriendIdChanged = {},
+            onNameChanged = {},
+            onSubmit = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewAddFriendScreenSubmitting() {
+    PollenTheme {
+        AddFriendScreen(
+            state = AddFriendUiState(
+                friendIdInput = "12345",
+                nameInput = "Алексей",
+                myServerId = "54321",
+                isSubmitting = true,
+            ),
+            onBack = {},
+            onFriendIdChanged = {},
+            onNameChanged = {},
+            onSubmit = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewAddFriendTopBar() {
+    PollenTheme {
+        AddFriendTopBar(onBack = {})
+    }
+}
+
+@Preview
+@Composable
+private fun PreviewEyebrowLabel() {
+    PollenTheme {
+        Column(Modifier.padding(16.dp)) {
+            EyebrowLabel(text = "ID друга")
+        }
+    }
+}
+
+// endregion
