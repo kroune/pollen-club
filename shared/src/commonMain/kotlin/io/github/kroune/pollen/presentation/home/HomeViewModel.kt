@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -172,7 +173,13 @@ class HomeViewModel(
     }.combine(_forecastTimeline) { state, timeline ->
         state.copy(forecastTimeline = timeline)
     }.combine(_isRefreshing) { state, refreshing ->
-        state.copy(isRefreshing = refreshing)
+        state.copy(
+            isRefreshing = refreshing,
+            pollens = if (refreshing && state.pollens.dataOrNull?.isEmpty() == true)
+                LoadState.Loading else state.pollens,
+            locations = if (refreshing && state.locations.dataOrNull?.isEmpty() == true)
+                LoadState.Loading else state.locations,
+        )
     }.combine(
         combine(_weekOffset, _weekLabel) { offset, label -> Pair(offset, label) },
     ) { state, (offset, label) ->
@@ -260,6 +267,10 @@ class HomeViewModel(
                         }
                     }
                 }
+                val location = selectedLocation.first()
+                if (location != null) {
+                    loadDayForecasts(location.id)
+                }
                 if (syncFailures > 0) {
                     _events.send(UiEvent.ShowError(MR.strings.error_load_data.desc()))
                 }
@@ -277,7 +288,9 @@ class HomeViewModel(
                     _dayForecasts.value = LoadState.Loading
                     _selectedDayLevels.value = null
                     launch { loadWeather(location) }
-                    loadDayForecasts(location.id)
+                    if (!_isRefreshing.value) {
+                        loadDayForecasts(location.id)
+                    }
                 }
             }
         }
@@ -285,8 +298,13 @@ class HomeViewModel(
 
     private fun observeLevelChanges() {
         viewModelScope.launch {
-            combine(levelsFlow, sensitivityRepository.observeAll(), pollenRepository.observePollens()) { levels, sens, pollens ->
-                Triple(levels, sens, pollens)
+            combine(
+                levelsFlow,
+                _selectedDayLevels,
+                sensitivityRepository.observeAll(),
+                pollenRepository.observePollens(),
+            ) { todayLevels, selectedLevels, sens, pollens ->
+                Triple(selectedLevels ?: todayLevels, sens, pollens)
             }.collect { (levels, sensitivities, pollens) ->
                 val hasActiveSensitivities = sensitivities.any { it.level != SensitivityLevel.NONE }
                 if (levels.isNotEmpty() && hasActiveSensitivities) {
@@ -331,9 +349,6 @@ class HomeViewModel(
                     pollenRepository.getForecastsForLocation(location.id, selectedDate)
                 }.toImmutableList()
                 _selectedDayLevels.value = levels
-                val sensitivities = sensitivityRepository.getAll()
-                val pollens = state.value.pollens.dataOrNull ?: return@launch
-                loadPersonalIndex(levels, sensitivities, pollens)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
