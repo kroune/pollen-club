@@ -4,6 +4,7 @@ import io.github.kroune.pollen.presentation.diary.DiaryViewModel
 import io.github.kroune.pollen.presentation.feed.FeedViewModel
 import io.github.kroune.pollen.presentation.friends.AddFriendViewModel
 import io.github.kroune.pollen.presentation.friends.FriendsListViewModel
+import io.github.kroune.pollen.presentation.friends.MyQrViewModel
 import io.github.kroune.pollen.presentation.home.ForecastDetailViewModel
 import io.github.kroune.pollen.presentation.home.HomeViewModel
 import io.github.kroune.pollen.presentation.map.MapViewModel
@@ -24,6 +25,7 @@ val viewModelModule = module {
     viewModelOf(::FeedViewModel)
     viewModelOf(::FriendsListViewModel)
     viewModelOf(::AddFriendViewModel)
+    viewModelOf(::MyQrViewModel)
     viewModelOf(::MedicationsViewModel)
     viewModelOf(::PhenologyViewModel)
     viewModelOf(::SettingsViewModel)

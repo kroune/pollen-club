@@ -271,4 +271,20 @@
     <string name="friends_empty_body">Add friends by ID to see their check-ins on the map</string>
     <string name="friends_empty_cta">Add friend</string>
     <string name="friends_delete">Delete</string>
+
+    <!-- QR code feature -->
+    <string name="friends_tab_qr">QR code</string>
+    <string name="friends_tab_manual">Enter ID</string>
+    <string name="friends_qr_scan_hint">Point the camera at your friend\'s QR code</string>
+    <string name="friends_or">or</string>
+    <string name="friends_your_code">Your code for friends</string>
+    <string name="friends_show_qr_hint">Show QR code to a friend or send your ID</string>
+    <string name="friends_my_qr_title">My QR code</string>
+    <string name="friends_your_id_label">YOUR ID</string>
+    <string name="friends_my_qr_instruction">Show this code to a friend so they can point their camera and add you</string>
+    <string name="friends_share">Share</string>
+    <string name="friends_empty_body_qr">Add friends by ID or QR code to see their check-ins on the map</string>
+    <string name="error_qr_scan">Failed to scan QR code</string>
+    <string name="error_camera_permission">Camera access is needed to scan QR codes</string>
+    <string name="friends_allow_camera">Allow camera</string>
 </resources>

@@ -70,7 +70,15 @@ if (project.hasProperty("excludeScreenshots")) {
     }
 }
 
+val qrEngine = providers.gradleProperty("qr.engine").getOrElse("gms")
+
 dependencies {
+    when (qrEngine) {
+        "gms" -> implementation(projects.qrGms)
+        "foss" -> implementation(projects.qrFoss)
+        else -> error("Invalid qr.engine='$qrEngine'. Must be 'gms' or 'foss'.")
+    }
+
     implementation(projects.shared)
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.ui)

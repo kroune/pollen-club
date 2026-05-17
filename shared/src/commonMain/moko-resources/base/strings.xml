@@ -271,4 +271,20 @@
     <string name="friends_empty_body">Добавьте друзей по ID, чтобы видеть их отметки на карте</string>
     <string name="friends_empty_cta">Добавить друга</string>
     <string name="friends_delete">Удалить</string>
+
+    <!-- QR code feature -->
+    <string name="friends_tab_qr">QR-код</string>
+    <string name="friends_tab_manual">Ввести ID</string>
+    <string name="friends_qr_scan_hint">Наведите камеру на QR-код друга</string>
+    <string name="friends_or">или</string>
+    <string name="friends_your_code">Ваш код для друзей</string>
+    <string name="friends_show_qr_hint">Покажите QR-код другу или отправьте ID</string>
+    <string name="friends_my_qr_title">Мой QR-код</string>
+    <string name="friends_your_id_label">ВАШ ID</string>
+    <string name="friends_my_qr_instruction">Покажите этот код другу, чтобы он навёл камеру и добавил вас</string>
+    <string name="friends_share">Поделиться</string>
+    <string name="friends_empty_body_qr">Добавьте друзей по ID или QR-коду, чтобы видеть их отметки на карте</string>
+    <string name="error_qr_scan">Не удалось отсканировать QR-код</string>
+    <string name="error_camera_permission">Для сканирования QR-кода нужен доступ к камере</string>
+    <string name="friends_allow_camera">Разрешить камеру</string>
 </resources>

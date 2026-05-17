@@ -75,6 +75,10 @@ kotlin {
 
             implementation(libs.vico.compose.m3)
 
+            implementation(libs.qrose)
+            api(projects.qrApi)
+            api(projects.theme)
+
             api(libs.moko.resources)
             api(libs.moko.resources.compose)
         }
