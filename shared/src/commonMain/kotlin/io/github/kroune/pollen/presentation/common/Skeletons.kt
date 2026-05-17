@@ -551,6 +551,25 @@ fun MapAreaSkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 fun DayStripSkeleton(modifier: Modifier = Modifier) {
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val weekLabelStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+    val dayNameStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium)
+    val dayNumberStyle = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium)
+
+    val weekLabelSize = remember(weekLabelStyle) {
+        val result = textMeasurer.measure("21 – 27 Apr", weekLabelStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val dayNameSize = remember(dayNameStyle) {
+        val result = textMeasurer.measure("СР", dayNameStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val dayNumberSize = remember(dayNumberStyle) {
+        val result = textMeasurer.measure("28", dayNumberStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -559,15 +578,19 @@ fun DayStripSkeleton(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Box(Modifier.size(32.dp).clip(CircleShape).shimmerEffect())
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            }
             Box(
                 Modifier
-                    .width(80.dp)
-                    .height(16.dp)
+                    .width(weekLabelSize.first)
+                    .height(weekLabelSize.second)
                     .clip(RoundedCornerShape(4.dp))
                     .shimmerEffect(),
             )
-            Box(Modifier.size(32.dp).clip(CircleShape).shimmerEffect())
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            }
         }
 
         Row(
@@ -581,21 +604,21 @@ fun DayStripSkeleton(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
-                        .padding(vertical = 7.dp),
+                        .padding(vertical = 7.dp, horizontal = 2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(
                         Modifier
-                            .width(24.dp)
-                            .height(12.dp)
+                            .width(dayNameSize.first)
+                            .height(dayNameSize.second)
                             .clip(RoundedCornerShape(3.dp))
                             .shimmerEffect(),
                     )
-                    Spacer(Modifier.height(6.dp))
                     Box(
                         Modifier
-                            .width(16.dp)
-                            .height(16.dp)
+                            .padding(top = 3.dp)
+                            .width(dayNumberSize.first)
+                            .height(dayNumberSize.second)
                             .clip(RoundedCornerShape(3.dp))
                             .shimmerEffect(),
                     )
@@ -614,54 +637,81 @@ fun DayStripSkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 fun ForecastDetailHeaderSkeleton(modifier: Modifier = Modifier) {
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val titleStyle = MaterialTheme.typography.displaySmall
+    val scoreStyle = TextStyle(fontSize = 46.sp, fontWeight = FontWeight.Normal)
+    val subtitleStyle = TextStyle(fontSize = 15.sp)
+    val severityStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+    val titleSize = remember(titleStyle) {
+        val result = textMeasurer.measure("Берёза", titleStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val scoreSize = remember(scoreStyle) {
+        val result = textMeasurer.measure("3", scoreStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val subtitleSize = remember(subtitleStyle) {
+        val result = textMeasurer.measure("/ 10 · today", subtitleStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+    val severitySize = remember(severityStyle) {
+        val result = textMeasurer.measure("Средний", severityStyle)
+        with(density) { result.size.width.toDp() to result.size.height.toDp() }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(start = 4.dp, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(24.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+            }
             Box(
                 Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .shimmerEffect(),
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier
-                    .width(140.dp)
-                    .height(32.dp)
+                    .width(titleSize.first)
+                    .height(titleSize.second)
                     .clip(RoundedCornerShape(6.dp))
                     .shimmerEffect(),
             )
         }
-        Spacer(Modifier.height(8.dp))
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
                 Modifier
-                    .width(64.dp)
-                    .height(44.dp)
+                    .width(scoreSize.first)
+                    .height(scoreSize.second)
                     .clip(RoundedCornerShape(6.dp))
                     .shimmerEffect(),
             )
             Spacer(Modifier.width(8.dp))
             Box(
                 Modifier
-                    .width(40.dp)
-                    .height(16.dp)
+                    .padding(bottom = 5.dp)
+                    .width(subtitleSize.first)
+                    .height(subtitleSize.second)
                     .clip(RoundedCornerShape(4.dp))
                     .shimmerEffect(),
             )
             Spacer(Modifier.weight(1f))
-            Box(
-                Modifier
-                    .width(72.dp)
-                    .height(16.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .shimmerEffect(),
-            )
+            Row(
+                modifier = Modifier.padding(bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(Modifier.size(8.dp).clip(CircleShape).shimmerEffect())
+                Box(
+                    Modifier
+                        .width(severitySize.first)
+                        .height(severitySize.second)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerEffect(),
+                )
+            }
         }
     }
 }
