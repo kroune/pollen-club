@@ -33,12 +33,25 @@ fun CommentDto.toDomain(locale: AppLocale): CommentDomain {
     )
 }
 
-fun VkPostDto.toDomain(): VkPostDomain = VkPostDomain(
-    id = id,
-    date = date,
-    location = location,
-    content = information,
-)
+fun VkPostDto.toDomain(): VkPostDomain {
+    val colonIndex = information.indexOf(':')
+    val userName: String
+    val content: String
+    if (colonIndex in 1..40) {
+        userName = information.substring(0, colonIndex).trim()
+        content = information.substring(colonIndex + 1).trim()
+    } else {
+        userName = ""
+        content = information
+    }
+    return VkPostDomain(
+        id = id,
+        date = date,
+        location = location,
+        userName = userName,
+        content = content,
+    )
+}
 
 fun MediaItemDto.toDomain(locale: AppLocale): MediaItemDomain = MediaItemDomain(
     id = id,

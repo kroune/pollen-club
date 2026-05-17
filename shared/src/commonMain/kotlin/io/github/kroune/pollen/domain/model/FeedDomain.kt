@@ -22,6 +22,7 @@ data class VkPostDomain(
     val id: Int,
     val date: String,
     val location: String,
+    val userName: String,
     val content: String,
 )
 
