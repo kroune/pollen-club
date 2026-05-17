@@ -9,7 +9,7 @@ import io.github.kroune.pollen.data.remote.dto.request.GetUserRequest
 import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.HashTagDomain
 import io.github.kroune.pollen.domain.model.MapPinDomain
-import io.github.kroune.pollen.domain.model.MapPolygonDomain
+import io.github.kroune.pollen.domain.model.MapRingDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.MapRepository
 import kotlinx.datetime.TimeZone
@@ -32,7 +32,7 @@ class MapRepositoryImpl(
 
     override suspend fun getPolygonForecast(
         pollenId: Int,
-    ): ApiResult<List<MapPolygonDomain>> {
+    ): ApiResult<List<MapRingDomain>> {
         val russianName = pollenDao.getById(pollenId)?.descRu ?: return ApiResult.Success(emptyList())
         val allergen = russianName.replace('ё', 'е').replace('Ё', 'Е')
         if (allergen !in FORECAST_ALLERGENS) {
@@ -44,7 +44,7 @@ class MapRepositoryImpl(
         return safeApiCall(logger, "get polygon forecast allergen=$allergen dateTime=$dateTime") {
             val polygons = forecastApi.getPolygonForecast(allergen, dateTime)
             logger.i { "Loaded ${polygons.size} polygons for $allergen" }
-            polygons.map { it.toDomain() }
+            polygons.flatMap { it.toDomain() }
         }
     }
 

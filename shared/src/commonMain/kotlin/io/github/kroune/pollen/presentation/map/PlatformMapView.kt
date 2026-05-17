@@ -7,12 +7,12 @@ import androidx.compose.ui.unit.dp
 import io.github.kroune.pollen.domain.model.DEFAULT_CENTER_LATITUDE
 import io.github.kroune.pollen.domain.model.DEFAULT_CENTER_LONGITUDE
 import io.github.kroune.pollen.domain.model.MapPinDomain
-import io.github.kroune.pollen.domain.model.MapPolygonDomain
+import io.github.kroune.pollen.domain.model.TileRingQuery
 
 @Composable
 expect fun PlatformMapView(
-    pins: List<MapPinDomain>,
-    polygons: List<MapPolygonDomain>,
+    pins: PlatformMapPins,
+    ringQuery: TileRingQuery,
     onPinClick: (MapPinDomain) -> Unit,
     modifier: Modifier,
     overlayBottomY: Dp = 0.dp,

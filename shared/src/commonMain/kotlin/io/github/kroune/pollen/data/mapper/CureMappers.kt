@@ -22,7 +22,7 @@ import io.github.kroune.pollen.domain.model.CureFrequencyDomain
 import io.github.kroune.pollen.domain.model.CureItemDomain
 import io.github.kroune.pollen.domain.model.HashTagDomain
 import io.github.kroune.pollen.domain.model.GeoPoint
-import io.github.kroune.pollen.domain.model.MapPolygonDomain
+import io.github.kroune.pollen.domain.model.MapRingDomain
 import io.github.kroune.pollen.domain.model.PhenologyObservationDomain
 import io.github.kroune.pollen.domain.model.TherapyDomain
 import io.github.kroune.pollen.domain.model.UserForecastEntryDomain
@@ -105,21 +105,40 @@ fun PhenologyObservationDomain.toEntity(): PhenologyEntity = PhenologyEntity(
 
 fun HashTagDto.toDomain(): HashTagDomain = HashTagDomain(id = id, value = value, name = name)
 
-fun PolygonDataResponse.toDomain(): MapPolygonDomain {
-    val parsed = latlngs.map { polygon ->
-        polygon.map { ring ->
-            ring.mapNotNull { point ->
+private const val MAX_FILL_OPACITY = 0.15f
+
+fun PolygonDataResponse.toDomain(): List<MapRingDomain> {
+    val fillArgb = parseHexToArgb(fillColor, fillOpacity.coerceAtMost(MAX_FILL_OPACITY))
+    val strokeArgb = parseHexToArgb(color, opacity)
+    return latlngs.flatMap { polygon ->
+        polygon.mapNotNull { ring ->
+            val points = ring.mapNotNull { point ->
                 if (point.size >= 2) GeoPoint(point[0], point[1]) else null
             }
+            if (points.size < 3) return@mapNotNull null
+            var minLat = Double.MAX_VALUE
+            var maxLat = -Double.MAX_VALUE
+            var minLng = Double.MAX_VALUE
+            var maxLng = -Double.MAX_VALUE
+            for (p in points) {
+                if (p.latitude < minLat) minLat = p.latitude
+                if (p.latitude > maxLat) maxLat = p.latitude
+                if (p.longitude < minLng) minLng = p.longitude
+                if (p.longitude > maxLng) maxLng = p.longitude
+            }
+            MapRingDomain(points, fillArgb, strokeArgb, minLat, maxLat, minLng, maxLng)
         }
     }
-    return MapPolygonDomain(
-        polygons = parsed,
-        color = color,
-        opacity = opacity,
-        fillColor = fillColor,
-        fillOpacity = fillOpacity,
-    )
+}
+
+private fun parseHexToArgb(hex: String, opacity: Float): Int {
+    val rgb = try {
+        hex.removePrefix("#").toLong(16).toInt() and 0xFFFFFF
+    } catch (_: NumberFormatException) {
+        0x808080
+    }
+    val alpha = (opacity.coerceIn(0f, 1f) * 255).toInt()
+    return (alpha shl 24) or rgb
 }
 
 fun UserForecastInfoDto.toDomain(locale: AppLocale): UserForecastInfoDomain = UserForecastInfoDomain(
