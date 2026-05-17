@@ -451,6 +451,7 @@ private fun PreviewMedicationsTodaySheetExpanded() {
             isExpanded = true,
             onToggleExpand = {},
             onRemoveDose = {},
+            dateLabel = "Пн, 1 Янв",
         )
     }
 }
@@ -489,6 +490,7 @@ private fun TodaySheet(
     onToggleExpand: () -> Unit,
     onRemoveDose: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    dateLabel: String = todayDateLabel(),
 ) {
     if (doses.isEmpty()) return
 
@@ -507,6 +509,7 @@ private fun TodaySheet(
         if (isExpanded) {
             ExpandedSheetContent(
                 doses = doses,
+                dateLabel = dateLabel,
                 onToggleExpand = onToggleExpand,
                 onRemoveDose = onRemoveDose,
             )
@@ -588,6 +591,7 @@ private fun CollapsedSheetContent(
 @Composable
 private fun ExpandedSheetContent(
     doses: ImmutableList<TodayDoseUi>,
+    dateLabel: String,
     onToggleExpand: () -> Unit,
     onRemoveDose: (Long) -> Unit,
 ) {
@@ -622,7 +626,7 @@ private fun ExpandedSheetContent(
             )
             Spacer(Modifier.weight(1f))
             Text(
-                text = todayDateLabel(),
+                text = dateLabel,
                 fontSize = 13.sp,
                 color = PollenTheme.colors.ink3,
             )
