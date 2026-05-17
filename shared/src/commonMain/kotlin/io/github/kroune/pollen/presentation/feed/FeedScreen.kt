@@ -252,20 +252,28 @@ private fun FeedPage(feed: FeedDataDomain, locale: AppLocale) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    if (post.userName.isNotBlank()) {
+                        Text(
+                            post.userName,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                    }
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
                             formatDateLocalized(post.date, locale),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        Text(
-                            post.location,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (post.location.isNotBlank()) {
+                            Text(
+                                post.location,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(post.content, style = MaterialTheme.typography.bodyMedium)
@@ -472,6 +480,7 @@ private fun PreviewFeedScreenLoaded() {
                 id = 1,
                 date = "2026-05-14",
                 location = "Москва",
+                userName = "Marina Moskalenko",
                 content = "Сегодня зафиксировано повышенное содержание пыльцы.",
             ),
         ),
@@ -562,6 +571,7 @@ private fun PreviewFeedPageLoaded() {
                 id = 1,
                 date = "2026-05-14",
                 location = "Москва",
+                userName = "Ksana Radchenko",
                 content = "Сегодня на станции мониторинга зафиксировано повышенное содержание пыльцы.",
             ),
         ),

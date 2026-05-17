@@ -20,6 +20,10 @@ import io.github.kroune.pollen.domain.model.VkPostDomain
 
 private val VIDEO_EXTENSIONS = setOf("mp4", "avi", "mov", "webm", "mkv", "3gp")
 
+// Server sends VK posts as "UserName: content text". Names are 1-3 words, letters only.
+private const val MAX_NAME_PREFIX_LENGTH = 40
+private val NAME_PATTERN = Regex("^[\\p{L} .'-]+$")
+
 fun CommentDto.toDomain(locale: AppLocale): CommentDomain {
     val expertId = expert.toIntOrNull() ?: 0
     return CommentDomain(
@@ -33,12 +37,28 @@ fun CommentDto.toDomain(locale: AppLocale): CommentDomain {
     )
 }
 
-fun VkPostDto.toDomain(): VkPostDomain = VkPostDomain(
-    id = id,
-    date = date,
-    location = location,
-    content = information,
-)
+fun VkPostDto.toDomain(): VkPostDomain {
+    val colonIndex = information.indexOf(':')
+    val candidate = if (colonIndex in 1..MAX_NAME_PREFIX_LENGTH) {
+        information.substring(0, colonIndex).trim()
+    } else null
+    val userName: String
+    val content: String
+    if (candidate != null && NAME_PATTERN.matches(candidate)) {
+        userName = candidate
+        content = information.substring(colonIndex + 1).trim()
+    } else {
+        userName = ""
+        content = information
+    }
+    return VkPostDomain(
+        id = id,
+        date = date,
+        location = location,
+        userName = userName,
+        content = content,
+    )
+}
 
 fun MediaItemDto.toDomain(locale: AppLocale): MediaItemDomain = MediaItemDomain(
     id = id,
