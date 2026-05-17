@@ -61,6 +61,15 @@ android {
     }
 }
 
+if (project.hasProperty("excludeScreenshots")) {
+    tasks.withType<Test>().configureEach {
+        filter {
+            excludeTestsMatching("io.github.kroune.pollen.PreviewScreenshotTest")
+            isFailOnNoMatchingTests = false
+        }
+    }
+}
+
 dependencies {
     implementation(projects.shared)
     implementation(libs.androidx.activity.compose)

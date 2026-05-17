@@ -161,11 +161,12 @@ Before writing any new common component, check this directory first.
 ## Build & Run
 
 ```bash
-./gradlew :androidApp:assembleDebug                  # Build Android
-./gradlew :shared:compileKotlinIosArm64               # Compile shared for iOS
-./gradlew :androidApp:recordRoborazziDebug            # Record screenshot baselines (Roborazzi)
-./gradlew :androidApp:verifyRoborazziDebug            # Verify screenshots against baselines
-./gradlew clean                                        # Clean build artifacts
+./gradlew :androidApp:assembleDebug                           # Build Android
+./gradlew :shared:compileKotlinIosArm64                        # Compile shared for iOS
+./gradlew :androidApp:testDebugUnitTest -PexcludeScreenshots   # Run Android unit tests (no screenshots)
+./gradlew :androidApp:recordRoborazziDebug                     # Record screenshot baselines (Roborazzi)
+./gradlew :androidApp:verifyRoborazziDebug                     # Verify screenshots against baselines
+./gradlew clean                                                # Clean build artifacts
 ```
 
 ## UI Development Workflow
