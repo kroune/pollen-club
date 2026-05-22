@@ -209,7 +209,11 @@ class HomeViewModel(
                     }
                     _selectedDayLevels.value = null
                     launch { loadWeather(location) }
-                    loadDayForecasts(location.id)
+                    // Avoid duplicate forecast loads if a sync is already in progress;
+                    // syncData will call loadDayForecasts after it finishes.
+                    if (!currentState.isRefreshing) {
+                        loadDayForecasts(location.id)
+                    }
                 }
             }
         }
@@ -330,7 +334,15 @@ class HomeViewModel(
     }
 
     private fun syncData(forceRefresh: Boolean) {
-        updateState { copy(isRefreshing = true) }
+        // Show loading indicators for empty pollens/locations while refreshing
+        // to avoid showing an empty state during initial load.
+        updateState {
+            copy(
+                isRefreshing = true,
+                pollens = if (pollens.dataOrNull?.isEmpty() == true) LoadState.Loading else pollens,
+                locations = if (locations.dataOrNull?.isEmpty() == true) LoadState.Loading else locations,
+            )
+        }
         viewModelScope.launch {
             try {
                 if (forceRefresh) {
@@ -355,6 +367,11 @@ class HomeViewModel(
                         async { runCatchingCancellable { pollenRepository.syncForecasts() } },
                         async { runCatchingCancellable { locationRepository.syncLocations() } },
                     ).awaitAll().any { it.isFailure }
+                }
+                // Load day forecasts after sync so the UI has data immediately.
+                val location = currentState.selectedLocation
+                if (location != null) {
+                    loadDayForecasts(location.id)
                 }
                 if (anyFailure) {
                     emitEffect(UiEvent.ShowError(MR.strings.error_load_data.desc()))
