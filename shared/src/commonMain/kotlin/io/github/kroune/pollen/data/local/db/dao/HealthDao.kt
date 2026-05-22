@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import io.github.kroune.pollen.data.local.db.entity.HealthEntryEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface HealthDao {
@@ -13,13 +14,13 @@ interface HealthDao {
     suspend fun insert(entry: HealthEntryEntity): Long
 
     @Query("SELECT * FROM health_entries WHERE date = :date LIMIT 1")
-    suspend fun getByDate(date: String): HealthEntryEntity?
+    suspend fun getByDate(date: LocalDate): HealthEntryEntity?
 
     @Query("SELECT * FROM health_entries WHERE date = :date LIMIT 1")
-    fun observeByDate(date: String): Flow<HealthEntryEntity?>
+    fun observeByDate(date: LocalDate): Flow<HealthEntryEntity?>
 
     @Query("SELECT * FROM health_entries WHERE date BETWEEN :from AND :to ORDER BY date DESC")
-    fun observeByDateRange(from: String, to: String): Flow<List<HealthEntryEntity>>
+    fun observeByDateRange(from: LocalDate, to: LocalDate): Flow<List<HealthEntryEntity>>
 
     @Query("SELECT * FROM health_entries ORDER BY date DESC")
     fun observeAll(): Flow<List<HealthEntryEntity>>

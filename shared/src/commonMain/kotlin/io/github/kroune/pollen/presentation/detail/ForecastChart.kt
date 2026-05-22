@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.home
+package io.github.kroune.pollen.presentation.detail
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +31,7 @@ import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.PollenLevelDomain
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.datetime.number
 
 @Composable
 fun ForecastChart(
@@ -45,7 +46,9 @@ fun ForecastChart(
 
     val dateLabels = remember(timeline) {
         timeline.mapIndexed { index, level ->
-            index to level.date.takeLast(5)
+            val mm = level.date.month.number.toString().padStart(2, '0')
+            val dd = level.date.day.toString().padStart(2, '0')
+            index to "$mm-$dd"
         }.toMap()
     }
 

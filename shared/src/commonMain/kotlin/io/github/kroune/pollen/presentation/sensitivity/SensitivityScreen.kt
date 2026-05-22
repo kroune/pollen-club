@@ -29,28 +29,27 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.SensitivityLevel
-import io.github.kroune.pollen.presentation.common.CollectEvents
-import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FullScreenError
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 private fun sensitivityLabel(level: SensitivityLevel): String = when (level) {
@@ -60,39 +59,22 @@ private fun sensitivityLabel(level: SensitivityLevel): String = when (level) {
     SensitivityLevel.SEVERE -> stringResource(MR.strings.sensitivity_strong)
 }
 
-/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun SensitivityScreen(
-    viewModel: SensitivityViewModel = koinViewModel(),
+    state: SensitivityUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
     onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    onSetSensitivity: (pollenId: Int, level: SensitivityLevel) -> Unit = { _, _ -> },
 ) {
-    val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+    CollectEffects(effects, snackbarHostState, onRetry = onRetry)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
     ) { _ ->
-        SensitivityScreen(
-            state = state,
-            onBack = onBack,
-            onRetry = viewModel::loadData,
-            onSetSensitivity = viewModel::setSensitivity,
-        )
-    }
-}
-
-/** State-based overload — previewable and testable. */
-@Composable
-fun SensitivityScreen(
-    state: SensitivityUiState,
-    onBack: () -> Unit = {},
-    onRetry: () -> Unit = {},
-    onSetSensitivity: (pollenId: Int, level: SensitivityLevel) -> Unit = { _, _ -> },
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,6 +111,7 @@ fun SensitivityScreen(
                 allergens = allergens.data,
                 onSetLevel = onSetSensitivity,
             )
+        }
         }
     }
 }

@@ -16,6 +16,9 @@ import io.github.kroune.pollen.domain.repository.CureCatalog
 import io.github.kroune.pollen.domain.repository.MedicationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.LocalDate
 
 class MedicationRepositoryImpl(
     private val api: PollenApiService,
@@ -24,13 +27,16 @@ class MedicationRepositoryImpl(
     private val localeProvider: LocaleProvider,
 ) : MedicationRepository {
 
+    private val cacheMutex = Mutex()
     private var cachedCatalog: CureCatalog? = null
     private var cacheTimestamp: Long = 0L
 
     override suspend fun getCureCatalog(): ApiResult<CureCatalog> {
         val now = kotlin.time.Clock.System.now().epochSeconds
-        cachedCatalog?.let { cached ->
-            if (now - cacheTimestamp < CACHE_TTL_SECONDS) return ApiResult.Success(cached)
+        cacheMutex.withLock {
+            cachedCatalog?.let { cached ->
+                if (now - cacheTimestamp < CACHE_TTL_SECONDS) return ApiResult.Success(cached)
+            }
         }
         return safeApiCall {
             val locale = localeProvider.current()
@@ -41,9 +47,11 @@ class MedicationRepositoryImpl(
                 forms = response.forms.map { it.toDomain(locale) },
                 doses = response.doses.map { it.toDomain(locale) },
                 frequencies = response.frequency.map { it.toDomain(locale) },
-            ).also {
-                cachedCatalog = it
-                cacheTimestamp = now
+            ).also { catalog ->
+                cacheMutex.withLock {
+                    cachedCatalog = catalog
+                    cacheTimestamp = kotlin.time.Clock.System.now().epochSeconds
+                }
             }
         }
     }
@@ -59,14 +67,14 @@ class MedicationRepositoryImpl(
         api.addUserCure(
             AddUserCureRequest(
                 userId = userId,
-                date = therapy.date,
+                date = therapy.date.toString(),
                 cureId = therapy.cureId,
                 cureName = therapy.cureName,
                 formaId = 0,
                 forma = therapy.form,
                 frequencyId = 0,
                 frequency = therapy.frequency,
-                useFrom = therapy.startDate,
+                useFrom = therapy.startDate.toString(),
                 doseId = 0,
                 dose = therapy.dose,
                 doseValue = 0,
@@ -81,23 +89,19 @@ class MedicationRepositoryImpl(
         therapyDao.delete(therapy.toEntity())
     }
 
-    override suspend fun recordIntake(therapyId: Long, date: String, taken: Boolean) {
+    override suspend fun recordIntake(therapyId: Long, date: LocalDate, taken: Boolean) {
         medicationIntakeDao.upsert(
             MedicationIntakeEntity(therapyId = therapyId, date = date, taken = taken),
         )
     }
 
-    override fun observeIntakesForDate(date: String): Flow<List<MedicationIntakeDomain>> =
+    override fun observeIntakesForDate(date: LocalDate): Flow<List<MedicationIntakeDomain>> =
         medicationIntakeDao.observeByDate(date).map { list ->
             list.map { it.toDomain() }
         }
 
-    private fun MedicationIntakeEntity.toDomain() = MedicationIntakeDomain(
-        id = id,
-        therapyId = therapyId,
-        date = date,
-        taken = taken,
-    )
+    override fun observeAllTakenIntakes(): Flow<List<MedicationIntakeDomain>> =
+        medicationIntakeDao.observeAllTaken().map { list -> list.map { it.toDomain() } }
 }
 
 private fun TherapyDomain.toEntity() = TherapyEntity(

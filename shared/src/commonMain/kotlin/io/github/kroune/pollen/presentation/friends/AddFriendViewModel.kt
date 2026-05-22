@@ -1,23 +1,20 @@
 package io.github.kroune.pollen.presentation.friends
 
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
+import co.touchlab.kermit.Logger
 import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.repository.FriendsRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.qr.QrScanResult
-import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
+import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.coroutines.launch
+
+private val logger = Logger.withTag("AddFriendVM")
 
 enum class AddFriendTab { QR, MANUAL }
 
@@ -31,84 +28,80 @@ data class AddFriendUiState(
     val selectedTab: AddFriendTab = AddFriendTab.QR,
 )
 
+sealed interface AddFriendIntent {
+    data class TabSelected(val tab: AddFriendTab) : AddFriendIntent
+    data class QrScanned(val result: QrScanResult) : AddFriendIntent
+    data class FriendIdChanged(val value: String) : AddFriendIntent
+    data class NameChanged(val value: String) : AddFriendIntent
+    data object Submit : AddFriendIntent
+}
+
 class AddFriendViewModel(
     private val friendsRepository: FriendsRepository,
     private val userRepository: UserRepository,
-) : ViewModel() {
-
-    private val _state = MutableStateFlow(AddFriendUiState())
-    val state: StateFlow<AddFriendUiState> = _state.asStateFlow()
-
-    private val _events = Channel<UiEvent>(Channel.BUFFERED)
-    val events = _events.receiveAsFlow()
+) : MviViewModel<AddFriendUiState, AddFriendIntent, UiEvent>(AddFriendUiState()) {
 
     init {
         viewModelScope.launch {
-            try {
+            runCatchingCancellable {
                 val user = userRepository.getLocalUser()
                 val serverId = user?.serverId?.takeIf { it > 0 }?.toString() ?: ""
-                _state.update { it.copy(myServerId = serverId) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                _events.send(UiEvent.ShowError(MR.strings.error_load_friends.desc()))
+                updateState { copy(myServerId = serverId) }
+            }.onFailure {
+                emitEffect(UiEvent.ShowError(MR.strings.error_load_friends.desc()))
             }
         }
     }
 
-    fun onTabSelected(tab: AddFriendTab) {
-        _state.update { it.copy(selectedTab = tab) }
+    override fun handleIntent(intent: AddFriendIntent) {
+        when (intent) {
+            is AddFriendIntent.TabSelected -> updateState { copy(selectedTab = intent.tab) }
+            is AddFriendIntent.QrScanned -> handleQrScanned(intent.result)
+            is AddFriendIntent.FriendIdChanged -> {
+                val filtered = intent.value.filter { it.isDigit() }.take(MAX_FRIEND_ID_LENGTH)
+                updateState { copy(friendIdInput = filtered) }
+            }
+            is AddFriendIntent.NameChanged -> updateState { copy(nameInput = intent.value) }
+            AddFriendIntent.Submit -> submit()
+        }
     }
 
-    fun onQrScanned(result: QrScanResult) {
+    private fun handleQrScanned(result: QrScanResult) {
         when (result) {
             is QrScanResult.Success -> {
                 val scannedId = result.value.filter { it.isDigit() }.take(MAX_FRIEND_ID_LENGTH)
                 if (scannedId.isNotBlank()) {
-                    _state.update {
-                        it.copy(friendIdInput = scannedId, selectedTab = AddFriendTab.MANUAL)
-                    }
+                    updateState { copy(friendIdInput = scannedId, selectedTab = AddFriendTab.MANUAL) }
                 }
             }
             is QrScanResult.Error -> {
-                viewModelScope.launch {
-                    _events.send(UiEvent.ShowError(MR.strings.error_qr_scan.desc()))
-                }
+                logger.w { "QR scan error: ${result.message}" }
+                emitEffect(UiEvent.ShowError(MR.strings.error_qr_scan.desc()))
             }
             is QrScanResult.Cancelled -> { /* no-op */ }
         }
     }
 
-    fun onFriendIdChanged(value: String) {
-        val filtered = value.filter { it.isDigit() }.take(MAX_FRIEND_ID_LENGTH)
-        _state.update { it.copy(friendIdInput = filtered) }
-    }
-
-    fun onNameChanged(value: String) {
-        _state.update { it.copy(nameInput = value) }
-    }
-
-    fun submit() {
-        val friendId = _state.value.friendIdInput.toIntOrNull() ?: return
-        val name = _state.value.nameInput.trim()
+    private fun submit() {
+        val friendId = currentState.friendIdInput.toIntOrNull() ?: return
+        val name = currentState.nameInput.trim()
 
         viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true) }
-            try {
+            updateState { copy(isSubmitting = true) }
+            runCatchingCancellable {
                 val user = userRepository.getLocalUser()
                 val userId = user?.serverId ?: 0
-                val result = friendsRepository.addFriend(userId, friendId, name)
+                friendsRepository.addFriend(userId, friendId, name)
+            }.onSuccess { result ->
                 if (result is ApiResult.Success) {
-                    _state.update { it.copy(isSubmitting = false, isSuccess = true) }
+                    updateState { copy(isSubmitting = false, isSuccess = true) }
                 } else {
-                    _state.update { it.copy(isSubmitting = false) }
-                    _events.send(UiEvent.ShowError(MR.strings.error_add_friend.desc()))
+                    updateState { copy(isSubmitting = false) }
+                    emitEffect(UiEvent.ShowError(MR.strings.error_add_friend.desc()))
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                _state.update { it.copy(isSubmitting = false) }
-                _events.send(UiEvent.ShowError(MR.strings.error_add_friend.desc()))
+            }.onFailure {
+                updateState { copy(isSubmitting = false) }
+                emitEffect(UiEvent.ShowError(MR.strings.error_add_friend.desc()))
             }
         }
     }

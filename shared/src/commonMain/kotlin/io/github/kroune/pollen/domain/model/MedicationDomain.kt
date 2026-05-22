@@ -1,15 +1,17 @@
 package io.github.kroune.pollen.domain.model
 
+import kotlinx.datetime.LocalDate
+
 data class TherapyDomain(
     val id: Long = 0,
-    val date: String,
+    val date: LocalDate,
     val cureTypeId: Int,
     val cureName: String,
     val cureId: Int,
     val form: String,
     val dose: String,
     val frequency: String,
-    val startDate: String,
+    val startDate: LocalDate,
 )
 
 data class CureDomain(

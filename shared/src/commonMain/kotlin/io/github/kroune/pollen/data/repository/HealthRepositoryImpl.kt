@@ -13,6 +13,7 @@ import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.HealthRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalDate
 
 class HealthRepositoryImpl(
     private val api: PollenApiService,
@@ -27,11 +28,11 @@ class HealthRepositoryImpl(
         return healthDao.observeAll().map { list -> list.map { it.toDomain() } }
     }
 
-    override suspend fun getEntryByDate(date: String): HealthEntryDomain? {
+    override suspend fun getEntryByDate(date: LocalDate): HealthEntryDomain? {
         return healthDao.getByDate(date)?.toDomain()
     }
 
-    override fun observeEntryByDate(date: String): Flow<HealthEntryDomain?> {
+    override fun observeEntryByDate(date: LocalDate): Flow<HealthEntryDomain?> {
         return healthDao.observeByDate(date).map { it?.toDomain() }
     }
 
@@ -40,7 +41,7 @@ class HealthRepositoryImpl(
         for (entry in unsynced) {
             api.addUserFeel(
                 AddUserFeelRequest(
-                    date = entry.date,
+                    date = entry.date.toString(),
                     location = entry.locationId,
                     time = entry.time,
                     opinion = entry.feeling,
@@ -61,7 +62,7 @@ class HealthRepositoryImpl(
                         userId = userId,
                         symptoms = listOf(
                             SymptomEntryDto(
-                                date = entry.date,
+                                date = entry.date.toString(),
                                 tags = entry.tags,
                                 nose = entry.nose,
                                 throat = entry.throat,

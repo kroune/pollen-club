@@ -1,40 +1,39 @@
-package io.github.kroune.pollen.presentation.home
+package io.github.kroune.pollen.presentation.detail.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.kroune.pollen.domain.model.Feeling
-import io.github.kroune.pollen.domain.model.HealthEntryDomain
-import io.github.kroune.pollen.domain.model.LevelDomain
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.Feeling
+import io.github.kroune.pollen.domain.model.HealthEntryDomain
+import io.github.kroune.pollen.domain.model.KnownPollens
+import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.TodayProvider
+import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.repository.HealthRepository
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.presentation.common.MviViewModel
+import io.github.kroune.pollen.presentation.common.PollenIconRegistry
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.detail.DetailStatsUi
+import io.github.kroune.pollen.presentation.detail.ForecastDetailPollenUi
+import io.github.kroune.pollen.presentation.detail.ForecastDetailUiState
+import io.github.kroune.pollen.presentation.detail.SCORE_DISPLAY_MAX
 import io.github.kroune.pollen.util.normalizeSeverity
+import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlin.coroutines.cancellation.CancellationException
 
 private const val TIMELINE_LOOKBACK_DAYS = 30
 private const val TIMELINE_LOOKAHEAD_DAYS = 5
-private const val DEFAULT_MAX_LEVEL = 10
 
 class ForecastDetailViewModel(
     private val pollenId: Int,
@@ -43,36 +42,47 @@ class ForecastDetailViewModel(
     private val locationRepository: LocationRepository,
     private val healthRepository: HealthRepository,
     private val todayProvider: TodayProvider,
-) : ViewModel() {
-
-    private val _state = MutableStateFlow(
-        ForecastDetailUiState(today = todayProvider.today.value),
-    )
-    val state: StateFlow<ForecastDetailUiState> = _state.asStateFlow()
-
-    private val _events = Channel<UiEvent>(Channel.BUFFERED)
-    val events = _events.receiveAsFlow()
+) : MviViewModel<ForecastDetailUiState, ForecastDetailIntent, UiEvent>(
+    ForecastDetailUiState(today = todayProvider.today.value),
+) {
 
     init {
+        observeToday()
         loadData()
     }
 
-    fun loadData() {
+    override fun handleIntent(intent: ForecastDetailIntent) {
+        when (intent) {
+            ForecastDetailIntent.ReloadData -> loadData()
+            ForecastDetailIntent.ToggleFeelingLine -> updateState { copy(showFeelingLine = !showFeelingLine) }
+        }
+    }
+
+    private fun observeToday() {
         viewModelScope.launch {
-            try {
+            todayProvider.today.collect { today ->
+                updateState { copy(today = today) }
+            }
+        }
+    }
+
+    private fun loadData() {
+        viewModelScope.launch {
+            runCatchingCancellable {
                 val pollens = pollenRepository.observePollens().first()
                 val pollen = pollens.firstOrNull { it.id == pollenId }
                 if (pollen == null) {
-                    _state.value = _state.value.copy(pollen = LoadState.Failed)
-                    _events.send(UiEvent.ShowError(MR.strings.error_allergen_not_found.desc()))
-                    return@launch
+                    updateState { copy(pollen = LoadState.Failed) }
+                    emitEffect(UiEvent.ShowError(MR.strings.error_allergen_not_found.desc()))
+                    return@runCatchingCancellable
                 }
-                val pollenUi = pollen.toDetailUi()
-                _state.value = _state.value.copy(
-                    pollen = LoadState.Loaded(pollenUi),
-                    aboutText = pollen.description,
-                    pollenIconRes = PollenIconRegistry.iconFor(pollen.id),
-                )
+                updateState {
+                    copy(
+                        pollen = LoadState.Loaded(pollen.toDetailUi()),
+                        aboutText = pollen.description,
+                        pollenIconRes = PollenIconRegistry.iconFor(pollen.id),
+                    )
+                }
 
                 val user = userRepository.getLocalUser()
                 val locationId = if (user != null && user.location > 0) {
@@ -81,17 +91,15 @@ class ForecastDetailViewModel(
                     locationRepository.getAll().firstOrNull()?.id
                 }
 
-                if (locationId != null) {
-                    loadTimeline(locationId, pollen)
-                } else {
-                    _state.value = _state.value.copy(timeline = LoadState.Failed)
-                    _events.send(UiEvent.ShowError(MR.strings.error_load_data.desc()))
+                if (locationId == null) {
+                    updateState { copy(timeline = LoadState.Failed) }
+                    emitEffect(UiEvent.ShowError(MR.strings.error_load_data.desc()))
+                    return@launch
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(pollen = LoadState.Failed)
-                _events.send(UiEvent.ShowError(MR.strings.error_load_data.desc()))
+                loadForecast(locationId, pollen)
+            }.onFailure {
+                updateState { copy(pollen = LoadState.Failed) }
+                emitEffect(UiEvent.ShowError(MR.strings.error_load_data.desc()))
             }
         }
     }
@@ -102,25 +110,22 @@ class ForecastDetailViewModel(
         severityLabels = levels.associate { it.level to it.name },
     )
 
-    fun toggleFeelingLine() {
-        _state.value = _state.value.copy(showFeelingLine = !_state.value.showFeelingLine)
-    }
-
-    private suspend fun loadTimeline(locationId: Int, pollen: PollenDomain) {
-        val today = _state.value.today
-        val startDate = today.minus(DatePeriod(days = TIMELINE_LOOKBACK_DAYS)).toString()
-        val endDate = today.plus(DatePeriod(days = TIMELINE_LOOKAHEAD_DAYS)).toString()
-        try {
-            val timeline = pollenRepository.getForecastTimeline(locationId, pollenId, startDate, endDate)
+    private suspend fun loadForecast(locationId: Int, pollen: PollenDomain) {
+        val today = currentState.today ?: todayProvider.today.value
+        val startDate = today.minus(DatePeriod(days = TIMELINE_LOOKBACK_DAYS))
+        val endDate = today.plus(DatePeriod(days = TIMELINE_LOOKAHEAD_DAYS))
+        runCatchingCancellable {
+            val timeline = pollenRepository
+                .getForecastTimeline(locationId, pollenId, startDate, endDate)
                 .toImmutableList()
 
-            val todayLevel = timeline.firstOrNull { it.date == today.toString() }
-            val maxLevel = pollen.maxLevel.takeIf { it > 0 } ?: DEFAULT_MAX_LEVEL
+            val todayLevel = timeline.firstOrNull { it.date == today }
+            val maxLevel = pollen.maxLevel.takeIf { it > 0 } ?: KnownPollens.DEFAULT_MAX_LEVEL
             val currentValue = todayLevel?.value ?: 0
             val scoreRatio = if (maxLevel > 0) currentValue.toDouble() / maxLevel * 10 else 0.0
 
             val severityLevel = computeSeverityLevel(currentValue, maxLevel)
-            val pollenUi = (_state.value.pollen as? LoadState.Loaded)?.data
+            val pollenUi = currentState.pollen.dataOrNull
             val severityLabel = pollenUi?.severityLabels?.get(currentValue) ?: ""
 
             val healthEntries = healthRepository.observeEntries().first()
@@ -128,20 +133,20 @@ class ForecastDetailViewModel(
 
             val stats = computeStats(timeline, healthEntries)
 
-            _state.value = _state.value.copy(
-                timeline = LoadState.Loaded(timeline),
-                currentScore = formatScore(scoreRatio),
-                currentScoreMax = SCORE_DISPLAY_MAX,
-                severityLevel = severityLevel,
-                severityLabel = severityLabel,
-                stats = stats,
-                feelingValues = feelingValues,
-            )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            _state.value = _state.value.copy(timeline = LoadState.Failed)
-            _events.send(UiEvent.ShowError(MR.strings.error_load_forecast.desc()))
+            updateState {
+                copy(
+                    timeline = LoadState.Loaded(timeline),
+                    currentScore = scoreRatio,
+                    currentScoreMax = SCORE_DISPLAY_MAX,
+                    severityLevel = severityLevel,
+                    severityLabel = severityLabel,
+                    stats = stats,
+                    feelingValues = feelingValues,
+                )
+            }
+        }.onFailure {
+            updateState { copy(timeline = LoadState.Failed) }
+            emitEffect(UiEvent.ShowError(MR.strings.error_load_forecast.desc()))
         }
     }
 
@@ -170,15 +175,14 @@ class ForecastDetailViewModel(
         timeline: List<LevelDomain>,
         healthEntries: List<HealthEntryDomain>,
     ): DetailStatsUi? {
-        if (timeline.isEmpty()) return null
-
         val peak = timeline.maxByOrNull { it.value } ?: return null
 
         val peakIndex = timeline.indexOf(peak)
         val decline = timeline.drop(peakIndex + 1).firstOrNull { it.value < peak.value }
 
         val timelineDates = timeline.map { it.date }.toSet()
-        val symptomCount = healthEntries.count { it.date in timelineDates && it.feeling == Feeling.BAD }
+        val symptomCount =
+            healthEntries.count { it.date in timelineDates && it.feeling == Feeling.BAD }
 
         return DetailStatsUi(
             peakDate = peak.date,

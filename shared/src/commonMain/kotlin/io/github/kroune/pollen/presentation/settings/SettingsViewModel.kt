@@ -1,7 +1,6 @@
 package io.github.kroune.pollen.presentation.settings
 
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.icerock.moko.resources.desc.ResourceFormatted
 import dev.icerock.moko.resources.desc.StringDesc
@@ -14,14 +13,10 @@ import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SettingsRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 @Stable
@@ -31,12 +26,16 @@ data class SettingsUiState(
 
 @Stable
 data class SettingsData(
-    val participantCode: String,
+    val participantCode: String?,
     val languageLabel: StringDesc,
-    val regionLabel: String,
-    val mainAllergenLabel: String,
+    val regionLabel: String?,
+    val mainAllergenLabel: String?,
     val friendsLabel: StringDesc?,
 )
+
+sealed interface SettingsIntent {
+    data object LoadData : SettingsIntent
+}
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
@@ -44,71 +43,67 @@ class SettingsViewModel(
     private val locationRepository: LocationRepository,
     private val pollenRepository: PollenRepository,
     private val friendsRepository: FriendsRepository,
-) : ViewModel() {
+) : MviViewModel<SettingsUiState, SettingsIntent, UiEvent>(SettingsUiState()) {
 
-    private val _state = MutableStateFlow(SettingsUiState())
-    val state: StateFlow<SettingsUiState> = _state.asStateFlow()
-
-    private val _events = Channel<UiEvent>(Channel.BUFFERED)
-    val events = _events.receiveAsFlow()
+    private var loadJob: Job? = null
 
     init {
-        loadData()
+        onIntent(SettingsIntent.LoadData)
     }
 
-    fun loadData() {
-        viewModelScope.launch {
-            _state.value = SettingsUiState(data = LoadState.Loading)
-            try {
-                combine(
-                    userRepository.observeUser(),
-                    settingsRepository.locale,
-                    locationRepository.observeLocations(),
-                    pollenRepository.observePollens(),
-                    friendsRepository.observeFriends(),
-                ) { user, locale, locations, pollens, friends ->
-                    val participantCode = user?.serverId?.takeIf { it > 0 }?.toString() ?: "—"
+    override fun handleIntent(intent: SettingsIntent) {
+        when (intent) {
+            SettingsIntent.LoadData -> loadData()
+        }
+    }
 
-                    val languageLabel: StringDesc = when (locale) {
-                        AppLocale.RU -> MR.strings.language_russian.desc()
-                        AppLocale.EN -> MR.strings.language_english.desc()
-                    }
+    private fun loadData() {
+        loadJob?.cancel()
+        updateState { SettingsUiState(data = LoadState.Loading) }
+        loadJob = viewModelScope.launch {
+            combine(
+                userRepository.observeUser(),
+                settingsRepository.locale,
+                locationRepository.observeLocations(),
+                pollenRepository.observePollens(),
+                friendsRepository.observeFriends(),
+            ) { user, locale, locations, pollens, friends ->
+                val participantCode = user?.serverId?.takeIf { it > 0 }?.toString()
 
-                    val regionLabel = if (user != null && user.location > 0) {
-                        locations.firstOrNull { it.id == user.location }?.name ?: "—"
-                    } else {
-                        "—"
-                    }
-
-                    val mainAllergenLabel = if (user != null && user.selectedAllergens.isNotEmpty()) {
-                        val primaryId = user.selectedAllergens.first()
-                        pollens.firstOrNull { it.id == primaryId }?.name ?: "—"
-                    } else {
-                        "—"
-                    }
-
-                    val friendsCount = friends.size
-                    val friendsLabel: StringDesc? = if (friendsCount > 0) {
-                        StringDesc.ResourceFormatted(MR.strings.settings_friends_count, friendsCount)
-                    } else {
-                        null
-                    }
-
-                    SettingsData(
-                        participantCode = participantCode,
-                        languageLabel = languageLabel,
-                        regionLabel = regionLabel,
-                        mainAllergenLabel = mainAllergenLabel,
-                        friendsLabel = friendsLabel,
-                    )
-                }.collect { data ->
-                    _state.value = SettingsUiState(data = LoadState.Loaded(data))
+                val languageLabel: StringDesc = when (locale) {
+                    AppLocale.RU -> MR.strings.language_russian.desc()
+                    AppLocale.EN -> MR.strings.language_english.desc()
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _state.value = SettingsUiState(data = LoadState.Failed)
-                _events.send(UiEvent.ShowError(MR.strings.error_load_settings.desc()))
+
+                val regionLabel = if (user != null && user.location > 0) {
+                    locations.firstOrNull { it.id == user.location }?.name
+                } else {
+                    null
+                }
+
+                val mainAllergenLabel = if (user != null && user.selectedAllergens.isNotEmpty()) {
+                    val primaryId = user.selectedAllergens.first()
+                    pollens.firstOrNull { it.id == primaryId }?.name
+                } else {
+                    null
+                }
+
+                val friendsCount = friends.size
+                val friendsLabel: StringDesc? = if (friendsCount > 0) {
+                    StringDesc.ResourceFormatted(MR.strings.settings_friends_count, friendsCount)
+                } else {
+                    null
+                }
+
+                SettingsData(
+                    participantCode = participantCode,
+                    languageLabel = languageLabel,
+                    regionLabel = regionLabel,
+                    mainAllergenLabel = mainAllergenLabel,
+                    friendsLabel = friendsLabel,
+                )
+            }.collect { data ->
+                updateState { SettingsUiState(data = LoadState.Loaded(data)) }
             }
         }
     }

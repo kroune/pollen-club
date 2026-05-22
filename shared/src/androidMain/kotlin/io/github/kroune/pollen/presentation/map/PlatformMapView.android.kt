@@ -8,9 +8,9 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.util.LruCache
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -47,6 +46,7 @@ import io.github.kroune.pollen.domain.model.MapPinDomain
 import io.github.kroune.pollen.domain.model.MapRingDomain
 import io.github.kroune.pollen.domain.model.TileRingIndex
 import io.github.kroune.pollen.domain.model.TileRingQuery
+import kotlinx.coroutines.awaitCancellation
 import java.io.ByteArrayOutputStream
 import kotlin.math.PI
 import kotlin.math.atan
@@ -54,7 +54,6 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlinx.coroutines.awaitCancellation
 
 private fun feelingColorInt(feeling: Feeling): Int = when (feeling) {
     Feeling.GOOD -> 0xFF6EA85C.toInt()
@@ -99,9 +98,15 @@ private class TileBounds(x: Int, y: Int, zoom: Int) {
 
 // ── ThreadLocal helper ──────────────────────────────────────────────
 
-private fun <T> threadLocal(init: () -> T) = object : ThreadLocal<T>() {
-    override fun initialValue(): T = init()
+private class NonNullThreadLocal<T : Any>(private val init: () -> T) {
+    private val delegate = object : ThreadLocal<T>() {
+        override fun initialValue(): T = init()
+    }
+
+    fun get(): T = delegate.get()!!
 }
+
+private fun <T : Any> threadLocal(init: () -> T): NonNullThreadLocal<T> = NonNullThreadLocal(init)
 
 // ── Tile provider ───────────────────────────────────────────────────
 
@@ -116,9 +121,12 @@ private class PollenTileProvider(
     private val bitmapLocal = threadLocal { createBitmap(renderSize, renderSize) }
     private val canvasLocal = threadLocal { Canvas() }
     private val pathLocal = threadLocal { Path() }
-    private val fillPaintLocal = threadLocal { Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL } }
+    private val fillPaintLocal =
+        threadLocal { Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL } }
     private val strokePaintLocal = threadLocal {
-        Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f * densityScale }
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE; strokeWidth = 2f * densityScale
+        }
     }
     private val streamLocal = threadLocal { ByteArrayOutputStream(STREAM_CAPACITY) }
 
@@ -160,13 +168,19 @@ private class PollenTileProvider(
         val points = ring.points
         val first = points[0]
         path.moveTo(
-            ((lngToPixelX(first.longitude, bounds.scale) - bounds.originX) * densityScale).toFloat(),
+            ((lngToPixelX(
+                first.longitude,
+                bounds.scale,
+            ) - bounds.originX) * densityScale).toFloat(),
             ((latToPixelY(first.latitude, bounds.scale) - bounds.originY) * densityScale).toFloat(),
         )
         for (i in 1 until points.size) {
             val p = points[i]
             path.lineTo(
-                ((lngToPixelX(p.longitude, bounds.scale) - bounds.originX) * densityScale).toFloat(),
+                ((lngToPixelX(
+                    p.longitude,
+                    bounds.scale,
+                ) - bounds.originX) * densityScale).toFloat(),
                 ((latToPixelY(p.latitude, bounds.scale) - bounds.originY) * densityScale).toFloat(),
             )
         }
@@ -308,7 +322,9 @@ private class CanvasClusterRenderer(
         }
 
     private fun dominantFeeling(cluster: Cluster<PinClusterItem>): Feeling {
-        var bad = 0; var mid = 0; var good = 0
+        var bad = 0;
+        var mid = 0;
+        var good = 0
         for (item in cluster.items) {
             when (item.pin.feeling) {
                 Feeling.BAD -> bad++
@@ -346,17 +362,26 @@ private class CanvasClusterRenderer(
         markerOptions.anchor(0.5f, 0.5f)
     }
 
-    override fun onClusterItemUpdated(item: PinClusterItem, marker: com.google.android.gms.maps.model.Marker) {
+    override fun onClusterItemUpdated(
+        item: PinClusterItem,
+        marker: com.google.android.gms.maps.model.Marker,
+    ) {
         marker.setIcon(pinDescriptor(item.pin.feeling))
         marker.setAnchor(0.5f, 0.5f)
     }
 
-    override fun onBeforeClusterRendered(cluster: Cluster<PinClusterItem>, markerOptions: MarkerOptions) {
+    override fun onBeforeClusterRendered(
+        cluster: Cluster<PinClusterItem>,
+        markerOptions: MarkerOptions,
+    ) {
         markerOptions.icon(clusterDescriptor(cluster))
         markerOptions.anchor(0.5f, 0.5f)
     }
 
-    override fun onClusterUpdated(cluster: Cluster<PinClusterItem>, marker: com.google.android.gms.maps.model.Marker) {
+    override fun onClusterUpdated(
+        cluster: Cluster<PinClusterItem>,
+        marker: com.google.android.gms.maps.model.Marker,
+    ) {
         marker.setIcon(clusterDescriptor(cluster))
         marker.setAnchor(0.5f, 0.5f)
     }
@@ -382,7 +407,7 @@ private fun MapClustering(
     MapEffect(context, mapWidthPx, mapHeightPx) { map ->
         if (mapWidthPx > 0 && mapHeightPx > 0) {
             clusterManager.setAlgorithm(
-                NonHierarchicalViewBasedAlgorithm(mapWidthPx, mapHeightPx)
+                NonHierarchicalViewBasedAlgorithm(mapWidthPx, mapHeightPx),
             )
         }
         clusterManager.setAnimation(false)

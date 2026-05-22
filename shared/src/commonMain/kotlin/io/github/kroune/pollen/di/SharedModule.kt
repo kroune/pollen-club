@@ -57,7 +57,7 @@ val sharedModule = module {
     single<MedicationRepository> { MedicationRepositoryImpl(get(), get(), get(), get()) }
     single<PhenologyRepository> { PhenologyRepositoryImpl(get(), get()) }
     single<WeatherRepository> { WeatherRepositoryImpl(get()) }
-    single<SettingsRepository> { SettingsRepositoryImpl(get()) }
+    single<SettingsRepository> { SettingsRepositoryImpl(get(), get()) }
     single<UserForecastRepository> { UserForecastRepositoryImpl(get(), get()) }
     single<SensitivityRepository> { SensitivityRepositoryImpl(get()) }
     single<PersonalIndexRepository> { PersonalIndexRepositoryImpl(get()) }

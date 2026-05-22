@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,74 +30,59 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.dataOrNull
-import io.github.kroune.pollen.presentation.common.CollectEvents
-import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.presentation.common.CategoriesCardSkeleton
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MedicationListSkeleton
+import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.common.formatDateLocalized
+import io.github.kroune.pollen.presentation.diary.dayOfWeekStringDesc
+import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.datetime.DayOfWeek
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.datetime.LocalDate
 
 @Composable
 fun MedicationsScreen(
+    state: MedicationsUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (MedicationsIntent) -> Unit = {},
     onBack: () -> Unit = {},
-    viewModel: MedicationsViewModel = koinViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState)
+    CollectEffects(effects, snackbarHostState)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
     ) { _ ->
-        MedicationsScreen(
-            state = state,
-            onBack = onBack,
-            onSearchQueryChanged = viewModel::onSearchQueryChanged,
-            onToggleTaken = viewModel::toggleTakenToday,
-            onToggleSheetExpanded = viewModel::toggleSheetExpanded,
-            onRemoveDose = viewModel::removeTodayDose,
-        )
-    }
-}
-
-@Composable
-fun MedicationsScreen(
-    state: MedicationsUiState,
-    onBack: () -> Unit,
-    onSearchQueryChanged: (String) -> Unit,
-    onToggleTaken: (Long) -> Unit,
-    onToggleSheetExpanded: () -> Unit,
-    onRemoveDose: (Long) -> Unit,
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
             TopBar(onBack = onBack)
 
             Column(
@@ -108,7 +94,7 @@ fun MedicationsScreen(
             ) {
                 SearchField(
                     query = state.searchQuery,
-                    onQueryChanged = onSearchQueryChanged,
+                    onQueryChanged = { onIntent(MedicationsIntent.SearchQueryChanged(it)) },
                 )
                 Spacer(Modifier.height(18.dp))
 
@@ -116,10 +102,10 @@ fun MedicationsScreen(
                 Spacer(Modifier.height(8.dp))
                 when (val meds = state.recentMeds) {
                     is LoadState.Loading -> MedicationListSkeleton()
-                    is LoadState.Failed -> MedicationListSkeleton(count = 2)
+                    is LoadState.Failed -> FullScreenError(onRetry = {})
                     is LoadState.Loaded -> RecentMedsList(
                         meds = meds.data,
-                        onToggleTaken = onToggleTaken,
+                        onToggleTaken = { onIntent(MedicationsIntent.ToggleTakenToday(it)) },
                     )
                 }
 
@@ -142,18 +128,20 @@ fun MedicationsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.3f))
-                    .clickable(onClick = onToggleSheetExpanded),
+                    .clickable(onClick = { onIntent(MedicationsIntent.ToggleSheetExpanded) }),
             )
         }
 
-        TodaySheet(
-            doses = state.todayDoses,
-            todayCount = state.todayCount,
-            isExpanded = state.isSheetExpanded,
-            onToggleExpand = onToggleSheetExpanded,
-            onRemoveDose = onRemoveDose,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+            TodaySheet(
+                doses = state.todayDoses,
+                todayCount = state.todayCount,
+                isExpanded = state.isSheetExpanded,
+                today = state.today,
+                onToggleExpand = { onIntent(MedicationsIntent.ToggleSheetExpanded) },
+                onRemoveDose = { onIntent(MedicationsIntent.RemoveTodayDose(it)) },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 }
 
@@ -206,17 +194,34 @@ private fun SearchField(
             tint = PollenTheme.colors.ink3,
         )
         Spacer(Modifier.width(10.dp))
-        if (query.isEmpty()) {
-            Text(
-                stringResource(MR.strings.medications_search),
-                fontSize = 14.sp,
-                color = PollenTheme.colors.ink3,
+        Box(modifier = Modifier.weight(1f)) {
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChanged,
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(
+                    fontSize = 14.sp,
+                    color = PollenTheme.colors.ink,
+                ),
+                cursorBrush = SolidColor(PollenTheme.colors.ink),
+                modifier = Modifier.fillMaxWidth(),
             )
-        } else {
-            Text(
-                query,
-                fontSize = 14.sp,
-                color = PollenTheme.colors.ink,
+            if (query.isEmpty()) {
+                Text(
+                    stringResource(MR.strings.medications_search),
+                    fontSize = 14.sp,
+                    color = PollenTheme.colors.ink3,
+                )
+            }
+        }
+        if (query.isNotEmpty()) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable { onQueryChanged("") },
+                tint = PollenTheme.colors.ink3,
             )
         }
     }
@@ -284,12 +289,26 @@ private fun RecentMedRow(
                 color = PollenTheme.colors.ink3,
                 modifier = Modifier.padding(top = 1.dp),
             )
-            Text(
-                text = stringResource(MR.strings.medications_intakes_format, med.count, med.lastTaken),
-                fontSize = 11.sp,
-                color = PollenTheme.colors.ink3,
-                modifier = Modifier.padding(top = 2.dp),
-            )
+            val lastTaken = med.lastTaken
+            if (lastTaken != null) {
+                Text(
+                    text = stringResource(
+                        MR.strings.medications_intakes_format,
+                        med.count,
+                        formatDateLocalized(lastTaken),
+                    ),
+                    fontSize = 11.sp,
+                    color = PollenTheme.colors.ink3,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            } else {
+                Text(
+                    text = stringResource(MR.strings.medications_never_taken),
+                    fontSize = 11.sp,
+                    color = PollenTheme.colors.ink3,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
         }
 
         Spacer(Modifier.width(8.dp))
@@ -387,9 +406,9 @@ private fun CategoriesCard(categories: ImmutableList<MedCategoryUi>) {
 // region Previews
 
 private val previewMeds = persistentListOf(
-    RecentMedUi(1, "Цетрин", "Цетиризин", "вчера", 12, true),
-    RecentMedUi(2, "Назонекс", "Мометазон", "3 дня назад", 5, false),
-    RecentMedUi(3, "Кромогексал", "Кромоглициевая к-та", "неделю назад", 2, false),
+    RecentMedUi(1, "Цетрин", "Цетиризин", LocalDate(2026, 5, 17), 12, true),
+    RecentMedUi(2, "Назонекс", "Мометазон", LocalDate(2026, 5, 15), 5, false),
+    RecentMedUi(3, "Кромогексал", "Кромоглициевая к-та", LocalDate(2026, 5, 11), 2, false),
 )
 
 private val previewCategories = persistentListOf(
@@ -435,6 +454,7 @@ private fun PreviewMedicationsTodaySheetCollapsed() {
             doses = previewDoses,
             todayCount = 2,
             isExpanded = false,
+            today = LocalDate(2026, 5, 18),
             onToggleExpand = {},
             onRemoveDose = {},
         )
@@ -449,6 +469,7 @@ private fun PreviewMedicationsTodaySheetExpanded() {
             doses = previewDoses,
             todayCount = 2,
             isExpanded = true,
+            today = LocalDate(2026, 5, 18),
             onToggleExpand = {},
             onRemoveDose = {},
         )
@@ -468,11 +489,6 @@ private fun PreviewMedicationsFull() {
                 searchQuery = "",
                 isSheetExpanded = false,
             ),
-            onBack = {},
-            onSearchQueryChanged = {},
-            onToggleTaken = {},
-            onToggleSheetExpanded = {},
-            onRemoveDose = {},
         )
     }
 }
@@ -486,6 +502,7 @@ private fun TodaySheet(
     doses: ImmutableList<TodayDoseUi>,
     todayCount: Int,
     isExpanded: Boolean,
+    today: LocalDate?,
     onToggleExpand: () -> Unit,
     onRemoveDose: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -507,6 +524,7 @@ private fun TodaySheet(
         if (isExpanded) {
             ExpandedSheetContent(
                 doses = doses,
+                today = today,
                 onToggleExpand = onToggleExpand,
                 onRemoveDose = onRemoveDose,
             )
@@ -588,6 +606,7 @@ private fun CollapsedSheetContent(
 @Composable
 private fun ExpandedSheetContent(
     doses: ImmutableList<TodayDoseUi>,
+    today: LocalDate?,
     onToggleExpand: () -> Unit,
     onRemoveDose: (Long) -> Unit,
 ) {
@@ -621,11 +640,13 @@ private fun ExpandedSheetContent(
                 color = PollenTheme.colors.ink,
             )
             Spacer(Modifier.weight(1f))
-            Text(
-                text = todayDateLabel(),
-                fontSize = 13.sp,
-                color = PollenTheme.colors.ink3,
-            )
+            today?.let { date ->
+                Text(
+                    text = todayDateLabel(date),
+                    fontSize = 13.sp,
+                    color = PollenTheme.colors.ink3,
+                )
+            }
         }
 
         Column(
@@ -709,33 +730,10 @@ private fun TodayDoseCard(
 }
 
 @Composable
-private fun todayDateLabel(): String {
-    val now = kotlin.time.Clock.System.now()
-    val date = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
-    val dayOfWeek = when (date.dayOfWeek) {
-        DayOfWeek.MONDAY -> stringResource(MR.strings.dow_mon)
-        DayOfWeek.TUESDAY -> stringResource(MR.strings.dow_tue)
-        DayOfWeek.WEDNESDAY -> stringResource(MR.strings.dow_wed)
-        DayOfWeek.THURSDAY -> stringResource(MR.strings.dow_thu)
-        DayOfWeek.FRIDAY -> stringResource(MR.strings.dow_fri)
-        DayOfWeek.SATURDAY -> stringResource(MR.strings.dow_sat)
-        DayOfWeek.SUNDAY -> stringResource(MR.strings.dow_sun)
-    }
-    val month = when (date.month) {
-        kotlinx.datetime.Month.JANUARY -> stringResource(MR.strings.month_jan_short)
-        kotlinx.datetime.Month.FEBRUARY -> stringResource(MR.strings.month_feb_short)
-        kotlinx.datetime.Month.MARCH -> stringResource(MR.strings.month_mar_short)
-        kotlinx.datetime.Month.APRIL -> stringResource(MR.strings.month_apr_short)
-        kotlinx.datetime.Month.MAY -> stringResource(MR.strings.month_may_short)
-        kotlinx.datetime.Month.JUNE -> stringResource(MR.strings.month_jun_short)
-        kotlinx.datetime.Month.JULY -> stringResource(MR.strings.month_jul_short)
-        kotlinx.datetime.Month.AUGUST -> stringResource(MR.strings.month_aug_short)
-        kotlinx.datetime.Month.SEPTEMBER -> stringResource(MR.strings.month_sep_short)
-        kotlinx.datetime.Month.OCTOBER -> stringResource(MR.strings.month_oct_short)
-        kotlinx.datetime.Month.NOVEMBER -> stringResource(MR.strings.month_nov_short)
-        kotlinx.datetime.Month.DECEMBER -> stringResource(MR.strings.month_dec_short)
-    }
-    return "$dayOfWeek, ${date.dayOfMonth} $month"
+private fun todayDateLabel(date: LocalDate): String {
+    val dayOfWeek = dayOfWeekStringDesc(date.dayOfWeek).localized()
+    val month = monthShortStringDesc(date.month).localized()
+    return "$dayOfWeek, ${date.day} $month"
 }
 
 // endregion

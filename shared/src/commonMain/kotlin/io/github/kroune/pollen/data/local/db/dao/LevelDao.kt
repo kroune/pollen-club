@@ -6,6 +6,7 @@ import androidx.room.Upsert
 import io.github.kroune.pollen.data.local.db.entity.ForecastLevelEntity
 import io.github.kroune.pollen.data.local.db.entity.LevelEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface LevelDao {
@@ -13,7 +14,7 @@ interface LevelDao {
     suspend fun upsertLevels(levels: List<LevelEntity>)
 
     @Query("SELECT * FROM levels WHERE location_id = :locationId AND date = :date ORDER BY pollen_id")
-    suspend fun getByLocationAndDate(locationId: Int, date: String): List<LevelEntity>
+    suspend fun getByLocationAndDate(locationId: Int, date: LocalDate): List<LevelEntity>
 
     @Query("SELECT * FROM levels WHERE location_id = :locationId ORDER BY date DESC, pollen_id")
     fun observeByLocation(locationId: Int): Flow<List<LevelEntity>>
@@ -25,7 +26,7 @@ interface LevelDao {
     suspend fun upsertForecasts(forecasts: List<ForecastLevelEntity>)
 
     @Query("SELECT * FROM forecast_levels WHERE location_id = :locationId AND date = :date ORDER BY pollen_id")
-    suspend fun getForecastsByLocationAndDate(locationId: Int, date: String): List<ForecastLevelEntity>
+    suspend fun getForecastsByLocationAndDate(locationId: Int, date: LocalDate): List<ForecastLevelEntity>
 
     @Query("SELECT * FROM forecast_levels WHERE location_id = :locationId ORDER BY date DESC, pollen_id")
     fun observeForecastsByLocation(locationId: Int): Flow<List<ForecastLevelEntity>>
@@ -40,8 +41,8 @@ interface LevelDao {
     suspend fun getLevelsByLocationAndPollen(locationId: Int, pollenId: Int): List<LevelEntity>
 
     @Query("DELETE FROM levels WHERE date < :cutoffDate")
-    suspend fun deleteLevelsOlderThan(cutoffDate: String)
+    suspend fun deleteLevelsOlderThan(cutoffDate: LocalDate)
 
     @Query("DELETE FROM forecast_levels WHERE date < :cutoffDate")
-    suspend fun deleteForecastsOlderThan(cutoffDate: String)
+    suspend fun deleteForecastsOlderThan(cutoffDate: LocalDate)
 }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,9 +19,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,60 +33,40 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocationDomain
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FullScreenError
-import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
-/** ViewModel convenience overload — used by navigation. */
-@Composable
-fun RegionSelectorScreen(
-    viewModel: RegionSelectorViewModel = koinViewModel(),
-    onBack: () -> Unit = {},
-) {
-    val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
-        RegionSelectorScreen(
-            state = state,
-            onBack = onBack,
-            onRetry = viewModel::loadData,
-            onSearchQueryChange = viewModel::setSearchQuery,
-            onSelectLocation = viewModel::selectLocation,
-        )
-    }
-}
-
-/** State-based overload — previewable and testable. */
 @Composable
 fun RegionSelectorScreen(
     state: RegionSelectorUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (RegionSelectorIntent) -> Unit = {},
     onBack: () -> Unit = {},
-    onRetry: () -> Unit = {},
-    onSearchQueryChange: (String) -> Unit = {},
-    onSelectLocation: (Int) -> Unit = {},
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(RegionSelectorIntent.LoadData) })
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
+        Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -114,7 +93,7 @@ fun RegionSelectorScreen(
 
         OutlinedTextField(
             value = state.searchQuery,
-            onValueChange = onSearchQueryChange,
+            onValueChange = { onIntent(RegionSelectorIntent.SearchQueryChanged(it)) },
             placeholder = {
                 Text(
                     stringResource(MR.strings.region_search_placeholder),
@@ -151,14 +130,15 @@ fun RegionSelectorScreen(
                     CircularProgressIndicator(color = PollenTheme.colors.accent)
                 }
             }
-            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
+            is LoadState.Failed -> FullScreenError(onRetry = { onIntent(RegionSelectorIntent.LoadData) })
             is LoadState.Loaded -> {
                 RegionList(
                     locations = locations.data,
                     selectedLocationId = state.selectedLocationId,
-                    onSelect = onSelectLocation,
+                    onSelect = { onIntent(RegionSelectorIntent.SelectLocation(it)) },
                 )
             }
+        }
         }
     }
 }

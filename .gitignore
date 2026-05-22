@@ -3,15 +3,12 @@
 /local.properties
 /.idea
 .DS_Store
-/build
+**/build
 /captures
 .externalNativeBuild
 .cxx
 *.apk
 *.aab
-/androidApp/build
-/shared/build
-/iosApp/build
 decompiled
 .kotlin
 .claude/worktrees

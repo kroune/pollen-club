@@ -1,5 +1,7 @@
 package io.github.kroune.pollen.domain.model
 
+import kotlinx.datetime.LocalDate
+
 data class PollenDomain(
     val id: Int,
     val name: String,
@@ -17,7 +19,7 @@ data class PollenLevelDomain(
 
 data class LevelDomain(
     val id: Int,
-    val date: String,
+    val date: LocalDate,
     val pollenId: Int,
     val locationId: Int,
     val value: Int,

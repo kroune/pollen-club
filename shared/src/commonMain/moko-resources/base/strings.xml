@@ -9,6 +9,9 @@
     <string name="dow_sat">сб</string>
     <string name="dow_sun">вс</string>
 
+    <string name="week_range_same_month">%1$d–%2$d %3$s</string>
+    <string name="week_range_cross_month">%1$d %2$s – %3$d %4$s</string>
+
     <!-- Month names (full) -->
     <string name="month_january">Январь</string>
     <string name="month_february">Февраль</string>
@@ -36,6 +39,20 @@
     <string name="month_oct_short">окт</string>
     <string name="month_nov_short">ноя</string>
     <string name="month_dec_short">дек</string>
+
+    <string name="date_day_month">%1$d %2$s</string>
+    <string name="month_january_gen">января</string>
+    <string name="month_february_gen">февраля</string>
+    <string name="month_march_gen">марта</string>
+    <string name="month_april_gen">апреля</string>
+    <string name="month_may_gen">мая</string>
+    <string name="month_june_gen">июня</string>
+    <string name="month_july_gen">июля</string>
+    <string name="month_august_gen">августа</string>
+    <string name="month_september_gen">сентября</string>
+    <string name="month_october_gen">октября</string>
+    <string name="month_november_gen">ноября</string>
+    <string name="month_december_gen">декабря</string>
 
     <!-- Severity labels -->
     <string name="severity_none">Нулевой</string>
@@ -188,6 +205,7 @@
     <string name="phenology_marked_on">Отметили %s</string>
     <string name="phenology_instruction">Отмечайте стадию цветения, чтобы другие пользователи имели более точную картину пыления</string>
     <string name="phenology_stage_number">Стадия №%d</string>
+    <string name="phenology_current_stage_format">№%d · %s</string>
     <string name="phenology_new_observation">Новое наблюдение</string>
     <string name="phenology_select_stage">Выберите стадию</string>
     <string name="phenology_comment_label">Написать комментарий к стадии</string>
@@ -199,6 +217,8 @@
     <string name="medications_your_meds">Ваши препараты</string>
     <string name="medications_categories">Категории</string>
     <string name="medications_intakes_format">%d приёмов · %s</string>
+    <string name="medications_never_taken">Ещё не принимался</string>
+    <string name="score_format">%d,%d</string>
     <string name="medications_cancel_intake">отменить</string>
     <string name="medications_take">+ принять</string>
     <string name="medications_intakes_today">· %d приёма</string>
@@ -239,6 +259,7 @@
     <string name="error_load_phenology">Не удалось загрузить данные фенологии</string>
     <string name="error_submit_observation">Не удалось отправить наблюдение</string>
     <string name="error_load_settings">Не удалось загрузить настройки</string>
+    <string name="error_change_language">Не удалось изменить язык</string>
     <string name="error_load_allergens">Не удалось загрузить аллергены</string>
     <string name="error_save_sensitivity">Не удалось сохранить</string>
     <string name="error_load_feed">Не удалось загрузить ленту</string>
@@ -285,6 +306,7 @@
     <string name="friends_share">Поделиться</string>
     <string name="friends_empty_body_qr">Добавьте друзей по ID или QR-коду, чтобы видеть их отметки на карте</string>
     <string name="error_qr_scan">Не удалось отсканировать QR-код</string>
+    <string name="friends_no_id">Не удалось загрузить ваш ID</string>
     <string name="error_camera_permission">Для сканирования QR-кода нужен доступ к камере</string>
     <string name="friends_allow_camera">Разрешить камеру</string>
 </resources>

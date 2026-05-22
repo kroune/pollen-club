@@ -21,10 +21,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -42,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,88 +51,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
+import dev.icerock.moko.resources.desc.Raw
+import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.BodyZone
 import io.github.kroune.pollen.domain.model.Feeling
-import androidx.compose.ui.tooling.preview.Preview
-import dev.icerock.moko.resources.desc.Raw
-import dev.icerock.moko.resources.desc.StringDesc
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.datetime.Instant
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
-import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiaryScreen(
+    state: DiaryUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (DiaryIntent) -> Unit = {},
     onNavigateToMedications: () -> Unit = {},
-    viewModel: DiaryViewModel = koinViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState)
+    CollectEffects(effects, snackbarHostState)
 
     var showDatePicker by remember { mutableStateOf(false) }
-
     if (showDatePicker) {
         DiaryDatePickerDialog(
-            selectedIsoDate = state.selectedIsoDate,
-            onDateSelected = { isoDate ->
+            selectedDate = state.selectedDate,
+            onDateSelected = { date ->
                 showDatePicker = false
-                viewModel.selectDate(isoDate)
+                onIntent(DiaryIntent.SelectDate(date))
             },
             onDismiss = { showDatePicker = false },
         )
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
-        DiaryScreen(
-            state = state,
-            onDateSelected = viewModel::selectDate,
-            onPreviousWeek = { viewModel.navigateWeek(forward = false) },
-            onNextWeek = { viewModel.navigateWeek(forward = true) },
-            onCalendarClick = { showDatePicker = true },
-            onMoodSelected = viewModel::selectFeeling,
-            onZoneSelected = viewModel::selectZone,
-            onTagToggled = viewModel::toggleTag,
-            onToggleMedicationTaken = viewModel::toggleMedicationTaken,
-            onAddMedication = onNavigateToMedications,
-        )
-    }
-}
-
-/** State-based overload — previewable and testable. */
-@Composable
-fun DiaryScreen(
-    state: DiaryUiState,
-    onDateSelected: (String) -> Unit,
-    onPreviousWeek: () -> Unit,
-    onNextWeek: () -> Unit,
-    onCalendarClick: () -> Unit,
-    onMoodSelected: (Feeling) -> Unit,
-    onZoneSelected: (BodyZone) -> Unit,
-    onTagToggled: (String) -> Unit,
-    onToggleMedicationTaken: (Long) -> Unit,
-    onAddMedication: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
         DateHeader(
             monthLabel = state.monthName?.localized() ?: "",
             dates = state.dates,
-            onDateSelected = onDateSelected,
-            onPreviousWeek = onPreviousWeek,
-            onNextWeek = onNextWeek,
-            onCalendarClick = onCalendarClick,
+            onDateSelected = { onIntent(DiaryIntent.SelectDate(it)) },
+            onPreviousWeek = { onIntent(DiaryIntent.NavigateWeek(forward = false)) },
+            onNextWeek = { onIntent(DiaryIntent.NavigateWeek(forward = true)) },
+            onCalendarClick = { showDatePicker = true },
         )
 
         Column(
@@ -144,7 +116,7 @@ fun DiaryScreen(
                 .padding(horizontal = 16.dp)
                 .padding(top = 14.dp, bottom = 16.dp),
         ) {
-            MoodSection(state.moodOptions, onMoodSelected)
+            MoodSection(state.moodOptions, onMoodSelected = { onIntent(DiaryIntent.SelectFeeling(it)) })
 
             val hasMood = state.moodOptions.any { it.isSelected }
             if (hasMood) {
@@ -155,8 +127,8 @@ fun DiaryScreen(
                         stringResource(MR.strings.section_symptoms, it.localized())
                     },
                     selectedZoneTags = state.selectedZoneTags,
-                    onZoneSelected = onZoneSelected,
-                    onTagToggled = onTagToggled,
+                    onZoneSelected = { onIntent(DiaryIntent.SelectZone(it)) },
+                    onTagToggled = { onIntent(DiaryIntent.ToggleTag(it)) },
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 16.dp),
@@ -168,9 +140,10 @@ fun DiaryScreen(
 
             TherapySection(
                 items = state.therapyItems,
-                onToggleTaken = onToggleMedicationTaken,
-                onAddMedication = onAddMedication,
+                onToggleTaken = { onIntent(DiaryIntent.ToggleMedicationTaken(it)) },
+                onAddMedication = onNavigateToMedications,
             )
+        }
         }
     }
 }
@@ -181,7 +154,7 @@ fun DiaryScreen(
 private fun DateHeader(
     monthLabel: String,
     dates: ImmutableList<DiaryDateUi>,
-    onDateSelected: (String) -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
     onPreviousWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onCalendarClick: () -> Unit,
@@ -246,7 +219,7 @@ private fun DateHeader(
                                 if (date.isSelected) PollenTheme.colors.accent else Color.Transparent,
                                 shape,
                             )
-                            .clickable { onDateSelected(date.isoDate) }
+                            .clickable { onDateSelected(date.date) }
                             .padding(vertical = 5.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
@@ -505,15 +478,11 @@ private fun SymptomTagPill(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiaryDatePickerDialog(
-    selectedIsoDate: String,
-    onDateSelected: (String) -> Unit,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val initialMillis = if (selectedIsoDate.isNotBlank()) {
-        LocalDate.parse(selectedIsoDate).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
-    } else {
-        null
-    }
+    val initialMillis = selectedDate?.atStartOfDayIn(TimeZone.UTC)?.toEpochMilliseconds()
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
 
     val pickerColors = DatePickerDefaults.colors(
@@ -537,7 +506,7 @@ private fun DiaryDatePickerDialog(
                 datePickerState.selectedDateMillis?.let { millis ->
                     val date = Instant.fromEpochMilliseconds(millis)
                         .toLocalDateTime(TimeZone.UTC).date
-                    onDateSelected(date.toString())
+                    onDateSelected(date)
                 }
             }) {
                 Text(stringResource(MR.strings.ok))
@@ -564,13 +533,13 @@ private fun DiaryDatePickerDialog(
 // region Previews
 
 private val previewDates = persistentListOf(
-    DiaryDateUi(12, StringDesc.Raw("пн"), false, "2026-05-12"),
-    DiaryDateUi(13, StringDesc.Raw("вт"), false, "2026-05-13"),
-    DiaryDateUi(14, StringDesc.Raw("ср"), true, "2026-05-14"),
-    DiaryDateUi(15, StringDesc.Raw("чт"), false, "2026-05-15"),
-    DiaryDateUi(16, StringDesc.Raw("пт"), false, "2026-05-16"),
-    DiaryDateUi(17, StringDesc.Raw("сб"), false, "2026-05-17"),
-    DiaryDateUi(18, StringDesc.Raw("вс"), false, "2026-05-18"),
+    DiaryDateUi(12, StringDesc.Raw("пн"), false, LocalDate(2026, 5, 12)),
+    DiaryDateUi(13, StringDesc.Raw("вт"), false, LocalDate(2026, 5, 13)),
+    DiaryDateUi(14, StringDesc.Raw("ср"), true, LocalDate(2026, 5, 14)),
+    DiaryDateUi(15, StringDesc.Raw("чт"), false, LocalDate(2026, 5, 15)),
+    DiaryDateUi(16, StringDesc.Raw("пт"), false, LocalDate(2026, 5, 16)),
+    DiaryDateUi(17, StringDesc.Raw("сб"), false, LocalDate(2026, 5, 17)),
+    DiaryDateUi(18, StringDesc.Raw("вс"), false, LocalDate(2026, 5, 18)),
 )
 
 private val previewMoodOptions = persistentListOf(
@@ -675,7 +644,7 @@ private fun PreviewDiaryFull() {
         DiaryScreen(
             state = DiaryUiState(
                 monthName = StringDesc.Raw("Май 2026"),
-                selectedIsoDate = "2026-05-14",
+                selectedDate = LocalDate(2026, 5, 14),
                 dates = previewDates,
                 moodOptions = previewMoodOptions,
                 bodyZones = previewBodyZones,
@@ -683,15 +652,6 @@ private fun PreviewDiaryFull() {
                 selectedZoneTags = previewTags,
                 therapyItems = previewTherapy,
             ),
-            onDateSelected = {},
-            onPreviousWeek = {},
-            onNextWeek = {},
-            onCalendarClick = {},
-            onMoodSelected = {},
-            onZoneSelected = {},
-            onTagToggled = {},
-            onToggleMedicationTaken = {},
-            onAddMedication = {},
         )
     }
 }

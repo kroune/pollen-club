@@ -55,90 +55,194 @@ docs/               # Planning docs (DECISIONS.md, ARCHITECTURE.md, PLAN.md)
 
 ## Key Patterns
 
-- **Repository pattern** — all data access through repository interfaces (domain/) with implementations (data/)
+- **MVI** — every screen has `State`, sealed `Intent`, and `UiEvent` effects via the `MviViewModel` base class.
+- **Repository pattern** — all data access through repository interfaces (domain/) with implementations (data/).
 - **DTO ↔ Domain mapping** — never use API DTOs in UI. Map at the repository boundary.
-- **Locale resolution** — server sends `_rus`/`_eng` field pairs. Mappers take `AppLocale` to pick the right one. User can switch language in settings.
+- **Locale resolution** — server sends `_rus`/`_eng` field pairs. Mappers receive `AppLocale` to pick the right one. The UI does **not** know about locale — moko-resources handles all UI string localization via `applyMokoLocale(locale)` called once from `KoinInit`.
+- **Dates are `LocalDate`** end-to-end — domain, Room (via `LocalDateConverter`), DAOs. Never bridge through `String`. Format for UI via `formatDateLocalized(date)`.
 - **Incremental sync** — levels, forecasts, statistics use `from_id` pattern. Store last ID in Room.
 - **Local-first for health entries** — save to Room immediately, sync to server in background.
-- **expect/actual for maps** — `PlatformMapView` composable with Google Maps on Android, MapKit on iOS.
+- **expect/actual for platform features** — `PlatformMapView` (maps), `rememberCopyToClipboard`, `rememberShareTextLauncher`. Pattern: one `expect` in commonMain, `actual` in androidMain/iosMain/jvmMain.
 
-## ViewModel & UI Patterns
+## MVI ViewModel Pattern
 
-Every screen follows the same shape. Do not deviate from it.
+Every ViewModel extends `MviViewModel<State, Intent, Effect>`. Do not roll your own `_state` / `_events` plumbing.
 
-### UiState — LoadState + ImmutableList
-
-```kotlin
-data class FooUiState(
-    val items: LoadState<ImmutableList<Item>> = LoadState.Loading,
-    val isRefreshing: Boolean = false,
-)
-```
-
-`LoadState<T>` is a sealed interface with `Loading`, `Loaded<T>`, `Failed`. Use it for every async field.
-Use `ImmutableList` (not `List`) for all list fields in UiState.
-
-### One-shot Events — Channel
+### Base class (do not change without good reason)
 
 ```kotlin
-private val _events = Channel<UiEvent>(Channel.BUFFERED)
-val events = _events.receiveAsFlow()
-```
-
-`UiEvent.ShowError(message)` is the only event type. Send it for transient errors. Use `CollectEvents` in the screen:
-
-```kotlin
-CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-```
-
-### Error Handling in ViewModels
-
-```kotlin
-try {
-    // ...
-} catch (e: CancellationException) {
-    throw e                         // ALWAYS rethrow — never swallow coroutine cancellation
-} catch (e: Exception) {
-    _state.value = _state.value.copy(data = LoadState.Failed)
-    _events.send(UiEvent.ShowError("Friendly user-facing message"))
+abstract class MviViewModel<State, Intent, Effect>(initialState: State) : ViewModel() {
+    val state: StateFlow<State>
+    val effects: Flow<Effect>
+    protected val currentState: State
+    fun onIntent(intent: Intent)
+    protected abstract fun handleIntent(intent: Intent)
+    protected fun updateState(reducer: State.() -> State)
+    protected fun emitEffect(effect: Effect)
 }
 ```
 
-Rules:
-- **Always rethrow `CancellationException`** before any `catch (e: Exception)` block.
-- Show `LoadState.Failed` in state AND send a `UiEvent.ShowError` — both, not just one.
-- Error messages sent via `UiEvent.ShowError` must be **user-friendly** ("Failed to load pollen data"), never raw exception messages or stack traces.
-- Do not silently ignore failures. Do not show only a log and move on.
-
-### Screen Structure
+### Concrete ViewModel shape
 
 ```kotlin
-@Composable
-fun FooScreen(viewModel: FooViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+@Stable
+data class FooUiState(
+    val items: LoadState<ImmutableList<Item>> = LoadState.Loading,
+    val query: String = "",
+)
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
-        when (val data = state.items) {
-            is LoadState.Loading -> /* skeleton */
-            is LoadState.Loaded  -> /* content */
-            is LoadState.Failed  -> FullScreenError(onRetry = viewModel::loadData)
+sealed interface FooIntent {
+    data object LoadData : FooIntent
+    data class SearchQueryChanged(val query: String) : FooIntent
+}
+
+class FooViewModel(private val repo: FooRepository) :
+    MviViewModel<FooUiState, FooIntent, UiEvent>(FooUiState()) {
+
+    init { observeItems() }
+
+    override fun handleIntent(intent: FooIntent) {
+        when (intent) {
+            FooIntent.LoadData -> reload()
+            is FooIntent.SearchQueryChanged -> updateState { copy(query = intent.query) }
+        }
+    }
+
+    private fun observeItems() {
+        viewModelScope.launch {
+            repo.observeItems().collect { items ->
+                updateState { copy(items = LoadState.Loaded(items.toImmutableList())) }
+            }
         }
     }
 }
 ```
 
-When multiple data pieces can partially fail: show `FullScreenError` only if **all** critical data failed; show `ErrorBanner` inline if only some data failed.
+### State slices — independent observers, no mega-combine
+
+When state has multiple async fields with **different** dependency sets, split them into independent slice observers. Each slice has its own `viewModelScope.launch { sourceFlow.collect { updateState { copy(slice = …) } } }`.
+
+Rules:
+- **If slices share inputs and outputs depend on them together** → use one `combine` (e.g. `userAllergens` needs pollens + sensitivities + levels, all three together).
+- **If slices have independent inputs** → separate `observe<X>()` private functions, one launch each. Don't merge with `combine` just to centralize; that re-runs every output when any input changes.
+- **Intent-only state** (search query, sheet expanded, dialog visibility) → no slice observer, write to state directly from `handleIntent` via `updateState`.
+- **No final assembly combine.** Slices update their own fields independently — Compose recomposes on each `updateState`.
+- **Never add helpers to `MviViewModel`** to "simplify" the launch/collect/updateState pattern. The pattern is 3 lines per slice; abstractions there grow the base class API surface for marginal gain.
+
+Example with 3 independent slices (Phenology):
+```kotlin
+init {
+    observeStages()        // observations + locale → stages, currentStageLabel
+    observeAllergenName()  // pollens → allergenName
+    observeLocationLabel() // user + locations → locationLabel
+}
+```
+
+### One-shot effects — `emitEffect` + `Flow<UiEvent>`
+
+`UiEvent.ShowError(message: StringDesc)` is the only event type. Emit it for transient errors:
+
+```kotlin
+emitEffect(UiEvent.ShowError(MR.strings.error_load_data.desc()))
+```
+
+`MviViewModel.effects` is `Flow<UiEvent>`. The screen wires it to a snackbar via `CollectEffects`.
+
+### Error handling
+
+```kotlin
+try {
+    // …
+} catch (e: CancellationException) {
+    throw e                              // ALWAYS rethrow — never swallow coroutine cancellation
+} catch (e: Exception) {
+    updateState { copy(items = LoadState.Failed) }
+    emitEffect(UiEvent.ShowError(MR.strings.error_load_items.desc()))
+}
+```
+
+Rules:
+- Always rethrow `CancellationException` before any general `catch (e: Exception)`.
+- Show `LoadState.Failed` AND `emitEffect(UiEvent.ShowError(…))` — both, not just one.
+- Error messages must be user-friendly `StringDesc` from `MR.strings.*`, never raw exception text.
+- Reactive `observe*()` flows from repos generally don't throw; defensive `.catch` is unnecessary unless you have a real error source.
+
+## Screen Pattern
+
+Each navigation-facing composable is a **single function** that takes state/effects/onIntent + navigation lambdas. There is no wrapper that injects the ViewModel — the entry block in `App.kt` does that.
+
+```kotlin
+@Composable
+fun FooScreen(
+    state: FooUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (FooIntent) -> Unit = {},
+    onNavigateToBar: () -> Unit = {},
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(FooIntent.LoadData) })
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
+        when (val data = state.items) {
+            is LoadState.Loading -> /* skeleton */
+            is LoadState.Loaded  -> /* content */
+            is LoadState.Failed  -> FullScreenError(onRetry = { onIntent(FooIntent.LoadData) })
+        }
+    }
+}
+```
+
+Rules:
+- **No `viewModel:` parameter.** Ever. VMs are created in `App.kt`'s `entryProvider`.
+- **`effects` and `onIntent` have defaults** (`emptyFlow()` and `{}`) so previews work with just `state`.
+- **`CollectEffects` lives inside the screen**, not in any wrapper.
+- **Local UI state** (dialogs, `LaunchedEffect`, `mutableStateOf`) goes inside this single screen function. Don't add another wrapper to "host" it.
+- **For 3+ intent-mapped callbacks**, pass `onIntent: (Intent) -> Unit` instead of individual lambdas. Navigation lambdas stay separate.
+- **Snackbar errors only for transient failures.** When all critical data failed, show `FullScreenError`. Inline `ErrorBanner` for partial failures.
+
+## Navigation Pattern
+
+Each `entry<XRoute>` in `App.kt` is responsible for creating its ViewModel and passing state/effects/onIntent to the screen:
+
+```kotlin
+entry<FooRoute> {
+    val vm: FooViewModel = koinViewModel()
+    val state by vm.state.collectAsState()
+    Box(Modifier.padding(innerPadding).fillMaxSize()) {
+        FooScreen(
+            state = state,
+            effects = vm.effects,
+            onIntent = vm::onIntent,
+            onNavigateToBar = { backStack.add(BarRoute) },
+        )
+    }
+}
+```
+
+For routes with parameters (`ForecastDetailRoute(pollenId)`):
+```kotlin
+entry<ForecastDetailRoute> { route ->
+    val vm = koinViewModel<ForecastDetailViewModel>(
+        key = "forecast_${route.pollenId}",
+    ) { parametersOf(route.pollenId) }
+    val state by vm.state.collectAsState()
+    // …
+}
+```
+
+For routes that embed multiple VMs (`FeedRoute` embeds friends content), create both VMs in the entry block and pass slices to the screen.
 
 ## Common UI Components (do not recreate)
 
 All in `presentation/common/`:
-- `CollectEvents(events, snackbarHostState, onRetry?)` — wires UiEvent channel to Snackbar
+- `CollectEffects(effects, snackbarHostState, onRetry?)` — wires `Flow<UiEvent>` to Snackbar
 - `FullScreenError(onRetry)` — centered error + retry button, use when entire screen fails
 - `ErrorBanner(onRetry)` — inline card-style banner for partial failures
 - `ShimmerEffect` — modifier extension for skeleton shimmer animation
-- Skeleton composables: `LocationHeaderSkeleton`, `WeatherCardSkeleton`, `PollenListSkeleton`, `PollenLevelCardSkeleton`, `FeedCardSkeleton`, `FeedListSkeleton`, `MedicationCardSkeleton`, `MedicationListSkeleton`, `CategoriesCardSkeleton`, `FriendsListSkeleton`, `MapChipRowSkeleton`, `MapAreaSkeleton`, `DayStripSkeleton`, `PersonalIndexCardSkeleton`, `ForecastDetailHeaderSkeleton`, `ForecastDetailChartSkeleton`, `ForecastDetailStatsSkeleton`
+- `rememberCopyToClipboard(): (String) -> Unit` — expect/actual clipboard write
+- `rememberShareTextLauncher(): (String) -> Unit` — expect/actual share sheet
+- `formatDateLocalized(date: LocalDate): String` — moko-resources backed date formatting
+- Per-section skeletons (`*Skeleton`) for loading states — grep `presentation/common/` for the one you need
 
 Before writing any new common component, check this directory first.
 
@@ -156,7 +260,10 @@ Before writing any new common component, check this directory first.
 - Material 3 defaults for UI — no custom design system yet
 - No ads in the rebuild
 - Android-first implementation, iOS structure in place but `actual` implementations can be stubs
-- Use `kotlin.time.Clock.System.now()` for current time, NOT `kotlinx.datetime.Clock.System.now()`. The correct import is `kotlin.time.Clock`.
+- Use `kotlin.time.Clock.System.now()` and `kotlin.time.Instant`, NOT `kotlinx.datetime.Clock` / `kotlinx.datetime.Instant` (the latter are deprecated typealiases as of kotlinx-datetime 0.7).
+- For month-of-year as 1-12 use `date.month.number`. For day-of-month use `date.day` (not deprecated `.dayOfMonth`).
+- `AppLocale` has `tag: String` and `fromTag(String): AppLocale` — use these for storage round-trips, never hardcode `"ru"` / `"en"` literals.
+- `applyMokoLocale(locale)` is called once from `KoinInit`. UI code reads strings via `stringResource(MR.strings.*)` or `StringDesc.localized()` — never inject `LocaleProvider` into composables.
 
 ## Build & Run
 

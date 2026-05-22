@@ -4,6 +4,7 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
+import androidx.room.TypeConverters
 import io.github.kroune.pollen.data.local.db.dao.DayActivityDao
 import io.github.kroune.pollen.data.local.db.dao.FriendDao
 import io.github.kroune.pollen.data.local.db.dao.HealthDao
@@ -51,9 +52,10 @@ import io.github.kroune.pollen.data.local.db.entity.UserEntity
         AllergenSensitivityEntity::class,
         MedicationIntakeEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
+@TypeConverters(LocalDateConverter::class)
 @ConstructedBy(PollenDatabaseConstructor::class)
 abstract class PollenDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao

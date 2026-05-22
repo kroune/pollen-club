@@ -1,5 +1,7 @@
 package io.github.kroune.pollen.domain.model
 
+import kotlinx.datetime.LocalDate
+
 enum class Feeling(val apiValue: Int) {
     GOOD(0), MIDDLE(1), BAD(2);
 
@@ -10,7 +12,7 @@ enum class Feeling(val apiValue: Int) {
 
 data class HealthEntryDomain(
     val id: Long = 0,
-    val date: String,
+    val date: LocalDate,
     val feeling: Feeling,
     val eyes: Int = 0,
     val nose: Int = 0,

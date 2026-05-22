@@ -4,13 +4,14 @@ import androidx.compose.runtime.Immutable
 import io.github.kroune.pollen.domain.model.LoadState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.datetime.LocalDate
 
 @Immutable
 data class RecentMedUi(
     val therapyId: Long,
     val name: String,
     val substance: String,
-    val lastTaken: String,
+    val lastTaken: LocalDate?,
     val count: Int,
     val takenToday: Boolean,
 )
@@ -37,4 +38,5 @@ data class MedicationsUiState(
     val todayCount: Int = 0,
     val searchQuery: String = "",
     val isSheetExpanded: Boolean = false,
+    val today: LocalDate? = null,
 )

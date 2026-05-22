@@ -50,7 +50,12 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
 }
 
 val databaseModule = module {
-    single { getDatabaseBuilder().addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build() }
+    single {
+        getDatabaseBuilder()
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+    }
 
     single { get<PollenDatabase>().userDao() }
     single { get<PollenDatabase>().syncStateDao() }

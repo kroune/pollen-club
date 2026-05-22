@@ -9,6 +9,9 @@
     <string name="dow_sat">Sat</string>
     <string name="dow_sun">Sun</string>
 
+    <string name="week_range_same_month">%1$d–%2$d %3$s</string>
+    <string name="week_range_cross_month">%1$d %2$s – %3$d %4$s</string>
+
     <!-- Month names (full) -->
     <string name="month_january">January</string>
     <string name="month_february">February</string>
@@ -36,6 +39,20 @@
     <string name="month_oct_short">Oct</string>
     <string name="month_nov_short">Nov</string>
     <string name="month_dec_short">Dec</string>
+
+    <string name="date_day_month">%2$s %1$d</string>
+    <string name="month_january_gen">January</string>
+    <string name="month_february_gen">February</string>
+    <string name="month_march_gen">March</string>
+    <string name="month_april_gen">April</string>
+    <string name="month_may_gen">May</string>
+    <string name="month_june_gen">June</string>
+    <string name="month_july_gen">July</string>
+    <string name="month_august_gen">August</string>
+    <string name="month_september_gen">September</string>
+    <string name="month_october_gen">October</string>
+    <string name="month_november_gen">November</string>
+    <string name="month_december_gen">December</string>
 
     <!-- Severity labels -->
     <string name="severity_none">None</string>
@@ -188,6 +205,7 @@
     <string name="phenology_marked_on">Marked on %s</string>
     <string name="phenology_instruction">Mark the flowering stage so other users have a more accurate picture of pollination</string>
     <string name="phenology_stage_number">Stage #%d</string>
+    <string name="phenology_current_stage_format">#%d · %s</string>
     <string name="phenology_new_observation">New observation</string>
     <string name="phenology_select_stage">Select stage</string>
     <string name="phenology_comment_label">Write a comment about the stage</string>
@@ -199,6 +217,8 @@
     <string name="medications_your_meds">Your medications</string>
     <string name="medications_categories">Categories</string>
     <string name="medications_intakes_format">%d intakes · %s</string>
+    <string name="medications_never_taken">Not yet taken</string>
+    <string name="score_format">%d.%d</string>
     <string name="medications_cancel_intake">undo</string>
     <string name="medications_take">+ take</string>
     <string name="medications_intakes_today">· %d intakes</string>
@@ -239,6 +259,7 @@
     <string name="error_load_phenology">Failed to load phenology data</string>
     <string name="error_submit_observation">Failed to submit observation</string>
     <string name="error_load_settings">Failed to load settings</string>
+    <string name="error_change_language">Failed to change language</string>
     <string name="error_load_allergens">Failed to load allergens</string>
     <string name="error_save_sensitivity">Failed to save</string>
     <string name="error_load_feed">Failed to load feed</string>
@@ -285,6 +306,7 @@
     <string name="friends_share">Share</string>
     <string name="friends_empty_body_qr">Add friends by ID or QR code to see their check-ins on the map</string>
     <string name="error_qr_scan">Failed to scan QR code</string>
+    <string name="friends_no_id">Could not load your ID</string>
     <string name="error_camera_permission">Camera access is needed to scan QR codes</string>
     <string name="friends_allow_camera">Allow camera</string>
 </resources>

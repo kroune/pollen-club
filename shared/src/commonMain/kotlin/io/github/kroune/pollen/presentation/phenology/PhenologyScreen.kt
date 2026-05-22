@@ -36,8 +36,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,69 +46,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
-import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.presentation.common.CollectEvents
-import io.github.kroune.pollen.presentation.common.FullScreenError
-import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.shimmerEffect
+import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import kotlin.math.abs
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import org.koin.compose.viewmodel.koinViewModel
-
-@Composable
-fun PhenologyScreen(viewModel: PhenologyViewModel = koinViewModel()) {
-    val uiState by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    if (uiState.form.showDialog) {
-        val screenData = uiState.screenData
-        if (screenData is LoadState.Loaded) {
-            AddPhenologyDialog(
-                stages = screenData.data.stages,
-                selectedStage = uiState.form.selectedStage,
-                comment = uiState.form.comment,
-                onStageSelect = viewModel::selectStage,
-                onCommentChange = viewModel::setComment,
-                onConfirm = viewModel::submit,
-                onDismiss = viewModel::dismissDialog,
-            )
-        }
-    }
-
-    PhenologyScreen(
-        state = uiState,
-        onAddObservation = viewModel::showAddDialog,
-        onRetry = viewModel::loadData,
-        snackbarHostState = snackbarHostState,
-    )
-}
+import kotlin.math.abs
 
 @Composable
 fun PhenologyScreen(
     state: PhenologyUiState,
-    onAddObservation: () -> Unit,
-    onRetry: () -> Unit = {},
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (PhenologyIntent) -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState)
+
+    if (state.form.showDialog) {
+        val screenData = state.screenData
+        if (screenData is LoadState.Loaded) {
+            AddPhenologyDialog(
+                stages = screenData.data.stages,
+                selectedStage = state.form.selectedStage,
+                comment = state.form.comment,
+                onStageSelect = { onIntent(PhenologyIntent.SelectStage(it)) },
+                onCommentChange = { onIntent(PhenologyIntent.SetComment(it)) },
+                onConfirm = { onIntent(PhenologyIntent.Submit) },
+                onDismiss = { onIntent(PhenologyIntent.DismissDialog) },
+            )
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (state.screenData is LoadState.Loaded) {
                 FloatingActionButton(
-                    onClick = onAddObservation,
+                    onClick = { onIntent(PhenologyIntent.ShowAddDialog) },
                     shape = CircleShape,
                     containerColor = PollenTheme.colors.accent,
                     contentColor = Color.White,
@@ -123,8 +109,8 @@ fun PhenologyScreen(
     ) { _ ->
         when (val data = state.screenData) {
             is LoadState.Loading -> PhenologySkeleton()
-            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
-            is LoadState.Loaded -> PhenologyContent(data.data)
+            is LoadState.Failed -> PhenologySkeleton()
+            is LoadState.Loaded -> PhenologyContent(data.data, state.today)
         }
     }
 }
@@ -201,7 +187,7 @@ private fun PhenologySkeleton() {
 }
 
 @Composable
-private fun PhenologyContent(data: PhenologyScreenDataUi) {
+private fun PhenologyContent(data: PhenologyScreenDataUi, today: kotlinx.datetime.LocalDate?) {
     val colors = PollenTheme.colors
     val scrollState = rememberScrollState()
 
@@ -228,10 +214,11 @@ private fun PhenologyContent(data: PhenologyScreenDataUi) {
             )
         }
 
-        if (data.currentStageLabel.isNotEmpty()) {
+        val stageNumber = data.currentStageNumber
+        if (stageNumber != null) {
             CurrentStageCard(
-                label = data.currentStageLabel,
-                date = data.currentStageEpochSeconds?.let { formatObservationDate(it) } ?: "",
+                label = stringResource(MR.strings.phenology_current_stage_format, stageNumber, data.currentStageName),
+                date = data.currentStageEpochSeconds?.let { formatObservationDate(it, today) } ?: "",
             )
         } else {
             InstructionCard()
@@ -426,21 +413,21 @@ private fun Modifier.dashedCircleBorder(
 }
 
 @Composable
-private fun formatObservationDate(epochSeconds: Long): String {
-    val now = kotlin.time.Clock.System.now()
-    val diffSeconds = now.epochSeconds - epochSeconds
-    val diffDays = abs(diffSeconds / 86400)
-
+private fun formatObservationDate(epochSeconds: Long, today: kotlinx.datetime.LocalDate?): String {
     val instant = kotlin.time.Instant.fromEpochSeconds(epochSeconds)
-    val local = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-    val monthName = monthShortStringDesc(local.month).localized()
-    val dateStr = "${local.dayOfMonth} $monthName"
+    val zoned = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    val observationDate = zoned.date
+    val monthName = monthShortStringDesc(observationDate.month).localized()
+    val dateStr = "${observationDate.day} $monthName"
 
-    val relativeStr = when {
-        diffDays == 0L -> stringResource(MR.strings.date_today)
-        diffDays == 1L -> stringResource(MR.strings.date_yesterday)
-        diffDays < 7L -> stringResource(MR.strings.date_days_ago, diffDays.toInt())
-        else -> null
+    val diffDays = today?.let {
+        abs(it.toEpochDays() - observationDate.toEpochDays())
+    }
+    val relativeStr = when (diffDays) {
+        null -> null
+        0L -> stringResource(MR.strings.date_today)
+        1L -> stringResource(MR.strings.date_yesterday)
+        else -> if (diffDays < 7L) stringResource(MR.strings.date_days_ago, diffDays.toInt()) else null
     }
 
     return if (relativeStr != null) "$dateStr · $relativeStr" else dateStr
@@ -465,10 +452,12 @@ private fun PreviewPhenologyContent() {
             PhenologyScreenDataUi(
                 allergenName = "Берёза",
                 locationLabel = "Москва · ВДНХ",
-                currentStageLabel = "Начало пыления",
+                currentStageNumber = 3,
+                currentStageName = "Начало пыления",
                 currentStageEpochSeconds = 1715700000,
                 stages = previewStages,
             ),
+            today = null,
         )
     }
 }
@@ -501,14 +490,14 @@ private fun PreviewPhenologyScreenLoaded() {
                     PhenologyScreenDataUi(
                         allergenName = "Берёза",
                         locationLabel = "Москва · ВДНХ",
-                        currentStageLabel = "№3 · Начало пыления",
+                        currentStageNumber = 3,
+                        currentStageName = "Начало пыления",
                         currentStageEpochSeconds = 1715700000,
                         stages = previewStages,
                     ),
                 ),
                 form = PhenologyFormState(),
             ),
-            onAddObservation = {},
         )
     }
 }
@@ -522,7 +511,6 @@ private fun PreviewPhenologyScreenLoading() {
                 screenData = LoadState.Loading,
                 form = PhenologyFormState(),
             ),
-            onAddObservation = {},
         )
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,59 +32,43 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
+import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import io.github.kroune.pollen.MR
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.tooling.preview.Preview
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MaxBrightnessEffect
+import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.common.rememberCopyToClipboard
 import io.github.kroune.pollen.presentation.common.rememberShareTextLauncher
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import io.github.alexzhirkevich.qrose.rememberQrCodePainter
-import org.koin.compose.viewmodel.koinViewModel
-
-@Composable
-fun MyQrScreen(
-    onBack: () -> Unit = {},
-    viewModel: MyQrViewModel = koinViewModel(),
-) {
-    val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    MyQrScreen(
-        state = state,
-        onBack = onBack,
-        onRetry = viewModel::loadData,
-        snackbarHostState = snackbarHostState,
-    )
-}
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 fun MyQrScreen(
     state: MyQrUiState,
-    onBack: () -> Unit,
-    onRetry: () -> Unit,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    effects: Flow<UiEvent> = emptyFlow(),
+    onBack: () -> Unit = {},
+    onRetry: () -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = onRetry)
+
     MaxBrightnessEffect()
 
-    val clipboardManager = LocalClipboardManager.current
+    val copyToClipboard = rememberCopyToClipboard()
     val shareText = rememberShareTextLauncher()
 
     Scaffold(
@@ -126,9 +111,18 @@ fun MyQrScreen(
                     if (id.isNotBlank()) {
                         MyQrContent(
                             myServerId = id,
-                            clipboardManager = clipboardManager,
+                            copyToClipboard = copyToClipboard,
                             shareText = shareText,
                         )
+                    } else {
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = stringResource(MR.strings.friends_no_id),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = PollenTheme.colors.ink3,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }
@@ -139,7 +133,7 @@ fun MyQrScreen(
 @Composable
 private fun MyQrContent(
     myServerId: String,
-    clipboardManager: androidx.compose.ui.platform.ClipboardManager,
+    copyToClipboard: (String) -> Unit,
     shareText: (String) -> Unit,
 ) {
     val qrPainter = rememberQrCodePainter(myServerId)
@@ -180,7 +174,7 @@ private fun MyQrContent(
                 Spacer(Modifier.height(6.dp))
                 CopyableId(
                     id = myServerId,
-                    onCopy = { clipboardManager.setText(AnnotatedString(myServerId)) },
+                    onCopy = { copyToClipboard(myServerId) },
                     fontSize = 24.sp,
                 )
             }

@@ -6,25 +6,21 @@ import dev.icerock.moko.resources.desc.RawStringDesc
 import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
-import io.github.kroune.pollen.domain.model.UserDomain
-import io.github.kroune.pollen.domain.model.WeatherDomain
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDate
 
 @Stable
 data class HomeUiState(
-    val user: UserDomain? = null,
-    val selectedLocation: LocationDomain? = null,
-    val locations: LoadState<ImmutableList<LocationDomain>> = LoadState.Loading,
+    val selectedLocation: HomeLocationUi? = null,
+    val locations: LoadState<ImmutableList<HomeLocationUi>> = LoadState.Loading,
     val pollens: LoadState<ImmutableList<PollenDomain>> = LoadState.Loading,
-    val weather: LoadState<WeatherDomain> = LoadState.Loading,
+    val weather: LoadState<HomeWeatherUi> = LoadState.Loading,
     val dayForecasts: LoadState<ImmutableList<HomeDayForecastUi>> = LoadState.Loading,
     val personalIndex: LoadState<HomePersonalIndexUi?> = LoadState.Loading,
     val userAllergens: ImmutableList<AllergenRowData> = persistentListOf(),
-    val otherAllergens: ImmutableList<PollenDomain> = persistentListOf(),
+    val otherAllergens: ImmutableList<HomeOtherAllergenUi> = persistentListOf(),
     val activeDayIndex: Int = 0,
     val showLocationPicker: Boolean = false,
     val expandedPollenId: Int? = null,
@@ -36,16 +32,35 @@ data class HomeUiState(
 )
 
 @Immutable
+data class HomeLocationUi(
+    val id: Int,
+    val name: String,
+)
+
+@Immutable
+data class HomeWeatherUi(
+    val temperature: Double,
+    val weatherCode: Int,
+    val isDay: Boolean,
+)
+
+@Immutable
+data class HomeOtherAllergenUi(
+    val id: Int,
+    val name: String,
+)
+
+@Immutable
 data class HomeDayForecastUi(
     val dayOfMonth: Int,
     val dayOfWeek: StringDesc,
     val severity: Int,
-    val date: String,
+    val date: LocalDate,
 )
 
 @Immutable
 data class HomePersonalIndexUi(
-    val score: String,
+    val score: Double,
     val severityLevel: Int,
     val label: StringDesc,
 )

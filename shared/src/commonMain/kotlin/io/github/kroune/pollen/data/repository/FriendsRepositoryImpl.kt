@@ -16,6 +16,7 @@ import io.github.kroune.pollen.domain.repository.FriendsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalDate
 
 class FriendsRepositoryImpl(
     private val api: PollenApiService,
@@ -60,7 +61,7 @@ class FriendsRepositoryImpl(
                     friendId = latest.friendId,
                     feeling = Feeling.fromApi(latest.value),
                     pollenType = latest.pollenType,
-                    date = latest.date,
+                    date = LocalDate.parse(latest.date),
                 )
             }
     }

@@ -16,14 +16,14 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -32,7 +32,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,35 +44,40 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.HashTagDomain
-import io.github.kroune.pollen.domain.model.LocationAvailability
 import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.domain.model.LocationAvailability
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.TileRingQuery
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.domain.model.dataOrNull
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MapAreaSkeleton
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.rememberLocationPermissionLauncher
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import kotlin.math.absoluteValue
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlin.math.absoluteValue
 
 @Composable
-fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
-    val state by viewModel.state.collectAsState()
+fun MapScreen(
+    state: MapUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (MapIntent) -> Unit = {},
+) {
     val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(MapIntent.LoadData) })
 
     val requestPermission = rememberLocationPermissionLauncher { granted ->
-        viewModel.onLocationPermissionResult(granted)
+        onIntent(MapIntent.LocationPermissionResult(granted))
     }
 
     Scaffold(
@@ -88,7 +92,7 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (val pins = state.pins) {
                 is LoadState.Loading -> MapAreaSkeleton(modifier = Modifier.fillMaxSize())
-                is LoadState.Failed -> FullScreenError(onRetry = viewModel::loadData)
+                is LoadState.Failed -> FullScreenError(onRetry = { onIntent(MapIntent.LoadData) })
                 is LoadState.Loaded -> {
                     val ringQuery = when (val rq = state.ringQuery) {
                         is LoadState.Loaded -> rq.data
@@ -121,7 +125,7 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
                 ) {
                     HashtagFilterRow(
                         state = state,
-                        onToggle = viewModel::toggleHashtag,
+                        onToggle = { onIntent(MapIntent.ToggleHashtag(it)) },
                     )
                     Box(
                         modifier = Modifier
@@ -133,9 +137,9 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
                     ) {
                         AllergenSelectorChip(
                             state = state,
-                            onToggleDropdown = viewModel::toggleAllergenDropdown,
-                            onDismissDropdown = viewModel::dismissAllergenDropdown,
-                            onSelectAllergen = viewModel::selectAllergen,
+                            onToggleDropdown = { onIntent(MapIntent.ToggleAllergenDropdown) },
+                            onDismissDropdown = { onIntent(MapIntent.DismissAllergenDropdown) },
+                            onSelectAllergen = { onIntent(MapIntent.SelectAllergen(it)) },
                             modifier = Modifier.align(Alignment.Center),
                         )
                         MapCompass(
@@ -158,10 +162,10 @@ fun MapScreen(viewModel: MapViewModel = koinViewModel()) {
             Surface(
                 onClick = {
                     when (state.locationAvailability) {
-                        LocationAvailability.Available -> viewModel.centerOnMyLocation()
+                        LocationAvailability.Available -> onIntent(MapIntent.CenterOnMyLocation)
                         LocationAvailability.PermissionDenied,
                         LocationAvailability.Unknown -> requestPermission()
-                        LocationAvailability.LocationDisabled -> viewModel.showLocationDisabledSnackbar()
+                        LocationAvailability.LocationDisabled -> onIntent(MapIntent.ShowLocationDisabledSnackbar)
                     }
                 },
                 shape = RoundedCornerShape(14.dp),
@@ -191,7 +195,7 @@ private fun HashtagFilterRow(
     onToggle: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val hashtags = (state.hashtags as? LoadState.Loaded)?.data ?: return
+    val hashtags = (state.hashtags.dataOrNull) ?: return
 
     Row(
         modifier = modifier
@@ -230,7 +234,7 @@ private fun AllergenSelectorChip(
     onSelectAllergen: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pollens = (state.pollens as? LoadState.Loaded)?.data ?: return
+    val pollens = (state.pollens.dataOrNull) ?: return
     if (pollens.isEmpty()) return
     val selected = pollens.getOrNull(state.selectedAllergenIndex) ?: return
 

@@ -13,6 +13,7 @@ import io.github.kroune.pollen.domain.model.MapRingDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.MapRepository
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 
 private val logger = Logger.withTag("MapRepository")
@@ -33,14 +34,15 @@ class MapRepositoryImpl(
     override suspend fun getPolygonForecast(
         pollenId: Int,
     ): ApiResult<List<MapRingDomain>> {
-        val russianName = pollenDao.getById(pollenId)?.descRu ?: return ApiResult.Success(emptyList())
+        val russianName =
+            pollenDao.getById(pollenId)?.descRu ?: return ApiResult.Success(emptyList())
         val allergen = russianName.replace('ё', 'е').replace('Ё', 'Е')
         if (allergen !in FORECAST_ALLERGENS) {
             return ApiResult.Success(emptyList())
         }
         val now = kotlin.time.Clock.System.now()
         val local = now.toLocalDateTime(TimeZone.currentSystemDefault())
-        val dateTime = "${local.year}/${local.monthNumber}/${local.dayOfMonth}/${local.hour}"
+        val dateTime = "${local.year}/${local.month.number}/${local.day}/${local.hour}"
         return safeApiCall(logger, "get polygon forecast allergen=$allergen dateTime=$dateTime") {
             val polygons = forecastApi.getPolygonForecast(allergen, dateTime)
             logger.i { "Loaded ${polygons.size} polygons for $allergen" }
@@ -50,7 +52,8 @@ class MapRepositoryImpl(
 
     companion object {
         // Server only has polygon forecasts for these allergens (from decompiled MyMapFragment.getAllergen)
-        private val FORECAST_ALLERGENS = setOf("Береза", "Злаки", "Амброзия", "Олива", "Ольха", "Полынь")
+        private val FORECAST_ALLERGENS =
+            setOf("Береза", "Злаки", "Амброзия", "Олива", "Ольха", "Полынь")
     }
 
     override suspend fun getHashTags(): ApiResult<List<HashTagDomain>> =

@@ -2,6 +2,7 @@ package io.github.kroune.pollen.presentation.detail
 
 import androidx.compose.runtime.Immutable
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.datetime.LocalDate
 
 @Immutable
 data class DetailChartPointUi(
@@ -12,8 +13,8 @@ data class DetailChartPointUi(
 
 @Immutable
 data class DetailStatsUi(
-    val peakDate: String,
-    val declineDate: String?,
+    val peakDate: LocalDate,
+    val declineDate: LocalDate?,
     val symptomCount: Int,
 )
 

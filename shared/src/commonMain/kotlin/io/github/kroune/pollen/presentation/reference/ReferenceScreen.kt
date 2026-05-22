@@ -47,7 +47,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,63 +61,47 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
-import io.github.kroune.pollen.MR
-import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.presentation.common.CollectEvents
-import io.github.kroune.pollen.presentation.common.FullScreenError
-import androidx.compose.ui.tooling.preview.Preview
 import dev.icerock.moko.resources.desc.Raw
 import dev.icerock.moko.resources.desc.StringDesc
-import kotlinx.collections.immutable.persistentListOf
+import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.FullScreenError
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.painterResource
-import org.koin.compose.viewmodel.koinViewModel
 
-/** ViewModel convenience overload — used by navigation. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReferenceScreen(
-    viewModel: ReferenceViewModel = koinViewModel(),
+    state: ReferenceUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
     onBack: () -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onRetry: () -> Unit = {},
 ) {
-    val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
+    CollectEffects(effects, snackbarHostState, onRetry = onRetry)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
     ) { _ ->
-        ReferenceScreen(
-            state = state,
-            onBack = onBack,
-            onSearchQueryChange = viewModel::onSearchQueryChange,
-            onRetry = viewModel::loadData,
-        )
-    }
-}
-
-/** State-based overload — previewable and testable. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ReferenceScreen(
-    state: ReferenceUiState,
-    onBack: () -> Unit = {},
-    onSearchQueryChange: (String) -> Unit = {},
-    onRetry: () -> Unit = {},
-) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     var selectedAllergen by remember { mutableStateOf<ReferenceAllergenUi?>(null) }
 
     // Allergen detail bottom sheet
-    if (selectedAllergen != null) {
-        val allergen = selectedAllergen!!
+    selectedAllergen?.let { allergen ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = { selectedAllergen = null },
@@ -285,6 +268,7 @@ fun ReferenceScreen(
                 }
             }
         }
+    }
     }
 }
 

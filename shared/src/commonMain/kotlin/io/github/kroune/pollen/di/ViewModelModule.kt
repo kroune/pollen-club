@@ -5,7 +5,7 @@ import io.github.kroune.pollen.presentation.feed.FeedViewModel
 import io.github.kroune.pollen.presentation.friends.AddFriendViewModel
 import io.github.kroune.pollen.presentation.friends.FriendsListViewModel
 import io.github.kroune.pollen.presentation.friends.MyQrViewModel
-import io.github.kroune.pollen.presentation.home.ForecastDetailViewModel
+import io.github.kroune.pollen.presentation.detail.viewmodel.ForecastDetailViewModel
 import io.github.kroune.pollen.presentation.home.HomeViewModel
 import io.github.kroune.pollen.presentation.map.MapViewModel
 import io.github.kroune.pollen.presentation.medications.MedicationsViewModel

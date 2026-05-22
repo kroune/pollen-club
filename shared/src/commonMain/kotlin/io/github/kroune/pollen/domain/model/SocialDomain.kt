@@ -1,5 +1,7 @@
 package io.github.kroune.pollen.domain.model
 
+import kotlinx.datetime.LocalDate
+
 data class FriendDomain(
     val id: Int,
     val friendId: Int,
@@ -10,5 +12,5 @@ data class FriendLastPinDomain(
     val friendId: Int,
     val feeling: Feeling,
     val pollenType: Int,
-    val date: String,
+    val date: LocalDate,
 )

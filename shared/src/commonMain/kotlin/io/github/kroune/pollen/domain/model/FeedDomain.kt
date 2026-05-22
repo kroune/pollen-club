@@ -1,7 +1,6 @@
 package io.github.kroune.pollen.domain.model
 
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import kotlinx.datetime.LocalDate
 
 data class ExpertInfoDomain(
     val name: String,
@@ -10,7 +9,7 @@ data class ExpertInfoDomain(
 
 data class CommentDomain(
     val id: Int,
-    val date: String,
+    val date: LocalDate,
     val expertId: Int,
     val expert: ExpertInfoDomain,
     val text: String,
@@ -20,7 +19,7 @@ data class CommentDomain(
 
 data class VkPostDomain(
     val id: Int,
-    val date: String,
+    val date: LocalDate,
     val location: String,
     val userName: String,
     val content: String,
@@ -28,7 +27,7 @@ data class VkPostDomain(
 
 data class MediaItemDomain(
     val id: Int,
-    val date: String,
+    val date: LocalDate,
     val type: MediaType,
     val url: String,
     val description: String,
@@ -39,14 +38,14 @@ enum class MediaType { IMAGE, VIDEO }
 data class FriendFeelDomain(
     val id: Int,
     val location: String,
-    val date: String,
+    val date: LocalDate,
     val friendId: Int,
     val feeling: Feeling,
 )
 
 data class FeedDataDomain(
-    val comments: ImmutableList<CommentDomain> = persistentListOf(),
-    val vkPosts: ImmutableList<VkPostDomain> = persistentListOf(),
-    val media: ImmutableList<MediaItemDomain> = persistentListOf(),
-    val friendFeels: ImmutableList<FriendFeelDomain> = persistentListOf(),
+    val comments: List<CommentDomain> = emptyList(),
+    val vkPosts: List<VkPostDomain> = emptyList(),
+    val media: List<MediaItemDomain> = emptyList(),
+    val friendFeels: List<FriendFeelDomain> = emptyList(),
 )

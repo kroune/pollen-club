@@ -6,13 +6,14 @@ import io.github.kroune.pollen.domain.model.BodyZone
 import io.github.kroune.pollen.domain.model.Feeling
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.datetime.LocalDate
 
 @Immutable
 data class DiaryDateUi(
     val dayOfMonth: Int,
     val dayOfWeek: StringDesc,
     val isSelected: Boolean,
-    val isoDate: String,
+    val date: LocalDate,
 )
 
 @Immutable
@@ -50,7 +51,7 @@ data class DiaryTherapyItemUi(
 data class DiaryUiState(
     val monthName: StringDesc? = null,
     val monthYear: Int = 0,
-    val selectedIsoDate: String = "",
+    val selectedDate: LocalDate? = null,
     val dates: ImmutableList<DiaryDateUi> = persistentListOf(),
     val moodOptions: ImmutableList<DiaryMoodOptionUi> = persistentListOf(),
     val bodyZones: ImmutableList<DiaryBodyZoneUi> = persistentListOf(),

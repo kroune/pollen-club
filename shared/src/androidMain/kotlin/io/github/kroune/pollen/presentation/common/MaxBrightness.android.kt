@@ -11,12 +11,13 @@ actual fun MaxBrightnessEffect() {
     val context = LocalContext.current
     DisposableEffect(Unit) {
         val window = (context as? Activity)?.window
-        val originalBrightness = window?.attributes?.screenBrightness ?: -1f
-        window?.attributes = window?.attributes?.apply {
+            ?: return@DisposableEffect onDispose { }
+        val originalBrightness = window.attributes.screenBrightness
+        window.attributes = window.attributes.apply {
             screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
         }
         onDispose {
-            window?.attributes = window?.attributes?.apply {
+            window.attributes = window.attributes.apply {
                 screenBrightness = originalBrightness
             }
         }

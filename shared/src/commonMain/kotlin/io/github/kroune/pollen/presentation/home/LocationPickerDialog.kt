@@ -37,22 +37,21 @@ import androidx.compose.ui.window.Dialog
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import androidx.compose.ui.tooling.preview.Preview
-import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun LocationPickerDialog(
-    locations: ImmutableList<LocationDomain>,
-    selectedLocation: LocationDomain?,
-    onSelect: (LocationDomain) -> Unit,
+    locations: ImmutableList<HomeLocationUi>,
+    selectedLocationId: Int?,
+    onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         LocationPickerContent(
             locations = locations,
-            selectedLocation = selectedLocation,
+            selectedLocationId = selectedLocationId,
             onSelect = onSelect,
             onDismiss = onDismiss,
         )
@@ -61,9 +60,9 @@ fun LocationPickerDialog(
 
 @Composable
 internal fun LocationPickerContent(
-    locations: ImmutableList<LocationDomain>,
-    selectedLocation: LocationDomain?,
-    onSelect: (LocationDomain) -> Unit,
+    locations: ImmutableList<HomeLocationUi>,
+    selectedLocationId: Int?,
+    onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
@@ -112,11 +111,11 @@ internal fun LocationPickerContent(
             Spacer(Modifier.height(8.dp))
             LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
                 items(filtered, key = { it.id }) { location ->
-                    val isSelected = location.id == selectedLocation?.id
+                    val isSelected = location.id == selectedLocationId
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(location) }
+                            .clickable { onSelect(location.id) }
                             .padding(vertical = 10.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -158,14 +157,14 @@ internal fun LocationPickerContent(
 @Composable
 private fun PreviewLocationPickerContent() {
     val locations = persistentListOf(
-        LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
-        LocationDomain(2, "Санкт-Петербург", "Северо-Западный регион", 59.9343, 30.3351),
-        LocationDomain(3, "Казань", "Поволжье", 55.7961, 49.1089),
+        HomeLocationUi(1, "Москва"),
+        HomeLocationUi(2, "Санкт-Петербург"),
+        HomeLocationUi(3, "Казань"),
     )
     PollenTheme {
         LocationPickerContent(
             locations = locations,
-            selectedLocation = locations.first(),
+            selectedLocationId = 1,
             onSelect = {},
             onDismiss = {},
         )

@@ -32,7 +32,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -42,57 +41,34 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
-import androidx.compose.ui.tooling.preview.Preview
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import io.github.kroune.pollen.qr.QrScanResult
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 fun AddFriendScreen(
+    state: AddFriendUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (AddFriendIntent) -> Unit = {},
     onBack: () -> Unit = {},
     onNavigateToMyQr: () -> Unit = {},
-    viewModel: AddFriendViewModel = koinViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState)
+    CollectEffects(effects, snackbarHostState)
 
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             onBack()
         }
     }
-
-    AddFriendScreen(
-        state = state,
-        onBack = onBack,
-        onNavigateToMyQr = onNavigateToMyQr,
-        onTabSelected = viewModel::onTabSelected,
-        onQrScanned = viewModel::onQrScanned,
-        onFriendIdChanged = viewModel::onFriendIdChanged,
-        onNameChanged = viewModel::onNameChanged,
-        onSubmit = viewModel::submit,
-        snackbarHostState = snackbarHostState,
-    )
-}
-
-@Composable
-fun AddFriendScreen(
-    state: AddFriendUiState,
-    onBack: () -> Unit,
-    onNavigateToMyQr: () -> Unit,
-    onTabSelected: (AddFriendTab) -> Unit,
-    onQrScanned: (QrScanResult) -> Unit,
-    onFriendIdChanged: (String) -> Unit,
-    onNameChanged: (String) -> Unit,
-    onSubmit: () -> Unit,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
@@ -108,7 +84,7 @@ fun AddFriendScreen(
             ) {
                 SegmentedTabBar(
                     selectedTab = state.selectedTab,
-                    onTabSelected = onTabSelected,
+                    onTabSelected = { onIntent(AddFriendIntent.TabSelected(it)) },
                 )
 
                 Spacer(Modifier.height(20.dp))
@@ -116,14 +92,14 @@ fun AddFriendScreen(
                 when (state.selectedTab) {
                     AddFriendTab.QR -> QrTabContent(
                         myServerId = state.myServerId,
-                        onQrScanned = onQrScanned,
+                        onQrScanned = { onIntent(AddFriendIntent.QrScanned(it)) },
                         onNavigateToMyQr = onNavigateToMyQr,
                     )
                     AddFriendTab.MANUAL -> ManualTabContent(
                         state = state,
-                        onFriendIdChanged = onFriendIdChanged,
-                        onNameChanged = onNameChanged,
-                        onSubmit = onSubmit,
+                        onFriendIdChanged = { onIntent(AddFriendIntent.FriendIdChanged(it)) },
+                        onNameChanged = { onIntent(AddFriendIntent.NameChanged(it)) },
+                        onSubmit = { onIntent(AddFriendIntent.Submit) },
                         onNavigateToMyQr = onNavigateToMyQr,
                     )
                 }
@@ -367,13 +343,6 @@ private fun PreviewAddFriendManualTab() {
                 selectedTab = AddFriendTab.MANUAL,
                 myServerId = "1132894",
             ),
-            onBack = {},
-            onNavigateToMyQr = {},
-            onTabSelected = {},
-            onQrScanned = {},
-            onFriendIdChanged = {},
-            onNameChanged = {},
-            onSubmit = {},
         )
     }
 }
@@ -389,13 +358,6 @@ private fun PreviewAddFriendManualFilled() {
                 nameInput = "Маша",
                 myServerId = "1132894",
             ),
-            onBack = {},
-            onNavigateToMyQr = {},
-            onTabSelected = {},
-            onQrScanned = {},
-            onFriendIdChanged = {},
-            onNameChanged = {},
-            onSubmit = {},
         )
     }
 }

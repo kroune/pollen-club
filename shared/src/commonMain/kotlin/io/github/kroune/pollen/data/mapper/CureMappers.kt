@@ -28,28 +28,32 @@ import io.github.kroune.pollen.domain.model.TherapyDomain
 import io.github.kroune.pollen.domain.model.UserForecastEntryDomain
 import io.github.kroune.pollen.domain.model.UserForecastInfoDomain
 import io.github.kroune.pollen.domain.model.WeatherDomain
+import kotlinx.datetime.LocalDate
+
+private fun AppLocale.pick(ru: String?, en: String?): String =
+    (if (this == AppLocale.RU) ru else en).orEmpty()
 
 fun CureActionTypeDto.toDomain(locale: AppLocale): CureActionTypeDomain = CureActionTypeDomain(
     id = id,
-    name = if (locale == AppLocale.RU) (nameRus ?: "") else (nameEng ?: ""),
+    name = locale.pick(nameRus, nameEng),
     sortNumber = sortNumber,
 )
 
 fun CureDto.toDomain(locale: AppLocale): CureDomain = CureDomain(
     id = id,
-    name = if (locale == AppLocale.RU) (nameRus ?: "") else (nameEng ?: ""),
-    description = if (locale == AppLocale.RU) (descRus ?: "") else (descEng ?: ""),
+    name = locale.pick(nameRus, nameEng),
+    description = locale.pick(descRus, descEng),
     forma = forma,
     sortNumber = sortNumber,
-    info = if (locale == AppLocale.RU) (infoRus ?: "") else (infoEng ?: ""),
+    info = locale.pick(infoRus, infoEng),
     actionType = actionType,
     items = items.map { it.toDomain(locale) },
 )
 
 fun CureItemDto.toDomain(locale: AppLocale): CureItemDomain = CureItemDomain(
     id = id,
-    name = if (locale == AppLocale.RU) (nameRus ?: "") else (nameEng ?: ""),
-    description = if (locale == AppLocale.RU) (descRus ?: "") else (descEng ?: ""),
+    name = locale.pick(nameRus, nameEng),
+    description = locale.pick(descRus, descEng),
     forma = forma,
     sortNumber = sortNumber,
     mark = mark,
@@ -58,17 +62,17 @@ fun CureItemDto.toDomain(locale: AppLocale): CureItemDomain = CureItemDomain(
 
 fun CureFormDto.toDomain(locale: AppLocale): CureFormDomain = CureFormDomain(
     id = id,
-    name = if (locale == AppLocale.RU) (nameRus ?: "") else (nameEng ?: ""),
+    name = locale.pick(nameRus, nameEng),
 )
 
 fun CureDoseDto.toDomain(locale: AppLocale): CureDoseDomain = CureDoseDomain(
     id = id,
-    name = if (locale == AppLocale.RU) (nameRus ?: "") else (nameEng ?: ""),
+    name = locale.pick(nameRus, nameEng),
 )
 
 fun CureFrequencyDto.toDomain(locale: AppLocale): CureFrequencyDomain = CureFrequencyDomain(
     id = id,
-    name = if (locale == AppLocale.RU) (nameRus ?: "") else (nameEng ?: ""),
+    name = locale.pick(nameRus, nameEng),
 )
 
 fun TherapyEntity.toDomain(): TherapyDomain = TherapyDomain(
@@ -143,12 +147,12 @@ private fun parseHexToArgb(hex: String, opacity: Float): Int {
 
 fun UserForecastInfoDto.toDomain(locale: AppLocale): UserForecastInfoDomain = UserForecastInfoDomain(
     id = id ?: "",
-    description = if (locale == AppLocale.RU) (descRus ?: "") else (descEng ?: ""),
+    description = locale.pick(descRus, descEng),
 )
 
 fun UserForecastEntryDto.toDomain(): UserForecastEntryDomain = UserForecastEntryDomain(
     id = id ?: "",
-    date = date ?: "",
+    date = date?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
     value = value ?: "",
 )
 
