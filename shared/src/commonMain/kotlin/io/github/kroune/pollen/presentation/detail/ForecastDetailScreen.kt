@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.home
+package io.github.kroune.pollen.presentation.detail
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -36,8 +36,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +57,6 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartRanges
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
@@ -86,46 +83,32 @@ import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
 import io.github.kroune.pollen.domain.model.LoadState
 import org.jetbrains.compose.resources.DrawableResource
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.ForecastDetailChartSkeleton
 import io.github.kroune.pollen.presentation.common.ForecastDetailHeaderSkeleton
 import io.github.kroune.pollen.presentation.common.ForecastDetailStatsSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.shimmerEffect
-import io.github.kroune.pollen.presentation.detail.DetailStatsUi
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDate
+import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.home.formatScoreLocalized
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlin.math.floor
 
-/** ViewModel convenience overload — used by navigation. */
-@Composable
-fun ForecastDetailScreen(
-    viewModel: ForecastDetailViewModel,
-    onBack: () -> Unit,
-) {
-    val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    ForecastDetailScreen(
-        state = state,
-        snackbarHostState = snackbarHostState,
-        onBack = onBack,
-        onToggleFeeling = viewModel::toggleFeelingLine,
-        onRetry = viewModel::loadData,
-    )
-}
-
-/** State-based overload — previewable and testable without a ViewModel. */
 @Composable
 fun ForecastDetailScreen(
     state: ForecastDetailUiState,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    effects: Flow<UiEvent> = emptyFlow(),
     onBack: () -> Unit = {},
     onToggleFeeling: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = onRetry)
     val pollenState = state.pollen
 
     Scaffold(
@@ -207,7 +190,7 @@ private fun DetailContent(
             verticalAlignment = Alignment.Bottom,
         ) {
             Text(
-                text = state.currentScore,
+                text = state.currentScore?.let { formatScoreLocalized(it) } ?: "—",
                 fontSize = 46.sp,
                 fontWeight = FontWeight.Normal,
                 color = PollenTheme.colors.severityColor(state.severityLevel),
@@ -351,7 +334,7 @@ private fun DetailContent(
                     ) {
                         Text(stringResource(MR.strings.forecast_no_data), color = PollenTheme.colors.ink3)
                     }
-                } else if (pollenLoaded != null) {
+                } else if (pollenLoaded != null && state.today != null) {
                     DetailChart(
                         timeline = timeline.data,
                         maxLevel = pollenLoaded.data.maxLevel,
@@ -498,13 +481,9 @@ private fun VerticalDivider() {
 }
 
 @Composable
-private fun formatShortDate(dateStr: String): String {
-    val parsed = remember(dateStr) {
-        runCatching { LocalDate.parse(dateStr) }.getOrNull()
-    }
-    if (parsed == null) return dateStr
-    val month = monthShortStringDesc(parsed.month).localized()
-    return "${parsed.day} $month"
+private fun formatShortDate(date: LocalDate): String {
+    val month = monthShortStringDesc(date.month).localized()
+    return "${date.day} $month"
 }
 
 @Composable
@@ -520,14 +499,13 @@ private fun DetailChart(
 
     val dateLabels = remember(timeline) {
         timeline.mapIndexed { index, level ->
-            val day = level.date.takeLast(2).trimStart('0')
+            val day = level.date.day.toString()
             index to day
         }.toMap()
     }
 
     val todayIndex = remember(timeline, today) {
-        val todayStr = today.toString()
-        timeline.indexOfFirst { it.date == todayStr }
+        timeline.indexOfFirst { it.date == today }
     }
 
     val hasAnyFeelingData = feelingValues.any { it != null }
@@ -793,8 +771,8 @@ private class EdgeAwareItemPlacer(
         return with(context.ranges) {
             buildList {
                 add(minX)
-                if (xLength >= xStep) add(minX + xStep * kotlin.math.floor(xLength / xStep))
-                if (xLength >= 2 * xStep) add(minX + xStep * kotlin.math.floor(xLength / 2 / xStep))
+                if (xLength >= xStep) add(minX + xStep * floor(xLength / xStep))
+                if (xLength >= 2 * xStep) add(minX + xStep * floor(xLength / 2 / xStep))
             }
         }
     }
@@ -863,13 +841,13 @@ private fun PreviewForecastDetailLoaded() {
                 ),
                 timeline = LoadState.Loaded(persistentListOf()),
                 today = LocalDate(2026, 5, 14),
-                currentScore = "3",
+                currentScore = 3.0,
                 currentScoreMax = "10",
                 severityLevel = 2,
                 severityLabel = "Средний",
                 stats = DetailStatsUi(
-                    peakDate = "2026-05-10",
-                    declineDate = "2026-05-20",
+                    peakDate = LocalDate(2026, 5, 10),
+                    declineDate = LocalDate(2026, 5, 20),
                     symptomCount = 5,
                 ),
                 aboutText = "Берёза — один из основных аллергенов в средней полосе России.",

@@ -36,8 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,59 +46,37 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
-import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.Feeling
 import io.github.kroune.pollen.domain.model.LoadState
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FriendsListSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
-import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.common.formatDateLocalized
+import io.github.kroune.pollen.presentation.common.rememberCopyToClipboard
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import io.github.kroune.pollen.util.formatDateLocalized
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.datetime.LocalDate
 
-/** ViewModel convenience overload — used by navigation. */
-@Composable
-fun FriendsListScreen(
-    onBack: () -> Unit = {},
-    onNavigateToAddFriend: () -> Unit = {},
-    viewModel: FriendsListViewModel = koinViewModel(),
-) {
-    val state by viewModel.state.collectAsState()
-    val locale by viewModel.locale.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    FriendsListScreen(
-        state = state,
-        locale = locale,
-        onBack = onBack,
-        onNavigateToAddFriend = onNavigateToAddFriend,
-        onDeleteFriend = viewModel::deleteFriend,
-        onRetry = viewModel::loadData,
-        snackbarHostState = snackbarHostState,
-    )
-}
-
-/** State-based overload — previewable and testable. */
 @Composable
 fun FriendsListScreen(
     state: FriendsListUiState,
-    locale: AppLocale,
-    onBack: () -> Unit,
-    onNavigateToAddFriend: () -> Unit,
-    onDeleteFriend: (Int) -> Unit,
-    onRetry: () -> Unit,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (FriendsListIntent) -> Unit = {},
+    onBack: () -> Unit = {},
+    onNavigateToAddFriend: () -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(FriendsListIntent.LoadData) })
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = PollenTheme.colors.paper,
@@ -109,57 +85,35 @@ fun FriendsListScreen(
             FriendsTopBar(onBack = onBack)
             FriendsListBody(
                 state = state,
-                locale = locale,
                 onNavigateToAddFriend = onNavigateToAddFriend,
-                onDeleteFriend = onDeleteFriend,
-                onRetry = onRetry,
+                onDeleteFriend = { onIntent(FriendsListIntent.DeleteFriend(it)) },
+                onRetry = { onIntent(FriendsListIntent.LoadData) },
             )
         }
     }
 }
 
-/** ViewModel convenience overload — used inside FeedScreen pager. */
-@Composable
-fun FriendsListContent(
-    onNavigateToAddFriend: () -> Unit = {},
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    viewModel: FriendsListViewModel = koinViewModel(),
-) {
-    val state by viewModel.state.collectAsState()
-    val locale by viewModel.locale.collectAsState()
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    FriendsListContent(
-        state = state,
-        locale = locale,
-        onNavigateToAddFriend = onNavigateToAddFriend,
-        onDeleteFriend = viewModel::deleteFriend,
-        onRetry = viewModel::loadData,
-    )
-}
-
-/** State-based overload — previewable and testable. */
 @Composable
 fun FriendsListContent(
     state: FriendsListUiState,
-    locale: AppLocale,
-    onNavigateToAddFriend: () -> Unit,
-    onDeleteFriend: (Int) -> Unit,
-    onRetry: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (FriendsListIntent) -> Unit = {},
+    onNavigateToAddFriend: () -> Unit = {},
 ) {
+    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(FriendsListIntent.LoadData) })
+
     FriendsListBody(
         state = state,
-        locale = locale,
         onNavigateToAddFriend = onNavigateToAddFriend,
-        onDeleteFriend = onDeleteFriend,
-        onRetry = onRetry,
+        onDeleteFriend = { onIntent(FriendsListIntent.DeleteFriend(it)) },
+        onRetry = { onIntent(FriendsListIntent.LoadData) },
     )
 }
 
 @Composable
 private fun FriendsListBody(
     state: FriendsListUiState,
-    locale: AppLocale,
     onNavigateToAddFriend: () -> Unit,
     onDeleteFriend: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -180,7 +134,6 @@ private fun FriendsListBody(
             } else {
                 FriendsPopulatedList(
                     friends = friends.data,
-                    locale = locale,
                     onAddFriend = onNavigateToAddFriend,
                     onDeleteFriend = onDeleteFriend,
                 )
@@ -218,7 +171,6 @@ private fun FriendsTopBar(onBack: () -> Unit) {
 @Composable
 private fun FriendsPopulatedList(
     friends: ImmutableList<FriendUi>,
-    locale: AppLocale,
     onAddFriend: () -> Unit,
     onDeleteFriend: (Int) -> Unit,
 ) {
@@ -280,7 +232,6 @@ private fun FriendsPopulatedList(
                     }
                     FriendRow(
                         friend = friend,
-                        locale = locale,
                         onDelete = { onDeleteFriend(friend.friendId) },
                     )
                 }
@@ -308,7 +259,6 @@ private fun FriendsPopulatedList(
 @Composable
 private fun FriendRow(
     friend: FriendUi,
-    locale: AppLocale,
     onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
@@ -345,7 +295,7 @@ private fun FriendRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val clipboardManager = LocalClipboardManager.current
+            val copyToClipboard = rememberCopyToClipboard()
             val displayName = friend.name ?: "ID ${friend.friendId}"
 
             Column(modifier = Modifier.weight(1f)) {
@@ -373,7 +323,7 @@ private fun FriendRow(
                             .clip(RoundedCornerShape(4.dp))
                             .background(PollenTheme.colors.accentLight)
                             .clickable {
-                                clipboardManager.setText(AnnotatedString("${friend.friendId}"))
+                                copyToClipboard("${friend.friendId}")
                             }
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
@@ -381,7 +331,7 @@ private fun FriendRow(
             }
 
             if (friend.lastPinFeeling != null) {
-                LastPinInfo(friend, locale)
+                LastPinInfo(friend)
             } else {
                 Text(
                     text = stringResource(MR.strings.friends_no_pins),
@@ -394,7 +344,7 @@ private fun FriendRow(
 }
 
 @Composable
-private fun LastPinInfo(friend: FriendUi, locale: AppLocale) {
+private fun LastPinInfo(friend: FriendUi) {
     val feelingColor = when (friend.lastPinFeeling) {
         Feeling.GOOD -> PollenTheme.colors.severity1
         Feeling.MIDDLE -> PollenTheme.colors.severity2
@@ -424,12 +374,14 @@ private fun LastPinInfo(friend: FriendUi, locale: AppLocale) {
                 color = feelingColor,
             )
         }
-        val meta = buildString {
-            friend.lastPinPollenName?.let { append(it) }
-            friend.lastPinDate?.let {
-                if (isNotEmpty()) append(" · ")
-                append(formatDateLocalized(it, locale))
-            }
+        val pollenName = friend.lastPinPollenName
+        val pinDate = friend.lastPinDate
+        val formattedDate = pinDate?.let { formatDateLocalized(it) }
+        val meta = when {
+            pollenName != null && formattedDate != null -> "$pollenName · $formattedDate"
+            pollenName != null -> pollenName
+            formattedDate != null -> formattedDate
+            else -> ""
         }
         if (meta.isNotEmpty()) {
             Text(
@@ -552,14 +504,14 @@ private val previewFriends = persistentListOf(
         name = "Алексей",
         lastPinFeeling = Feeling.BAD,
         lastPinPollenName = "Берёза",
-        lastPinDate = "2026-05-13",
+        lastPinDate = LocalDate(2026, 5, 13),
     ),
     FriendUi(
         friendId = 1002,
         name = "Мария",
         lastPinFeeling = Feeling.GOOD,
         lastPinPollenName = "Ольха",
-        lastPinDate = "2026-05-12",
+        lastPinDate = LocalDate(2026, 5, 12),
     ),
     FriendUi(
         friendId = 1003,
@@ -579,11 +531,6 @@ private fun PreviewFriendsScreenPopulated() {
                 friends = LoadState.Loaded(previewFriends),
                 myServerId = "12345",
             ),
-            locale = AppLocale.RU,
-            onBack = {},
-            onNavigateToAddFriend = {},
-            onDeleteFriend = {},
-            onRetry = {},
         )
     }
 }
@@ -597,11 +544,6 @@ private fun PreviewFriendsScreenEmpty() {
                 friends = LoadState.Loaded(persistentListOf()),
                 myServerId = "12345",
             ),
-            locale = AppLocale.RU,
-            onBack = {},
-            onNavigateToAddFriend = {},
-            onDeleteFriend = {},
-            onRetry = {},
         )
     }
 }
@@ -612,11 +554,6 @@ private fun PreviewFriendsScreenLoading() {
     PollenTheme {
         FriendsListScreen(
             state = FriendsListUiState(friends = LoadState.Loading),
-            locale = AppLocale.RU,
-            onBack = {},
-            onNavigateToAddFriend = {},
-            onDeleteFriend = {},
-            onRetry = {},
         )
     }
 }
@@ -627,11 +564,6 @@ private fun PreviewFriendsScreenFailed() {
     PollenTheme {
         FriendsListScreen(
             state = FriendsListUiState(friends = LoadState.Failed),
-            locale = AppLocale.RU,
-            onBack = {},
-            onNavigateToAddFriend = {},
-            onDeleteFriend = {},
-            onRetry = {},
         )
     }
 }
@@ -642,7 +574,6 @@ private fun PreviewFriendsPopulated() {
     PollenTheme {
         FriendsPopulatedList(
             friends = previewFriends,
-            locale = AppLocale.RU,
             onAddFriend = {},
             onDeleteFriend = {},
         )
@@ -666,7 +597,6 @@ private fun PreviewFriendsLoading() {
     PollenTheme {
         FriendsListBody(
             state = FriendsListUiState(friends = LoadState.Loading),
-            locale = AppLocale.RU,
             onNavigateToAddFriend = {},
             onDeleteFriend = {},
             onRetry = {},
@@ -680,7 +610,6 @@ private fun PreviewFriendsFailed() {
     PollenTheme {
         FriendsListBody(
             state = FriendsListUiState(friends = LoadState.Failed),
-            locale = AppLocale.RU,
             onNavigateToAddFriend = {},
             onDeleteFriend = {},
             onRetry = {},

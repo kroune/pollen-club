@@ -1,152 +1,166 @@
 package io.github.kroune.pollen.presentation.medications
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.kroune.pollen.domain.model.ApiResult
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.MedicationIntakeDomain
 import io.github.kroune.pollen.domain.model.TherapyDomain
 import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.repository.MedicationRepository
+import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
-import kotlin.coroutines.cancellation.CancellationException
+import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+sealed interface MedicationsIntent {
+    data class SearchQueryChanged(val query: String) : MedicationsIntent
+    data object ToggleSheetExpanded : MedicationsIntent
+    data class ToggleTakenToday(val therapyId: Long) : MedicationsIntent
+    data class RemoveTodayDose(val therapyId: Long) : MedicationsIntent
+}
 
 class MedicationsViewModel(
     private val medicationRepository: MedicationRepository,
     private val todayProvider: TodayProvider,
-) : ViewModel() {
+) : MviViewModel<MedicationsUiState, MedicationsIntent, UiEvent>(MedicationsUiState()) {
 
-    private val _events = Channel<UiEvent>(Channel.BUFFERED)
-    val events = _events.receiveAsFlow()
-
-    private val _searchQuery = MutableStateFlow("")
-    private val _isSheetExpanded = MutableStateFlow(false)
-    private val _categories = MutableStateFlow<LoadState<ImmutableList<MedCategoryUi>>>(LoadState.Loading)
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val state: StateFlow<MedicationsUiState> = combine(
-        combine(
-            medicationRepository.observeTherapies(),
-            todayProvider.today.flatMapLatest { date ->
-                medicationRepository.observeIntakesForDate(date.toString())
-            },
-        ) { therapies, intakes -> mapTherapyData(therapies, intakes) },
-        _categories,
-        _searchQuery,
-        _isSheetExpanded,
-    ) { therapyData, categories, query, sheetExpanded ->
-        MedicationsUiState(
-            recentMeds = LoadState.Loaded(therapyData.recentMeds),
-            categories = categories,
-            todayDoses = therapyData.todayDoses,
-            todayCount = therapyData.todayDoses.size,
-            searchQuery = query,
-            isSheetExpanded = sheetExpanded,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MedicationsUiState())
+    private val searchQueryFlow = MutableStateFlow("")
 
     init {
+        observeToday()
+        observeTherapies()
         loadCategories()
     }
 
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun toggleSheetExpanded() {
-        _isSheetExpanded.update { !it }
-    }
-
-    fun toggleTakenToday(therapyId: Long) {
+    private fun observeToday() {
         viewModelScope.launch {
-            try {
-                val today = todayProvider.today.value.toString()
-                val intakes = medicationRepository.observeIntakesForDate(today)
-                    .stateIn(viewModelScope).value
-                val currentlyTaken = intakes.any { it.therapyId == therapyId && it.taken }
-                medicationRepository.recordIntake(therapyId, today, !currentlyTaken)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _events.send(UiEvent.ShowError(MR.strings.error_update_intake.desc()))
+            todayProvider.today.collect { today ->
+                updateState { copy(today = today) }
             }
         }
     }
 
-    fun removeTodayDose(therapyId: Long) {
+    override fun handleIntent(intent: MedicationsIntent) {
+        when (intent) {
+            is MedicationsIntent.SearchQueryChanged -> {
+                searchQueryFlow.value = intent.query
+                updateState { copy(searchQuery = intent.query) }
+            }
+            MedicationsIntent.ToggleSheetExpanded -> updateState { copy(isSheetExpanded = !isSheetExpanded) }
+            is MedicationsIntent.ToggleTakenToday -> toggleTakenToday(intent.therapyId)
+            is MedicationsIntent.RemoveTodayDose -> removeTodayDose(intent.therapyId)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeTherapies() {
         viewModelScope.launch {
-            try {
-                val today = todayProvider.today.value.toString()
-                medicationRepository.recordIntake(therapyId, today, false)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _events.send(UiEvent.ShowError(MR.strings.error_remove_dose.desc()))
+            combine(
+                medicationRepository.observeTherapies(),
+                todayProvider.today.flatMapLatest { medicationRepository.observeIntakesForDate(it) },
+                medicationRepository.observeAllTakenIntakes(),
+                searchQueryFlow,
+            ) { therapies, todayIntakes, takenIntakes, query ->
+                mapTherapyData(therapies, todayIntakes, takenIntakes, query)
+            }.collect { data ->
+                updateState {
+                    copy(
+                        recentMeds = LoadState.Loaded(data.recentMeds),
+                        todayDoses = data.todayDoses,
+                        todayCount = data.todayDoses.size,
+                    )
+                }
             }
         }
     }
 
     private fun loadCategories() {
         viewModelScope.launch {
-            try {
-                when (val result = medicationRepository.getCureCatalog()) {
+            runCatchingCancellable {
+                medicationRepository.getCureCatalog()
+            }.onSuccess { result ->
+                when (result) {
                     is ApiResult.Success -> {
                         val categories = result.data.actionTypes.map { actionType ->
                             MedCategoryUi(id = actionType.id, name = actionType.name)
                         }.toImmutableList()
-                        _categories.value = LoadState.Loaded(categories)
+                        updateState { copy(categories = LoadState.Loaded(categories)) }
                     }
                     is ApiResult.Error -> {
-                        _categories.value = LoadState.Failed
-                        _events.send(UiEvent.ShowError(MR.strings.error_load_categories.desc()))
+                        updateState { copy(categories = LoadState.Failed) }
+                        emitEffect(UiEvent.ShowError(MR.strings.error_load_categories.desc()))
                     }
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _categories.value = LoadState.Failed
-                _events.send(UiEvent.ShowError(MR.strings.error_load_categories.desc()))
+            }.onFailure {
+                updateState { copy(categories = LoadState.Failed) }
+                emitEffect(UiEvent.ShowError(MR.strings.error_load_categories.desc()))
+            }
+        }
+    }
+
+    private fun toggleTakenToday(therapyId: Long) {
+        viewModelScope.launch {
+            runCatchingCancellable {
+                val today = todayProvider.today.value
+                val intakes = medicationRepository.observeIntakesForDate(today).first()
+                val currentlyTaken = intakes.any { it.therapyId == therapyId && it.taken }
+                medicationRepository.recordIntake(therapyId, today, !currentlyTaken)
+            }.onFailure {
+                emitEffect(UiEvent.ShowError(MR.strings.error_update_intake.desc()))
+            }
+        }
+    }
+
+    private fun removeTodayDose(therapyId: Long) {
+        viewModelScope.launch {
+            runCatchingCancellable {
+                val today = todayProvider.today.value
+                medicationRepository.recordIntake(therapyId, today, false)
+            }.onFailure {
+                emitEffect(UiEvent.ShowError(MR.strings.error_remove_dose.desc()))
             }
         }
     }
 
     private fun mapTherapyData(
         therapies: List<TherapyDomain>,
-        intakes: List<MedicationIntakeDomain>,
+        todayIntakes: List<MedicationIntakeDomain>,
+        takenIntakes: List<MedicationIntakeDomain>,
+        searchQuery: String,
     ): TherapyUiData {
-        val intakeMap = intakes.associateBy { it.therapyId }
+        val todayMap = todayIntakes.associateBy { it.therapyId }
+        val takenByTherapy = takenIntakes.groupBy { it.therapyId }
 
-        val recentMeds = therapies.map { therapy ->
-            val taken = intakeMap[therapy.id]?.taken ?: false
+        val filteredTherapies = if (searchQuery.isBlank()) {
+            therapies
+        } else {
+            therapies.filter { it.cureName.contains(searchQuery, ignoreCase = true) }
+        }
+
+        val recentMeds = filteredTherapies.map { therapy ->
+            val taken = todayMap[therapy.id]?.taken == true
+            val takenForThisTherapy = takenByTherapy[therapy.id].orEmpty()
             RecentMedUi(
                 therapyId = therapy.id,
                 name = therapy.cureName,
                 substance = "${therapy.dose} · ${therapy.form}",
-                lastTaken = therapy.startDate,
-                count = 0,
+                lastTaken = takenForThisTherapy.maxOfOrNull { it.date },
+                count = takenForThisTherapy.size,
                 takenToday = taken,
             )
         }.toImmutableList()
 
         val todayDoses = therapies
-            .filter { therapy -> intakeMap[therapy.id]?.taken == true }
+            .filter { therapy -> todayMap[therapy.id]?.taken == true }
             .map { therapy ->
                 TodayDoseUi(
                     therapyId = therapy.id,

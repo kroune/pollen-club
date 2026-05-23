@@ -3,10 +3,11 @@ package io.github.kroune.pollen.data.local.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.datetime.LocalDate
 
 @Entity(tableName = "day_activities")
 data class DayActivityEntity(
-    @PrimaryKey val date: String,
+    @PrimaryKey val date: LocalDate,
     @ColumnInfo(name = "app_opened") val appOpened: Boolean = false,
     @ColumnInfo(name = "health_set") val healthSet: Boolean = false,
     @ColumnInfo(name = "symptoms_set") val symptomsSet: Boolean = false,

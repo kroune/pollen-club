@@ -28,13 +28,18 @@ class TodayProviderImpl(
 private fun currentLocalDate(): LocalDate =
     kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
+private const val SECONDS_PER_DAY = 86_400L
+private const val SECONDS_PER_HOUR = 3_600L
+private const val SECONDS_PER_MINUTE = 60L
+private const val MIDNIGHT_BUFFER_MS = 100L
+
 private fun midnightTicker() = flow {
     while (true) {
         val now = kotlin.time.Clock.System.now()
         val localNow = now.toLocalDateTime(TimeZone.currentSystemDefault())
-        val secondsUntilMidnight = (24 * 3600L) -
-            (localNow.hour * 3600L + localNow.minute * 60L + localNow.second)
-        delay(secondsUntilMidnight * 1000 + 100)
+        val secondsUntilMidnight = SECONDS_PER_DAY -
+            (localNow.hour * SECONDS_PER_HOUR + localNow.minute * SECONDS_PER_MINUTE + localNow.second)
+        delay(secondsUntilMidnight * 1000 + MIDNIGHT_BUFFER_MS)
         emit(Unit)
     }
 }

@@ -7,10 +7,11 @@ import io.github.kroune.pollen.data.remote.dto.response.LevelDto
 import io.github.kroune.pollen.data.remote.dto.response.StatisticDto
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.StatisticDomain
+import kotlinx.datetime.LocalDate
 
 fun LevelDto.toLevelEntity(): LevelEntity = LevelEntity(
     id = id,
-    date = date,
+    date = LocalDate.parse(date),
     pollenId = pollen,
     locationId = location,
     value = value,
@@ -18,7 +19,7 @@ fun LevelDto.toLevelEntity(): LevelEntity = LevelEntity(
 
 fun LevelDto.toForecastEntity(): ForecastLevelEntity = ForecastLevelEntity(
     id = id,
-    date = date,
+    date = LocalDate.parse(date),
     pollenId = pollen,
     locationId = location,
     value = value,
@@ -42,7 +43,7 @@ fun ForecastLevelEntity.toDomain(): LevelDomain = LevelDomain(
 
 fun StatisticDto.toEntity(): StatisticsEntity = StatisticsEntity(
     id = id,
-    date = date,
+    date = date?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
     locationId = location,
     good = good,
     middle = middle,

@@ -1,6 +1,5 @@
 package io.github.kroune.pollen.presentation.home
 
-import kotlinx.coroutines.CompletableDeferred
 import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.DayForecastSummaryDomain
@@ -18,6 +17,7 @@ import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.domain.repository.WeatherRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,9 +49,9 @@ class FakePollenRepository : PollenRepository {
     var syncPollensError: Exception? = null
     var syncLevelsError: Exception? = null
     var syncForecastsError: Exception? = null
-    var levelsForDate = mutableMapOf<Pair<Int, String>, List<LevelDomain>>()
-    var forecastsForDate = mutableMapOf<Pair<Int, String>, List<LevelDomain>>()
-    var forecastTimelines = mutableMapOf<Pair<Int, Int>, List<LevelDomain>>()
+    val levelsForDate = mutableMapOf<Pair<Int, LocalDate>, List<LevelDomain>>()
+    val forecastsForDate = mutableMapOf<Pair<Int, LocalDate>, List<LevelDomain>>()
+    val forecastTimelines = mutableMapOf<Pair<Int, Int>, List<LevelDomain>>()
 
     fun emitLevels(levels: List<LevelDomain>) { levelsFlow.value = levels }
     fun emitForecasts(forecasts: List<LevelDomain>) { forecastsFlow.value = forecasts }
@@ -84,11 +84,13 @@ class FakePollenRepository : PollenRepository {
 
     override suspend fun resetSyncState() {}
 
-    override suspend fun getLevelsForLocation(locationId: Int, date: String): List<LevelDomain> =
-        levelsForDate[locationId to date] ?: levelsFlow.value.filter { it.locationId == locationId && it.date == date }
+    override suspend fun getLevelsForLocation(locationId: Int, date: LocalDate): List<LevelDomain> =
+        levelsForDate[locationId to date]
+            ?: levelsFlow.value.filter { it.locationId == locationId && it.date == date }
 
-    override suspend fun getForecastsForLocation(locationId: Int, date: String): List<LevelDomain> =
-        forecastsForDate[locationId to date] ?: forecastsFlow.value.filter { it.locationId == locationId && it.date == date }
+    override suspend fun getForecastsForLocation(locationId: Int, date: LocalDate): List<LevelDomain> =
+        forecastsForDate[locationId to date]
+            ?: forecastsFlow.value.filter { it.locationId == locationId && it.date == date }
 
     override suspend fun getForecastTimeline(locationId: Int, pollenId: Int): List<LevelDomain> =
         forecastTimelines[locationId to pollenId] ?: emptyList()
@@ -96,8 +98,8 @@ class FakePollenRepository : PollenRepository {
     override suspend fun getForecastTimeline(
         locationId: Int,
         pollenId: Int,
-        startDate: String,
-        endDate: String,
+        startDate: LocalDate,
+        endDate: LocalDate,
     ): List<LevelDomain> =
         forecastTimelines[locationId to pollenId]?.filter { it.date in startDate..endDate } ?: emptyList()
 }
@@ -125,7 +127,7 @@ class FakeWeatherRepository : WeatherRepository {
 
 class FakePersonalIndexRepository : PersonalIndexRepository {
     var indexResult = PersonalPollenIndexDomain(value = 3.5, maxPossible = 10.0, dominantAllergenName = "Birch")
-    var dayForecastSummaries = listOf<DayForecastSummaryDomain>()
+    var dayForecastSummaries: List<DayForecastSummaryDomain> = emptyList()
 
     override suspend fun computePersonalIndex(
         levels: List<LevelDomain>,
@@ -154,35 +156,35 @@ class FakePersonalIndexRepository : PersonalIndexRepository {
 }
 
 class FakeSensitivityRepository : SensitivityRepository {
-    private val _sensitivities = MutableStateFlow<List<AllergenSensitivityDomain>>(emptyList())
+    private val sensitivitiesFlow = MutableStateFlow<List<AllergenSensitivityDomain>>(emptyList())
     var setSensitivityError: Exception? = null
 
     fun emit(sensitivities: List<AllergenSensitivityDomain>) {
-        _sensitivities.value = sensitivities
+        sensitivitiesFlow.value = sensitivities
     }
 
-    override fun observeAll(): Flow<List<AllergenSensitivityDomain>> = _sensitivities
+    override fun observeAll(): Flow<List<AllergenSensitivityDomain>> = sensitivitiesFlow
 
-    override suspend fun getAll(): List<AllergenSensitivityDomain> = _sensitivities.value
+    override suspend fun getAll(): List<AllergenSensitivityDomain> = sensitivitiesFlow.value
 
     override suspend fun setSensitivity(pollenId: Int, level: SensitivityLevel) {
         setSensitivityError?.let { throw it }
-        val current = _sensitivities.value.toMutableList()
+        val current = sensitivitiesFlow.value.toMutableList()
         current.removeAll { it.pollenId == pollenId }
         if (level != SensitivityLevel.NONE) {
             current.add(AllergenSensitivityDomain(pollenId, level))
         }
-        _sensitivities.value = current
+        sensitivitiesFlow.value = current
     }
 
     override suspend fun setSensitivities(sensitivities: List<AllergenSensitivityDomain>) {
-        _sensitivities.value = sensitivities
+        sensitivitiesFlow.value = sensitivities
     }
 }
 
 class FakeTodayProvider(date: LocalDate) : TodayProvider {
-    private val _today = MutableStateFlow(date)
-    override val today: StateFlow<LocalDate> = _today
+    private val todayFlow = MutableStateFlow(date)
+    override val today: StateFlow<LocalDate> = todayFlow
 
-    fun setDate(date: LocalDate) { _today.value = date }
+    fun setDate(date: LocalDate) { todayFlow.value = date }
 }

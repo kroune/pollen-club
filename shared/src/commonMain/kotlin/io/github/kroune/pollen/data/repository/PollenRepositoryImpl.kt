@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
@@ -58,7 +59,7 @@ class PollenRepositoryImpl(
         pollenDao.replacePollensAndLevels(pollenEntities, levelInfoEntities)
     }
 
-    override suspend fun getLevelsForLocation(locationId: Int, date: String): List<LevelDomain> =
+    override suspend fun getLevelsForLocation(locationId: Int, date: LocalDate): List<LevelDomain> =
         levelDao.getByLocationAndDate(locationId, date).map { it.toDomain() }
 
     override fun observeLevelsForLocation(locationId: Int): Flow<List<LevelDomain>> =
@@ -67,19 +68,21 @@ class PollenRepositoryImpl(
     override suspend fun syncLevels(): ApiResult<Unit> = safeApiCall {
         val state = syncStateDao.getSyncState() ?: SyncStateEntity()
         val response = api.getLevels(state.lastLevelsId)
-        val entities = response.levels.orEmpty().map { it.toLevelEntity() }
+        val raw = response.levels.orEmpty()
+        val entities = raw.map { it.toLevelEntity() }
         if (entities.isNotEmpty()) {
             levelDao.upsertLevels(entities)
-            syncStateDao.upsert(state.copy(lastLevelsId = entities.maxOf { it.id }))
+        }
+        if (raw.isNotEmpty()) {
+            syncStateDao.upsert(state.copy(lastLevelsId = raw.maxOf { it.id }))
         }
         val cutoff = kotlin.time.Clock.System.now()
             .toLocalDateTime(TimeZone.currentSystemDefault()).date
             .minus(DatePeriod(days = STALE_DATA_DAYS))
-            .toString()
         levelDao.deleteLevelsOlderThan(cutoff)
     }
 
-    override suspend fun getForecastsForLocation(locationId: Int, date: String): List<LevelDomain> =
+    override suspend fun getForecastsForLocation(locationId: Int, date: LocalDate): List<LevelDomain> =
         levelDao.getForecastsByLocationAndDate(locationId, date).map { it.toDomain() }
 
     override fun observeForecastsForLocation(locationId: Int): Flow<List<LevelDomain>> =
@@ -88,15 +91,17 @@ class PollenRepositoryImpl(
     override suspend fun syncForecasts(): ApiResult<Unit> = safeApiCall {
         val state = syncStateDao.getSyncState() ?: SyncStateEntity()
         val response = api.getForecasts(LevelForecastRequest(fromId = state.lastForecastId))
-        val entities = response.levels.orEmpty().map { it.toForecastEntity() }
+        val raw = response.levels.orEmpty()
+        val entities = raw.map { it.toForecastEntity() }
         if (entities.isNotEmpty()) {
             levelDao.upsertForecasts(entities)
-            syncStateDao.upsert(state.copy(lastForecastId = entities.maxOf { it.id }))
+        }
+        if (raw.isNotEmpty()) {
+            syncStateDao.upsert(state.copy(lastForecastId = raw.maxOf { it.id }))
         }
         val cutoff = kotlin.time.Clock.System.now()
             .toLocalDateTime(TimeZone.currentSystemDefault()).date
             .minus(DatePeriod(days = STALE_DATA_DAYS))
-            .toString()
         levelDao.deleteForecastsOlderThan(cutoff)
     }
 
@@ -105,8 +110,8 @@ class PollenRepositoryImpl(
         val today = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
         return getForecastTimeline(
             locationId, pollenId,
-            today.minus(DatePeriod(days = 3)).toString(),
-            today.plus(DatePeriod(days = 7)).toString(),
+            today.minus(DatePeriod(days = 3)),
+            today.plus(DatePeriod(days = 7)),
         )
     }
 
@@ -117,8 +122,8 @@ class PollenRepositoryImpl(
     override suspend fun getForecastTimeline(
         locationId: Int,
         pollenId: Int,
-        startDate: String,
-        endDate: String,
+        startDate: LocalDate,
+        endDate: LocalDate,
     ): List<LevelDomain> {
         val observed = levelDao.getLevelsByLocationAndPollen(locationId, pollenId)
             .map { it.toDomain() }

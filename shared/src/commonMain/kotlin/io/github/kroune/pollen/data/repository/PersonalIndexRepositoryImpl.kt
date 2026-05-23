@@ -2,6 +2,7 @@ package io.github.kroune.pollen.data.repository
 
 import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.DayForecastSummaryDomain
+import io.github.kroune.pollen.domain.model.KnownPollens
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.PersonalPollenIndexDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
@@ -82,7 +83,7 @@ class PersonalIndexRepositoryImpl(
 
         val allForecasts = sensitivePollenIds.flatMap { pollenId ->
             pollenRepository.getForecastTimeline(
-                locationId, pollenId, startDate.toString(), endDate.toString(),
+                locationId, pollenId, startDate, endDate,
             )
         }
 
@@ -101,7 +102,7 @@ class PersonalIndexRepositoryImpl(
         val endDate = startDate.plus(days - 1, DateTimeUnit.DAY)
         val allForecasts = pollens.flatMap { pollen ->
             pollenRepository.getForecastTimeline(
-                locationId, pollen.id, startDate.toString(), endDate.toString(),
+                locationId, pollen.id, startDate, endDate,
             )
         }
 
@@ -115,11 +116,12 @@ class PersonalIndexRepositoryImpl(
         days: Int,
     ): List<DayForecastSummaryDomain> {
         return (0 until days).map { offset ->
-            val date = startDate.plus(offset, DateTimeUnit.DAY).toString()
+            val date = startDate.plus(offset, DateTimeUnit.DAY)
             val dayLevels = forecasts.filter { it.date == date }
             val dominantLevel = dayLevels.maxByOrNull { it.value }
             val severity = if (dominantLevel != null) {
-                val pollenMax = maxLevelByPollen[dominantLevel.pollenId]?.takeIf { it > 0 } ?: 5
+                val pollenMax = maxLevelByPollen[dominantLevel.pollenId]?.takeIf { it > 0 }
+                    ?: KnownPollens.DEFAULT_MAX_LEVEL
                 normalizeSeverity(dominantLevel.value, pollenMax)
             } else {
                 0

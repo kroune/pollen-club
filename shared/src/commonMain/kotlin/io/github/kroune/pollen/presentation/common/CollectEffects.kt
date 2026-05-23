@@ -10,8 +10,8 @@ import io.github.kroune.pollen.MR
 import kotlinx.coroutines.flow.Flow
 
 @Composable
-fun CollectEvents(
-    events: Flow<UiEvent>,
+fun CollectEffects(
+    effects: Flow<UiEvent>,
     snackbarHostState: SnackbarHostState,
     onRetry: (() -> Unit)? = null,
 ) {
@@ -19,7 +19,7 @@ fun CollectEvents(
     val resolveDesc = rememberStringDescResolver()
 
     LaunchedEffect(Unit) {
-        events.collect { event ->
+        effects.collect { event ->
             when (event) {
                 is UiEvent.ShowError -> {
                     val result = snackbarHostState.showSnackbar(

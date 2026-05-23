@@ -1,5 +1,6 @@
 package io.github.kroune.pollen.domain.model
 
+import kotlinx.datetime.LocalDateTime
 import kotlin.math.PI
 import kotlin.math.atan
 import kotlin.math.cos
@@ -9,7 +10,7 @@ import kotlin.math.ln
 import kotlin.math.tan
 
 data class MapPinDomain(
-    val date: String,
+    val date: LocalDateTime,
     val feeling: Feeling,
     val latitude: Double,
     val longitude: Double,

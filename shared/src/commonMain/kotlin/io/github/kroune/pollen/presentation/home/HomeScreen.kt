@@ -27,13 +27,12 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -41,12 +40,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,92 +53,55 @@ import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.LocationDomain
-import io.github.kroune.pollen.domain.model.PollenDomain
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.DayStripSkeleton
 import io.github.kroune.pollen.presentation.common.ErrorBanner
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.LocationHeaderSkeleton
 import io.github.kroune.pollen.presentation.common.PersonalIndexCardSkeleton
 import io.github.kroune.pollen.presentation.common.PollenListSkeleton
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
-/** ViewModel convenience overload — used by navigation. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HomeScreen(
-    viewModel: HomeViewModel = koinViewModel(),
-    onNavigateToForecast: (pollenId: Int) -> Unit = {},
-    onNavigateToAllergenSettings: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-) {
-    val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    HomeScreen(
-        state = state,
-        snackbarHostState = snackbarHostState,
-        onRefresh = viewModel::loadData,
-        onLocationClick = viewModel::showLocationPicker,
-        onSelectLocation = viewModel::selectLocation,
-        onDismissLocationPicker = viewModel::dismissLocationPicker,
-        onDaySelected = viewModel::selectDay,
-        onPreviousWeek = { viewModel.shiftWeek(-1) },
-        onNextWeek = { viewModel.shiftWeek(1) },
-        onAllergenAdd = viewModel::addAllergen,
-        onNavigateToForecast = onNavigateToForecast,
-        onNavigateToAllergenSettings = onNavigateToAllergenSettings,
-        onNavigateToSettings = onNavigateToSettings,
-    )
-}
-
-/** State-based overload — previewable and testable without a ViewModel. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    onRefresh: () -> Unit = {},
-    onLocationClick: () -> Unit = {},
-    onSelectLocation: (LocationDomain) -> Unit = {},
-    onDismissLocationPicker: () -> Unit = {},
-    onDaySelected: (Int) -> Unit = {},
-    onPreviousWeek: () -> Unit = {},
-    onNextWeek: () -> Unit = {},
-    onAllergenAdd: (pollenId: Int) -> Unit = {},
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (HomeIntent) -> Unit = {},
     onNavigateToForecast: (pollenId: Int) -> Unit = {},
     onNavigateToAllergenSettings: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(HomeIntent.LoadData) })
     if (state.showLocationPicker) {
         val locations = state.locations
         if (locations is LoadState.Loaded) {
             LocationPickerDialog(
                 locations = locations.data,
-                selectedLocation = state.selectedLocation,
-                onSelect = onSelectLocation,
-                onDismiss = onDismissLocationPicker,
+                selectedLocationId = state.selectedLocation?.id,
+                onSelect = { onIntent(HomeIntent.SelectLocation(it)) },
+                onDismiss = { onIntent(HomeIntent.DismissLocationPicker) },
             )
         }
     }
 
     val allFailed = state.pollens is LoadState.Failed &&
-        state.locations is LoadState.Failed
+            state.locations is LoadState.Failed
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
         if (allFailed) {
-            FullScreenError(onRetry = onRefresh)
+            FullScreenError(onRetry = { onIntent(HomeIntent.LoadData) })
             return@Scaffold
         }
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
-            onRefresh = onRefresh,
+            onRefresh = { onIntent(HomeIntent.LoadData) },
             modifier = Modifier.fillMaxSize(),
         ) {
             LazyColumn(
@@ -153,7 +114,7 @@ fun HomeScreen(
                         is LoadState.Loaded, is LoadState.Failed -> {
                             LocationRow(
                                 locationName = state.selectedLocation?.name ?: "—",
-                                onLocationClick = onLocationClick,
+                                onLocationClick = { onIntent(HomeIntent.ShowLocationPicker) },
                                 onSettingsClick = onNavigateToSettings,
                             )
                         }
@@ -168,20 +129,22 @@ fun HomeScreen(
                         is LoadState.Loading -> {
                             DayStripSkeleton()
                         }
+
                         is LoadState.Loaded -> {
                             if (forecasts.data.isNotEmpty()) {
                                 DayStrip(
                                     days = forecasts.data,
                                     activeDayIndex = state.activeDayIndex,
                                     weekLabel = state.weekLabel.localized(),
-                                    onDaySelected = onDaySelected,
-                                    onPreviousWeek = onPreviousWeek,
-                                    onNextWeek = onNextWeek,
+                                    onDaySelected = { onIntent(HomeIntent.SelectDay(it)) },
+                                    onPreviousWeek = { onIntent(HomeIntent.ShiftWeek(-1)) },
+                                    onNextWeek = { onIntent(HomeIntent.ShiftWeek(1)) },
                                 )
                             }
                         }
+
                         is LoadState.Failed -> {
-                            ErrorBanner(onRetry = onRefresh)
+                            ErrorBanner(onRetry = { onIntent(HomeIntent.LoadData) })
                         }
                     }
                 }
@@ -194,6 +157,7 @@ fun HomeScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
+
                         is LoadState.Loaded -> {
                             val data = index.data
                             if (data != null) {
@@ -210,8 +174,9 @@ fun HomeScreen(
                                 )
                             }
                         }
+
                         is LoadState.Failed -> {
-                            ErrorBanner(onRetry = onRefresh)
+                            ErrorBanner(onRetry = { onIntent(HomeIntent.LoadData) })
                         }
                     }
                 }
@@ -221,6 +186,7 @@ fun HomeScreen(
                     is LoadState.Loading -> {
                         item { PollenListSkeleton(modifier = Modifier.padding(horizontal = 16.dp)) }
                     }
+
                     is LoadState.Loaded -> {
                         if (pollens.data.isEmpty()) {
                             item {
@@ -238,7 +204,10 @@ fun HomeScreen(
                                         title = stringResource(MR.strings.home_your_allergens).uppercase(),
                                         actionLabel = stringResource(MR.strings.home_configure),
                                         onAction = onNavigateToAllergenSettings,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp,
+                                            vertical = 0.dp,
+                                        ),
                                     )
                                 }
                                 item {
@@ -256,15 +225,16 @@ fun HomeScreen(
                                 item {
                                     OtherAllergensSection(
                                         allergens = state.otherAllergens,
-                                        onAllergenAdd = onAllergenAdd,
+                                        onAllergenAdd = { onIntent(HomeIntent.AddAllergen(it)) },
                                         modifier = Modifier.padding(horizontal = 16.dp),
                                     )
                                 }
                             }
                         }
                     }
+
                     is LoadState.Failed -> {
-                        item { ErrorBanner(onRetry = onRefresh) }
+                        item { ErrorBanner(onRetry = { onIntent(HomeIntent.LoadData) }) }
                     }
                 }
 
@@ -436,7 +406,7 @@ private fun DayStripContent(day: HomeDayForecastUi, isActive: Boolean) {
 
 @Composable
 fun PersonalIndexCard(
-    score: String,
+    score: Double,
     severityLevel: Int,
     label: String,
     maxLevel: Int = 5,
@@ -453,7 +423,7 @@ fun PersonalIndexCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = score,
+                text = formatScoreLocalized(score),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PollenTheme.colors.severityColor(severityLevel),
@@ -623,7 +593,7 @@ fun AllergenListCard(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OtherAllergensSection(
-    allergens: ImmutableList<PollenDomain>,
+    allergens: ImmutableList<HomeOtherAllergenUi>,
     onAllergenAdd: (pollenId: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -638,10 +608,10 @@ fun OtherAllergensSection(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            allergens.forEach { pollen ->
+            allergens.forEach { allergen ->
                 AllergenPill(
-                    name = pollen.name,
-                    onClick = { onAllergenAdd(pollen.id) },
+                    name = allergen.name,
+                    onClick = { onAllergenAdd(allergen.id) },
                 )
             }
         }
@@ -679,7 +649,7 @@ fun AllergenPill(
 }
 
 @Composable
-fun WeatherCard(weather: io.github.kroune.pollen.domain.model.WeatherDomain) {
+fun WeatherCard(weather: HomeWeatherUi) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),

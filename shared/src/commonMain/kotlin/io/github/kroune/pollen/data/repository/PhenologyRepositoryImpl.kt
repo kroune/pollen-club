@@ -28,7 +28,7 @@ class PhenologyRepositoryImpl(
         api.addFenology(
             AddFenologyRequest(
                 userId = userId,
-                date = observation.date,
+                date = observation.date.toString(),
                 time = observation.time,
                 comment = observation.comment,
                 state = observation.state,

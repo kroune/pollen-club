@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import io.github.kroune.pollen.data.local.db.entity.TherapyEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface TherapyDao {
@@ -17,7 +18,7 @@ interface TherapyDao {
     fun observeAll(): Flow<List<TherapyEntity>>
 
     @Query("SELECT * FROM therapies WHERE date = :date")
-    suspend fun getByDate(date: String): List<TherapyEntity>
+    suspend fun getByDate(date: LocalDate): List<TherapyEntity>
 
     @Delete
     suspend fun delete(therapy: TherapyEntity)

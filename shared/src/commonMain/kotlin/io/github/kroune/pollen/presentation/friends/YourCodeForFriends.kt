@@ -18,8 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import io.github.kroune.pollen.presentation.common.rememberCopyToClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -40,7 +39,7 @@ fun YourCodeForFriends(
 ) {
     if (myServerId.isBlank()) return
 
-    val clipboardManager = LocalClipboardManager.current
+    val copyToClipboard = rememberCopyToClipboard()
     val qrPainter = rememberQrCodePainter(myServerId)
 
     Card(
@@ -64,7 +63,7 @@ fun YourCodeForFriends(
             Column(modifier = Modifier.weight(1f)) {
                 CopyableId(
                     id = myServerId,
-                    onCopy = { clipboardManager.setText(AnnotatedString(myServerId)) },
+                    onCopy = { copyToClipboard(myServerId) },
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(

@@ -15,7 +15,6 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
-import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 
 fun buildDates(
@@ -27,7 +26,7 @@ fun buildDates(
         dayOfMonth = date.day,
         dayOfWeek = dayOfWeekStringDesc(date.dayOfWeek),
         isSelected = date == selectedDate,
-        isoDate = date.toString(),
+        date = date,
     )
 }.toImmutableList()
 
@@ -52,7 +51,7 @@ fun mapBodyZones(
 fun mapZoneTags(
     zone: BodyZone?,
     selectedTagKeys: Set<String>,
-    locale: AppLocale = AppLocale.RU,
+    locale: AppLocale,
 ): ImmutableList<DiarySymptomTagUi> {
     if (zone == null) return emptyList<DiarySymptomTagUi>().toImmutableList()
     return SymptomTagRegistry.getTagsByZone(zone, locale).map { tag ->
@@ -136,17 +135,4 @@ fun zonePrefix(zone: BodyZone): String = when (zone) {
     BodyZone.THROAT -> "throat_"
     BodyZone.CHEST -> "chest_"
     BodyZone.SKIN -> "skin_"
-}
-
-fun LocalDate.startOfWeek(): LocalDate {
-    val offset = when (dayOfWeek) {
-        DayOfWeek.MONDAY -> 0
-        DayOfWeek.TUESDAY -> 1
-        DayOfWeek.WEDNESDAY -> 2
-        DayOfWeek.THURSDAY -> 3
-        DayOfWeek.FRIDAY -> 4
-        DayOfWeek.SATURDAY -> 5
-        DayOfWeek.SUNDAY -> 6
-    }
-    return minus(offset, DateTimeUnit.DAY)
 }

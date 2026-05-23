@@ -11,10 +11,7 @@ class LocaleProviderImpl(
     private val prefs: AppPreferences,
 ) : LocaleProvider {
 
-    override val currentLocale: Flow<AppLocale> = prefs.languageCode.map { it.toAppLocale() }
+    override val currentLocale: Flow<AppLocale> = prefs.languageCode.map(AppLocale::fromTag)
 
-    override suspend fun current(): AppLocale = prefs.languageCode.first().toAppLocale()
+    override suspend fun current(): AppLocale = AppLocale.fromTag(prefs.languageCode.first())
 }
-
-private fun String.toAppLocale(): AppLocale =
-    if (this == "en") AppLocale.EN else AppLocale.RU

@@ -12,7 +12,7 @@ class PinClusterItem(
 ) : ClusterItem {
     override fun getPosition(): LatLng = LatLng(pin.latitude, pin.longitude)
     override fun getTitle(): String = pin.tags.joinToString(" ")
-    override fun getSnippet(): String = pin.date
+    override fun getSnippet(): String = pin.date.toString()
     override fun getZIndex(): Float = 0f
 }
 

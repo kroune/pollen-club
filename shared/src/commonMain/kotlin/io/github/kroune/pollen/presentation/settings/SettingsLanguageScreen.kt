@@ -17,43 +17,37 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
-import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
-/** ViewModel convenience overload — used by navigation. */
 @Composable
 fun SettingsLanguageScreen(
-    viewModel: SettingsLanguageViewModel = koinViewModel(),
+    state: SettingsLanguageUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onIntent: (SettingsLanguageIntent) -> Unit = {},
     onBack: () -> Unit = {},
 ) {
-    val currentLocale by viewModel.locale.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState)
 
-    SettingsLanguageScreen(
-        currentLocale = currentLocale,
-        onBack = onBack,
-        onSetLocale = viewModel::setLocale,
-    )
-}
-
-/** State-based overload — previewable and testable. */
-@Composable
-fun SettingsLanguageScreen(
-    currentLocale: AppLocale,
-    onBack: () -> Unit = {},
-    onSetLocale: (AppLocale) -> Unit = {},
-) {
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
     Column(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -89,17 +83,18 @@ fun SettingsLanguageScreen(
             Column {
                 LanguageRow(
                     label = stringResource(MR.strings.language_russian),
-                    isSelected = currentLocale == AppLocale.RU,
-                    onClick = { onSetLocale(AppLocale.RU) },
+                    isSelected = state.locale == AppLocale.RU,
+                    onClick = { onIntent(SettingsLanguageIntent.SetLocale(AppLocale.RU)) },
                 )
                 HorizontalDivider(color = PollenTheme.colors.line2)
                 LanguageRow(
                     label = stringResource(MR.strings.language_english),
-                    isSelected = currentLocale == AppLocale.EN,
-                    onClick = { onSetLocale(AppLocale.EN) },
+                    isSelected = state.locale == AppLocale.EN,
+                    onClick = { onIntent(SettingsLanguageIntent.SetLocale(AppLocale.EN)) },
                 )
             }
         }
+    }
     }
 }
 
@@ -109,7 +104,7 @@ fun SettingsLanguageScreen(
 @Composable
 private fun PreviewSettingsLanguageRu() {
     PollenTheme {
-        SettingsLanguageScreen(currentLocale = AppLocale.RU)
+        SettingsLanguageScreen(state = SettingsLanguageUiState(locale = AppLocale.RU))
     }
 }
 
@@ -117,7 +112,7 @@ private fun PreviewSettingsLanguageRu() {
 @Composable
 private fun PreviewSettingsLanguageEn() {
     PollenTheme {
-        SettingsLanguageScreen(currentLocale = AppLocale.EN)
+        SettingsLanguageScreen(state = SettingsLanguageUiState(locale = AppLocale.EN))
     }
 }
 

@@ -2,10 +2,6 @@ package io.github.kroune.pollen.presentation.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -16,13 +12,12 @@ import dev.icerock.moko.resources.desc.Raw
 import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.PollenLevelDomain
-import io.github.kroune.pollen.domain.model.WeatherDomain
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.datetime.LocalDate
 
 private val previewPollen = PollenDomain(
     id = 1,
@@ -40,13 +35,13 @@ private val previewPollen = PollenDomain(
 
 private val previewLevel = LevelDomain(
     id = 1,
-    date = "2026-05-05",
+    date = LocalDate(2026, 5, 5),
     pollenId = 1,
     locationId = 1,
     value = 2,
 )
 
-private val previewWeather = WeatherDomain(
+private val previewWeather = HomeWeatherUi(
     temperature = 22.0,
     weatherCode = 1,
     isDay = true,
@@ -76,13 +71,13 @@ private fun PreviewLocationRow() {
 @Composable
 private fun PreviewDayStrip() {
     val days = persistentListOf(
-        HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, "2026-04-23"),
-        HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, "2026-04-24"),
-        HomeDayForecastUi(25, StringDesc.Raw("пт"), 3, "2026-04-25"),
-        HomeDayForecastUi(26, StringDesc.Raw("сб"), 2, "2026-04-26"),
-        HomeDayForecastUi(27, StringDesc.Raw("вс"), 3, "2026-04-27"),
-        HomeDayForecastUi(28, StringDesc.Raw("пн"), 2, "2026-04-28"),
-        HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, "2026-04-29"),
+        HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, LocalDate(2026, 4, 23)),
+        HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, LocalDate(2026, 4, 24)),
+        HomeDayForecastUi(25, StringDesc.Raw("пт"), 3, LocalDate(2026, 4, 25)),
+        HomeDayForecastUi(26, StringDesc.Raw("сб"), 2, LocalDate(2026, 4, 26)),
+        HomeDayForecastUi(27, StringDesc.Raw("вс"), 3, LocalDate(2026, 4, 27)),
+        HomeDayForecastUi(28, StringDesc.Raw("пн"), 2, LocalDate(2026, 4, 28)),
+        HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, LocalDate(2026, 4, 29)),
     )
     PollenTheme {
         Box(Modifier.background(MaterialTheme.colorScheme.background)) {
@@ -103,7 +98,7 @@ private fun PreviewDayStrip() {
 private fun PreviewPersonalIndexCard() {
     PollenTheme {
         Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
-            PersonalIndexCard(score = "5,2", severityLevel = 2, label = "Средний")
+            PersonalIndexCard(score = 5.2, severityLevel = 2, label = "Средний")
         }
     }
 }
@@ -145,9 +140,10 @@ private fun PreviewOtherAllergenPills() {
         previewPollen.copy(id = 9, name = "Кладоспориум"),
         previewPollen.copy(id = 10, name = "Альтернария"),
     )
+    val othersUi = others.map { HomeOtherAllergenUi(it.id, it.name) }.toImmutableList()
     PollenTheme {
         Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
-            OtherAllergensSection(allergens = others, onAllergenAdd = {})
+            OtherAllergensSection(allergens = othersUi, onAllergenAdd = {})
         }
     }
 }
@@ -186,13 +182,13 @@ private fun PreviewAllergenPill() {
 @Composable
 private fun PreviewHomeScreenLoaded() {
     val days = persistentListOf(
-        HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, "2026-04-23"),
-        HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, "2026-04-24"),
-        HomeDayForecastUi(25, StringDesc.Raw("пт"), 3, "2026-04-25"),
-        HomeDayForecastUi(26, StringDesc.Raw("сб"), 2, "2026-04-26"),
-        HomeDayForecastUi(27, StringDesc.Raw("вс"), 3, "2026-04-27"),
-        HomeDayForecastUi(28, StringDesc.Raw("пн"), 2, "2026-04-28"),
-        HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, "2026-04-29"),
+        HomeDayForecastUi(23, StringDesc.Raw("ср"), 1, LocalDate(2026, 4, 23)),
+        HomeDayForecastUi(24, StringDesc.Raw("чт"), 1, LocalDate(2026, 4, 24)),
+        HomeDayForecastUi(25, StringDesc.Raw("пт"), 3, LocalDate(2026, 4, 25)),
+        HomeDayForecastUi(26, StringDesc.Raw("сб"), 2, LocalDate(2026, 4, 26)),
+        HomeDayForecastUi(27, StringDesc.Raw("вс"), 3, LocalDate(2026, 4, 27)),
+        HomeDayForecastUi(28, StringDesc.Raw("пн"), 2, LocalDate(2026, 4, 28)),
+        HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, LocalDate(2026, 4, 29)),
     )
     val allergens = persistentListOf(
         AllergenRowData(previewPollen, 2, 4),
@@ -208,11 +204,12 @@ private fun PreviewHomeScreenLoaded() {
         previewPollen.copy(id = 9, name = "Кладоспориум"),
         previewPollen.copy(id = 10, name = "Альтернария"),
     )
+    val otherUiAllergens = others.map { HomeOtherAllergenUi(it.id, it.name) }.toImmutableList()
     val state = HomeUiState(
-        selectedLocation = LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
+        selectedLocation = HomeLocationUi(1, "Москва"),
         locations = LoadState.Loaded(
             persistentListOf(
-                LocationDomain(1, "Москва", "Центральный регион", 55.7558, 37.6173),
+                HomeLocationUi(1, "Москва"),
             ),
         ),
         pollens = LoadState.Loaded(
@@ -220,10 +217,10 @@ private fun PreviewHomeScreenLoaded() {
         ),
         dayForecasts = LoadState.Loaded(days),
         personalIndex = LoadState.Loaded(
-            HomePersonalIndexUi(score = "5,2", severityLevel = 2, label = StringDesc.Raw("Средний")),
+            HomePersonalIndexUi(score = 5.2, severityLevel = 2, label = StringDesc.Raw("Средний")),
         ),
         userAllergens = allergens,
-        otherAllergens = others,
+        otherAllergens = otherUiAllergens,
         activeDayIndex = 3,
         weekLabel = StringDesc.Raw("21–27 Apr"),
     )

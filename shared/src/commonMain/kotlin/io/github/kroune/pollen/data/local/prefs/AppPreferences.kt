@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.kroune.pollen.domain.model.AppLocale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -20,7 +21,7 @@ class AppPreferences(
     }
 
     val languageCode: Flow<String> = dataStore.data.map { prefs ->
-        prefs[KEY_LANGUAGE] ?: "ru"
+        prefs[KEY_LANGUAGE] ?: AppLocale.Default.tag
     }
 
     val selectedTags: Flow<String> = dataStore.data.map { prefs ->

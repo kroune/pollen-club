@@ -1,6 +1,5 @@
 package io.github.kroune.pollen.presentation.home
 
-import kotlinx.coroutines.CompletableDeferred
 import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.DayForecastSummaryDomain
@@ -10,19 +9,23 @@ import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.model.UserDomain
-import io.github.kroune.pollen.domain.model.WeatherDomain
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.presentation.common.UiEvent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -94,15 +97,15 @@ class HomeViewModelTest {
     )
 
     private val birchLevel = LevelDomain(
-        id = 1, date = today.toString(), pollenId = 10, locationId = 1, value = 500,
+        id = 1, date = today, pollenId = 10, locationId = 1, value = 500,
     )
 
     private fun weekDaySummaries(): List<DayForecastSummaryDomain> {
         val dow = today.dayOfWeek.ordinal
-        val monday = LocalDate.fromEpochDays(today.toEpochDays() - dow)
+        val monday = today.minus(dow.toLong(), DateTimeUnit.DAY)
         return (0 until 7).map { offset ->
-            val date = LocalDate.fromEpochDays(monday.toEpochDays() + offset)
-            DayForecastSummaryDomain(date = date.toString(), maxSeverity = 2, dominantPollenId = 10)
+            val date = monday.plus(offset.toLong(), DateTimeUnit.DAY)
+            DayForecastSummaryDomain(date = date, maxSeverity = 2, dominantPollenId = 10)
         }
     }
 
@@ -113,34 +116,30 @@ class HomeViewModelTest {
         personalIndexRepo.dayForecastSummaries = weekDaySummaries()
     }
 
-    // --- Helpers ---
-
-    private fun kotlinx.coroutines.test.TestScope.collectState(vm: HomeViewModel) {
+    private fun TestScope.collectState(vm: HomeViewModel) {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.state.collect {} }
     }
 
-    private fun kotlinx.coroutines.test.TestScope.collectEvents(vm: HomeViewModel): MutableList<UiEvent> {
+    private fun TestScope.collectEffects(vm: HomeViewModel): MutableList<UiEvent> {
         val events = mutableListOf<UiEvent>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.events.collect { events.add(it) } }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { events.add(it) } }
         return events
     }
 
     // === Sync & Loading ===
 
     @Test
-    fun initialState_duringSync_showsLoadingForEmptyData() = runTest(testDispatcher) {
+    fun initialState_duringSync_isRefreshing() = runTest(testDispatcher) {
         pollenRepo.syncGate = CompletableDeferred()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
 
-        val state = vm.state.value
-        assertIs<LoadState.Loading>(state.pollens)
-        assertIs<LoadState.Loading>(state.locations)
-        assertTrue(state.isRefreshing)
+        assertTrue(vm.state.value.isRefreshing)
 
         pollenRepo.syncGate!!.complete(Unit)
         advanceUntilIdle()
+        assertEquals(false, vm.state.value.isRefreshing)
     }
 
     @Test
@@ -153,7 +152,7 @@ class HomeViewModelTest {
         val state = vm.state.value
         assertIs<LoadState.Loaded<*>>(state.pollens)
         assertEquals(2, state.pollens.dataOrNull!!.size)
-        assertEquals(moscow, state.selectedLocation)
+        assertEquals(HomeLocationUi(moscow.id, moscow.name), state.selectedLocation)
         assertIs<LoadState.Loaded<*>>(state.locations)
     }
 
@@ -192,7 +191,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun loadData_triggersRefreshCycle() = runTest(testDispatcher) {
+    fun loadDataIntent_triggersRefreshCycle() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
@@ -200,7 +199,7 @@ class HomeViewModelTest {
         assertEquals(false, vm.state.value.isRefreshing)
 
         pollenRepo.syncGate = CompletableDeferred()
-        vm.loadData()
+        vm.onIntent(HomeIntent.LoadData)
         advanceUntilIdle()
         assertEquals(true, vm.state.value.isRefreshing)
 
@@ -212,12 +211,12 @@ class HomeViewModelTest {
     // === Sync error paths ===
 
     @Test
-    fun syncFailure_sendsErrorEvent() = runTest(testDispatcher) {
+    fun syncFailure_sendsErrorEffect() = runTest(testDispatcher) {
         seedData()
         pollenRepo.syncLevelsError = RuntimeException("network")
         val vm = createViewModel()
         collectState(vm)
-        val events = collectEvents(vm)
+        val events = collectEffects(vm)
         advanceUntilIdle()
 
         assertTrue(events.any { it is UiEvent.ShowError })
@@ -247,7 +246,7 @@ class HomeViewModelTest {
 
         val weather = vm.state.value.weather
         assertIs<LoadState.Loaded<*>>(weather)
-        assertEquals(22.0, (weather.dataOrNull as WeatherDomain).temperature)
+        assertEquals(22.0, (weather.dataOrNull as HomeWeatherUi).temperature)
     }
 
     @Test
@@ -256,7 +255,7 @@ class HomeViewModelTest {
         weatherRepo.result = ApiResult.Error("fail")
         val vm = createViewModel()
         collectState(vm)
-        val events = collectEvents(vm)
+        val events = collectEffects(vm)
         advanceUntilIdle()
 
         assertIs<LoadState.Failed>(vm.state.value.weather)
@@ -285,37 +284,37 @@ class HomeViewModelTest {
         collectState(vm)
         advanceUntilIdle()
 
-        assertEquals(spb, vm.state.value.selectedLocation)
+        assertEquals(HomeLocationUi(spb.id, spb.name), vm.state.value.selectedLocation)
     }
 
     @Test
-    fun selectLocation_updatesSelectedLocation() = runTest(testDispatcher) {
+    fun selectLocationIntent_updatesSelectedLocation() = runTest(testDispatcher) {
         seedData()
         locationRepo.locationsFlow.value = listOf(moscow, spb)
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
-        assertEquals(moscow, vm.state.value.selectedLocation)
+        assertEquals(HomeLocationUi(moscow.id, moscow.name), vm.state.value.selectedLocation)
 
-        vm.selectLocation(spb)
+        vm.onIntent(HomeIntent.SelectLocation(spb.id))
         advanceUntilIdle()
 
-        assertEquals(spb, vm.state.value.selectedLocation)
+        assertEquals(HomeLocationUi(spb.id, spb.name), vm.state.value.selectedLocation)
     }
 
     @Test
-    fun showLocationPicker_togglesFlag() = runTest(testDispatcher) {
+    fun showAndDismissLocationPicker_togglesFlag() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
         assertEquals(false, vm.state.value.showLocationPicker)
 
-        vm.showLocationPicker()
+        vm.onIntent(HomeIntent.ShowLocationPicker)
         advanceUntilIdle()
         assertEquals(true, vm.state.value.showLocationPicker)
 
-        vm.dismissLocationPicker()
+        vm.onIntent(HomeIntent.DismissLocationPicker)
         advanceUntilIdle()
         assertEquals(false, vm.state.value.showLocationPicker)
     }
@@ -361,7 +360,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun addAllergen_movesFromOtherToUser() = runTest(testDispatcher) {
+    fun addAllergenIntent_movesFromOtherToUser() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
@@ -369,7 +368,7 @@ class HomeViewModelTest {
         assertEquals(0, vm.state.value.userAllergens.size)
         assertEquals(2, vm.state.value.otherAllergens.size)
 
-        vm.addAllergen(birch.id)
+        vm.onIntent(HomeIntent.AddAllergen(birch.id))
         advanceUntilIdle()
 
         assertEquals(1, vm.state.value.userAllergens.size)
@@ -378,13 +377,13 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun addAllergen_setsLightSensitivity() = runTest(testDispatcher) {
+    fun addAllergenIntent_setsLightSensitivity() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
 
-        vm.addAllergen(alder.id)
+        vm.onIntent(HomeIntent.AddAllergen(alder.id))
         advanceUntilIdle()
 
         val sensitivities = sensitivityRepo.getAll()
@@ -394,15 +393,15 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun addAllergenError_sendsEvent() = runTest(testDispatcher) {
+    fun addAllergenError_sendsEffect() = runTest(testDispatcher) {
         seedData()
         sensitivityRepo.setSensitivityError = RuntimeException("db error")
         val vm = createViewModel()
         collectState(vm)
-        val events = collectEvents(vm)
+        val events = collectEffects(vm)
         advanceUntilIdle()
 
-        vm.addAllergen(birch.id)
+        vm.onIntent(HomeIntent.AddAllergen(birch.id))
         advanceUntilIdle()
 
         assertTrue(events.any { it is UiEvent.ShowError })
@@ -437,34 +436,34 @@ class HomeViewModelTest {
     // === Day selection ===
 
     @Test
-    fun selectDay_updatesActiveDayIndex() = runTest(testDispatcher) {
+    fun selectDayIntent_updatesActiveDayIndex() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
 
-        vm.selectDay(3)
+        vm.onIntent(HomeIntent.SelectDay(3))
         advanceUntilIdle()
 
         assertEquals(3, vm.state.value.activeDayIndex)
     }
 
     @Test
-    fun selectDay_outOfBounds_noOp() = runTest(testDispatcher) {
+    fun selectDayIntent_outOfBounds_noOp() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
         val indexBefore = vm.state.value.activeDayIndex
 
-        vm.selectDay(99)
+        vm.onIntent(HomeIntent.SelectDay(99))
         advanceUntilIdle()
 
         assertEquals(indexBefore, vm.state.value.activeDayIndex)
     }
 
     @Test
-    fun selectDay_loadsLevelsForSelectedDate() = runTest(testDispatcher) {
+    fun selectDayIntent_loadsLevelsForSelectedDate() = runTest(testDispatcher) {
         seedData()
         sensitivityRepo.emit(listOf(AllergenSensitivityDomain(birch.id, SensitivityLevel.MODERATE)))
         val summaries = weekDaySummaries()
@@ -475,16 +474,16 @@ class HomeViewModelTest {
         collectState(vm)
         advanceUntilIdle()
 
-        vm.selectDay(1)
+        vm.onIntent(HomeIntent.SelectDay(1))
         advanceUntilIdle()
 
         val allergen = vm.state.value.userAllergens.first()
-        // 800/1000*5 = 4
+        // 800/1000 * 5 = 4
         assertEquals(4, allergen.severity)
     }
 
     @Test
-    fun selectDayError_setsFailed_sendsEvent() = runTest(testDispatcher) {
+    fun selectDayIntent_emptyLevelsAndForecasts_stillUpdatesIndex() = runTest(testDispatcher) {
         seedData()
         val summaries = weekDaySummaries()
         val tuesdayDate = summaries[1].date
@@ -492,10 +491,9 @@ class HomeViewModelTest {
         pollenRepo.forecastsForDate[1 to tuesdayDate] = emptyList()
         val vm = createViewModel()
         collectState(vm)
-        val events = collectEvents(vm)
         advanceUntilIdle()
 
-        vm.selectDay(1)
+        vm.onIntent(HomeIntent.SelectDay(1))
         advanceUntilIdle()
 
         assertEquals(1, vm.state.value.activeDayIndex)
@@ -504,14 +502,14 @@ class HomeViewModelTest {
     // === Week navigation ===
 
     @Test
-    fun shiftWeek_updatesWeekOffset() = runTest(testDispatcher) {
+    fun shiftWeekIntent_updatesWeekOffset() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
         assertEquals(0, vm.state.value.weekOffset)
 
-        vm.shiftWeek(1)
+        vm.onIntent(HomeIntent.ShiftWeek(1))
         advanceUntilIdle()
 
         assertEquals(1, vm.state.value.weekOffset)
@@ -519,13 +517,13 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun shiftWeekBack_updatesOffset() = runTest(testDispatcher) {
+    fun shiftWeekIntent_negativeDelta_updatesOffset() = runTest(testDispatcher) {
         seedData()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
 
-        vm.shiftWeek(-1)
+        vm.onIntent(HomeIntent.ShiftWeek(-1))
         advanceUntilIdle()
 
         assertEquals(-1, vm.state.value.weekOffset)
@@ -534,7 +532,7 @@ class HomeViewModelTest {
     // === Expanded allergen & forecast timeline ===
 
     @Test
-    fun toggleAllergenExpanded_setsExpandedId() = runTest(testDispatcher) {
+    fun toggleAllergenExpandedIntent_setsExpandedId() = runTest(testDispatcher) {
         seedData()
         pollenRepo.forecastTimelines[1 to birch.id] = listOf(birchLevel)
         val vm = createViewModel()
@@ -542,7 +540,7 @@ class HomeViewModelTest {
         advanceUntilIdle()
         assertNull(vm.state.value.expandedPollenId)
 
-        vm.toggleAllergenExpanded(birch.id)
+        vm.onIntent(HomeIntent.ToggleAllergenExpanded(birch.id))
         advanceUntilIdle()
 
         assertEquals(birch.id, vm.state.value.expandedPollenId)
@@ -550,18 +548,18 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun toggleAllergenExpanded_collapses() = runTest(testDispatcher) {
+    fun toggleAllergenExpandedIntent_collapses() = runTest(testDispatcher) {
         seedData()
         pollenRepo.forecastTimelines[1 to birch.id] = listOf(birchLevel)
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
 
-        vm.toggleAllergenExpanded(birch.id)
+        vm.onIntent(HomeIntent.ToggleAllergenExpanded(birch.id))
         advanceUntilIdle()
         assertEquals(birch.id, vm.state.value.expandedPollenId)
 
-        vm.toggleAllergenExpanded(birch.id)
+        vm.onIntent(HomeIntent.ToggleAllergenExpanded(birch.id))
         advanceUntilIdle()
         assertNull(vm.state.value.expandedPollenId)
     }

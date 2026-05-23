@@ -31,16 +31,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
@@ -60,62 +60,37 @@ import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
 import io.github.kroune.pollen.MR
-import io.github.kroune.pollen.domain.model.AppLocale
-import io.github.kroune.pollen.domain.model.ExpertRegistry
-import io.github.kroune.pollen.domain.model.FeedDataDomain
+import io.github.kroune.pollen.domain.model.CommentDomain
 import io.github.kroune.pollen.domain.model.ExpertInfoDomain
+import io.github.kroune.pollen.domain.model.FeedDataDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.MediaType
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.domain.model.VkPostDomain
+import io.github.kroune.pollen.presentation.common.CollectEffects
+import io.github.kroune.pollen.presentation.common.ExpertRegistry
 import io.github.kroune.pollen.presentation.common.FeedListSkeleton
 import io.github.kroune.pollen.presentation.common.FullScreenError
-import androidx.compose.ui.tooling.preview.Preview
-import io.github.kroune.pollen.domain.model.CommentDomain
-import io.github.kroune.pollen.domain.model.VkPostDomain
+import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.common.formatDateLocalized
 import io.github.kroune.pollen.presentation.common.shimmerEffect
-import io.github.kroune.pollen.presentation.friends.FriendsListContent
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import io.github.kroune.pollen.util.formatDateLocalized
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.painterResource
-import org.koin.compose.viewmodel.koinViewModel
 
-/** ViewModel convenience overload — used by navigation. */
-@Composable
-fun FeedScreen(
-    onNavigateToAddFriend: () -> Unit = {},
-    viewModel: FeedViewModel = koinViewModel(),
-) {
-    val uiState by viewModel.uiState.collectAsState()
-    val locale by viewModel.locale.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::refresh)
-
-    FeedScreen(
-        state = uiState,
-        locale = locale,
-        onRefresh = viewModel::refresh,
-        snackbarHostState = snackbarHostState,
-        friendsTabContent = {
-            FriendsListContent(
-                onNavigateToAddFriend = onNavigateToAddFriend,
-                snackbarHostState = snackbarHostState,
-            )
-        },
-    )
-}
-
-/** State-based overload — previewable and testable. */
 @Composable
 fun FeedScreen(
     state: FeedUiState,
-    locale: AppLocale,
-    onRefresh: () -> Unit,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    friendsTabContent: @Composable (() -> Unit)? = null,
+    effects: Flow<UiEvent> = emptyFlow(),
+    onRefresh: () -> Unit = {},
+    friendsTabContent: (@Composable (SnackbarHostState) -> Unit)? = null,
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = onRefresh)
+
     val scope = rememberCoroutineScope()
     val tabTitles = listOf(
         stringResource(MR.strings.feed_tab_news),
@@ -127,7 +102,7 @@ fun FeedScreen(
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { _ ->
         Column(modifier = Modifier.fillMaxSize()) {
-            TabRow(selectedTabIndex = pagerState.currentPage) {
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
                 tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -142,11 +117,11 @@ fun FeedScreen(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (page) {
-                    2 -> friendsTabContent?.invoke() ?: Box(Modifier.fillMaxSize())
+                    2 -> friendsTabContent?.invoke(snackbarHostState) ?: Box(Modifier.fillMaxSize())
                     else -> FeedTabPage(
                         feed = state.feed,
                         page = page,
-                        locale = locale,
+                        isRefreshing = state.isRefreshing,
                         onRetry = onRefresh,
                     )
                 }
@@ -160,21 +135,21 @@ fun FeedScreen(
 private fun FeedTabPage(
     feed: LoadState<FeedDataDomain>,
     page: Int,
-    locale: AppLocale,
+    isRefreshing: Boolean,
     onRetry: () -> Unit,
 ) {
-    PullToRefreshBox(
-        isRefreshing = feed is LoadState.Loading,
-        onRefresh = onRetry,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        when (feed) {
-            is LoadState.Loading -> FeedListSkeleton(modifier = Modifier.padding(16.dp))
-            is LoadState.Failed -> FullScreenError(onRetry = onRetry)
-            is LoadState.Loaded -> when (page) {
-                0 -> NewsPage(feed.data, locale)
-                1 -> FeedPage(feed.data, locale)
-                3 -> MediaPage(feed.data, locale)
+    when (feed) {
+        is LoadState.Loading -> FeedListSkeleton(modifier = Modifier.padding(16.dp))
+        is LoadState.Failed -> FullScreenError(onRetry = onRetry)
+        is LoadState.Loaded -> PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRetry,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when (page) {
+                0 -> NewsPage(feed.data)
+                1 -> FeedPage(feed.data)
+                3 -> MediaPage(feed.data)
                 else -> {}
             }
         }
@@ -182,7 +157,7 @@ private fun FeedTabPage(
 }
 
 @Composable
-private fun NewsPage(feed: FeedDataDomain, locale: AppLocale) {
+private fun NewsPage(feed: FeedDataDomain) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp),
@@ -192,7 +167,7 @@ private fun NewsPage(feed: FeedDataDomain, locale: AppLocale) {
             item { Text(stringResource(MR.strings.feed_no_expert_comments)) }
         }
         items(feed.comments, key = { "c${it.id}" }) { comment ->
-            val expertProfile = ExpertRegistry.get(comment.expertId, locale)
+            val expertPhoto = ExpertRegistry.photoFor(comment.expertId)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
@@ -202,7 +177,7 @@ private fun NewsPage(feed: FeedDataDomain, locale: AppLocale) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(expertProfile.photo),
+                            painter = painterResource(expertPhoto),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(48.dp)
@@ -216,7 +191,7 @@ private fun NewsPage(feed: FeedDataDomain, locale: AppLocale) {
                                 style = MaterialTheme.typography.titleSmall,
                             )
                             Text(
-                                formatDateLocalized(comment.date, locale),
+                                formatDateLocalized(comment.date),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -235,7 +210,7 @@ private fun NewsPage(feed: FeedDataDomain, locale: AppLocale) {
 }
 
 @Composable
-private fun FeedPage(feed: FeedDataDomain, locale: AppLocale) {
+private fun FeedPage(feed: FeedDataDomain) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp),
@@ -263,7 +238,7 @@ private fun FeedPage(feed: FeedDataDomain, locale: AppLocale) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            formatDateLocalized(post.date, locale),
+                            formatDateLocalized(post.date),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -284,7 +259,7 @@ private fun FeedPage(feed: FeedDataDomain, locale: AppLocale) {
 }
 
 @Composable
-private fun MediaPage(feed: FeedDataDomain, locale: AppLocale) {
+private fun MediaPage(feed: FeedDataDomain) {
     var fullScreenMedia by remember { mutableStateOf<FullScreenMedia?>(null) }
 
     fullScreenMedia?.let { media ->
@@ -309,7 +284,7 @@ private fun MediaPage(feed: FeedDataDomain, locale: AppLocale) {
                 Column {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            formatDateLocalized(item.date, locale),
+                            formatDateLocalized(item.date),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -454,7 +429,6 @@ private fun PreviewFeedScreenLoading() {
     PollenTheme {
         FeedScreen(
             state = FeedUiState(feed = LoadState.Loading),
-            locale = AppLocale.RU,
             onRefresh = {},
         )
     }
@@ -467,7 +441,7 @@ private fun PreviewFeedScreenLoaded() {
         comments = persistentListOf(
             CommentDomain(
                 id = 1,
-                date = "2026-05-14",
+                date = LocalDate(2026, 5, 14),
                 expertId = 1,
                 expert = ExpertInfoDomain(name = "Ирина", title = "к.м.н."),
                 text = "Концентрация пыльцы берёзы достигла средних значений.",
@@ -478,7 +452,7 @@ private fun PreviewFeedScreenLoaded() {
         vkPosts = persistentListOf(
             VkPostDomain(
                 id = 1,
-                date = "2026-05-14",
+                date = LocalDate(2026, 5, 14),
                 location = "Москва",
                 userName = "Marina Moskalenko",
                 content = "Сегодня зафиксировано повышенное содержание пыльцы.",
@@ -488,7 +462,6 @@ private fun PreviewFeedScreenLoaded() {
     PollenTheme {
         FeedScreen(
             state = FeedUiState(feed = LoadState.Loaded(feed)),
-            locale = AppLocale.RU,
             onRefresh = {},
         )
     }
@@ -500,7 +473,6 @@ private fun PreviewFeedScreenFailed() {
     PollenTheme {
         FeedScreen(
             state = FeedUiState(feed = LoadState.Failed),
-            locale = AppLocale.RU,
             onRefresh = {},
         )
     }
@@ -513,7 +485,7 @@ private fun PreviewFeedTabLoading() {
         FeedTabPage(
             feed = LoadState.Loading,
             page = 0,
-            locale = AppLocale.RU,
+            isRefreshing = false,
             onRetry = {},
         )
     }
@@ -526,7 +498,7 @@ private fun PreviewFeedTabFailed() {
         FeedTabPage(
             feed = LoadState.Failed,
             page = 0,
-            locale = AppLocale.RU,
+            isRefreshing = false,
             onRetry = {},
         )
     }
@@ -539,7 +511,7 @@ private fun PreviewNewsPageLoaded() {
         comments = persistentListOf(
             CommentDomain(
                 id = 1,
-                date = "2026-05-14",
+                date = LocalDate(2026, 5, 14),
                 expertId = 1,
                 expert = ExpertInfoDomain(name = "Ирина", title = "к.м.н."),
                 text = "Концентрация пыльцы берёзы достигла средних значений. Аллергикам рекомендуется носить маску на улице.",
@@ -548,7 +520,7 @@ private fun PreviewNewsPageLoaded() {
             ),
             CommentDomain(
                 id = 2,
-                date = "2026-05-13",
+                date = LocalDate(2026, 5, 13),
                 expertId = 2,
                 expert = ExpertInfoDomain(name = "Алексей", title = "аллерголог"),
                 text = "Орешник закончил пыление. Ольха на спаде.",
@@ -558,7 +530,7 @@ private fun PreviewNewsPageLoaded() {
         ),
     )
     PollenTheme {
-        NewsPage(feed = feed, locale = AppLocale.RU)
+        NewsPage(feed = feed)
     }
 }
 
@@ -569,7 +541,7 @@ private fun PreviewFeedPageLoaded() {
         vkPosts = persistentListOf(
             VkPostDomain(
                 id = 1,
-                date = "2026-05-14",
+                date = LocalDate(2026, 5, 14),
                 location = "Москва",
                 userName = "Ksana Radchenko",
                 content = "Сегодня на станции мониторинга зафиксировано повышенное содержание пыльцы.",
@@ -577,7 +549,7 @@ private fun PreviewFeedPageLoaded() {
         ),
     )
     PollenTheme {
-        FeedPage(feed = feed, locale = AppLocale.RU)
+        FeedPage(feed = feed)
     }
 }
 

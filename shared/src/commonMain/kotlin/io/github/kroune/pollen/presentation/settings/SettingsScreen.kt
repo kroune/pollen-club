@@ -27,15 +27,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
@@ -44,50 +41,19 @@ import dev.icerock.moko.resources.desc.Raw
 import dev.icerock.moko.resources.desc.StringDesc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.presentation.common.CollectEvents
+import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FullScreenError
-import androidx.compose.ui.tooling.preview.Preview
+import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.common.rememberCopyToClipboard
 import io.github.kroune.pollen.presentation.common.shimmerEffect
 import io.github.kroune.pollen.presentation.theme.PollenTheme
-import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
-/** ViewModel convenience overload — used by navigation. */
-@Composable
-fun SettingsScreen(
-    viewModel: SettingsViewModel = koinViewModel(),
-    onBack: () -> Unit = {},
-    onNavigateToLanguage: () -> Unit = {},
-    onNavigateToLocations: () -> Unit = {},
-    onNavigateToAllergens: () -> Unit = {},
-    onNavigateToFriends: () -> Unit = {},
-    onNavigateToReference: () -> Unit = {},
-) {
-    val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    CollectEvents(viewModel.events, snackbarHostState, onRetry = viewModel::loadData)
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = PollenTheme.colors.paper,
-    ) { _ ->
-        SettingsScreen(
-            state = state,
-            onBack = onBack,
-            onRetry = viewModel::loadData,
-            onNavigateToLanguage = onNavigateToLanguage,
-            onNavigateToLocations = onNavigateToLocations,
-            onNavigateToAllergens = onNavigateToAllergens,
-            onNavigateToFriends = onNavigateToFriends,
-            onNavigateToReference = onNavigateToReference,
-        )
-    }
-}
-
-/** State-based overload — previewable and testable. */
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
+    effects: Flow<UiEvent> = emptyFlow(),
     onBack: () -> Unit = {},
     onRetry: () -> Unit = {},
     onNavigateToLanguage: () -> Unit = {},
@@ -96,7 +62,14 @@ fun SettingsScreen(
     onNavigateToFriends: () -> Unit = {},
     onNavigateToReference: () -> Unit = {},
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    CollectEffects(effects, snackbarHostState, onRetry = onRetry)
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = PollenTheme.colors.paper,
+    ) { _ ->
+        Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -130,6 +103,7 @@ fun SettingsScreen(
                 onNavigateToReference = onNavigateToReference,
             )
         }
+        }
     }
 }
 
@@ -142,8 +116,7 @@ private fun SettingsContent(
     onNavigateToFriends: () -> Unit,
     onNavigateToReference: () -> Unit,
 ) {
-    @Suppress("DEPRECATION")
-    val clipboardManager = LocalClipboardManager.current
+    val copyToClipboard = rememberCopyToClipboard()
     val uriHandler = LocalUriHandler.current
 
     Column(
@@ -172,24 +145,23 @@ private fun SettingsContent(
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     Text(
-                        text = data.participantCode,
+                        text = data.participantCode ?: NO_VALUE_PLACEHOLDER,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.sp,
                         color = PollenTheme.colors.ink,
                         modifier = Modifier.weight(1f),
                     )
-                    Text(
-                        text = stringResource(MR.strings.settings_copy),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = PollenTheme.colors.accent2,
-                        modifier = Modifier.clickable {
-                            if (data.participantCode != "—") {
-                                clipboardManager.setText(AnnotatedString(data.participantCode))
-                            }
-                        },
-                    )
+                    val code = data.participantCode
+                    if (code != null) {
+                        Text(
+                            text = stringResource(MR.strings.settings_copy),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = PollenTheme.colors.accent2,
+                            modifier = Modifier.clickable { copyToClipboard(code) },
+                        )
+                    }
                 }
             }
         }
@@ -201,9 +173,9 @@ private fun SettingsContent(
             header = stringResource(MR.strings.settings_general),
             items = listOf(
                 SettingsRowData(stringResource(MR.strings.settings_language), data.languageLabel.localized(), onNavigateToLanguage),
-                SettingsRowData(stringResource(MR.strings.settings_monitoring_region), data.regionLabel, onNavigateToLocations),
-                SettingsRowData(stringResource(MR.strings.settings_main_allergen), data.mainAllergenLabel, onNavigateToAllergens),
-                SettingsRowData(stringResource(MR.strings.settings_friends), data.friendsLabel?.localized() ?: "—", onNavigateToFriends),
+                SettingsRowData(stringResource(MR.strings.settings_monitoring_region), data.regionLabel ?: NO_VALUE_PLACEHOLDER, onNavigateToLocations),
+                SettingsRowData(stringResource(MR.strings.settings_main_allergen), data.mainAllergenLabel ?: NO_VALUE_PLACEHOLDER, onNavigateToAllergens),
+                SettingsRowData(stringResource(MR.strings.settings_friends), data.friendsLabel?.localized() ?: NO_VALUE_PLACEHOLDER, onNavigateToFriends),
             ),
         )
 
@@ -215,10 +187,10 @@ private fun SettingsContent(
             items = listOf(
                 SettingsRowData(stringResource(MR.strings.settings_allergen_reference), "", onNavigateToReference),
                 SettingsRowData(stringResource(MR.strings.settings_guide), "", {
-                    uriHandler.openUri("https://pollen.club/guide/")
+                    uriHandler.openUri(GUIDE_URL)
                 }),
                 SettingsRowData(stringResource(MR.strings.settings_become_participant), "", {
-                    uriHandler.openUri("https://pollen.club/offer/")
+                    uriHandler.openUri(BECOME_PARTICIPANT_URL)
                 }),
             ),
         )
@@ -226,6 +198,10 @@ private fun SettingsContent(
         Spacer(Modifier.height(24.dp))
     }
 }
+
+private const val NO_VALUE_PLACEHOLDER = "—"
+private const val GUIDE_URL = "https://pollen.club/guide/"
+private const val BECOME_PARTICIPANT_URL = "https://pollen.club/offer/"
 
 private data class SettingsRowData(
     val label: String,

@@ -3,11 +3,12 @@ package io.github.kroune.pollen.data.local.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.datetime.LocalDate
 
 @Entity(tableName = "therapies")
 data class TherapyEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "date") val date: String = "",
+    @ColumnInfo(name = "date") val date: LocalDate,
     @ColumnInfo(name = "cure_type_id") val cureTypeId: Int = 0,
     @ColumnInfo(name = "cure_name") val cureName: String = "",
     @ColumnInfo(name = "cure_id") val cureId: Int = 0,
@@ -19,5 +20,5 @@ data class TherapyEntity(
     @ColumnInfo(name = "frequency") val frequency: String = "",
     @ColumnInfo(name = "frequency_id") val frequencyId: Int = 0,
     @ColumnInfo(name = "frequency_value") val frequencyValue: Int = 0,
-    @ColumnInfo(name = "start_date") val startDate: String = "",
+    @ColumnInfo(name = "start_date") val startDate: LocalDate,
 )

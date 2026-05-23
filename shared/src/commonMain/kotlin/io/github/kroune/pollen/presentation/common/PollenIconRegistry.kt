@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.home
+package io.github.kroune.pollen.presentation.common
 
 import org.jetbrains.compose.resources.DrawableResource
 import polenclub.shared.generated.resources.Res
