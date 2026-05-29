@@ -139,7 +139,7 @@ private fun FeedTabPage(
     onRetry: () -> Unit,
 ) {
     when (feed) {
-        is LoadState.Loading -> FeedListSkeleton(modifier = Modifier.padding(16.dp))
+        is LoadState.Loading -> FeedListSkeleton(modifier = Modifier.fillMaxSize().padding(16.dp))
         is LoadState.Failed -> FullScreenError(onRetry = onRetry)
         is LoadState.Loaded -> PullToRefreshBox(
             isRefreshing = isRefreshing,
