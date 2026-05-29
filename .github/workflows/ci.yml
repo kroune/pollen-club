@@ -77,7 +77,7 @@ jobs:
           path: androidApp/build/outputs/roborazzi/
           retention-days: 14
 
-  compile-ios:
+  build-ios:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,5 +88,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
-      - name: Compile shared for iOS
-        run: ./gradlew :shared:compileKotlinIosArm64 --no-daemon
+      - name: Compile shared framework (device + simulator)
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64 --no-daemon
+      - name: Build iOS app (simulator, no signing)
+        run: |
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
