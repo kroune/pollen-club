@@ -3,6 +3,7 @@ package io.github.kroune.pollen.presentation.map
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import dev.icerock.moko.resources.desc.StringDesc
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.ApiResult
@@ -22,7 +23,6 @@ import io.github.kroune.pollen.domain.repository.MapRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.presentation.common.MviViewModel
-import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -54,13 +54,20 @@ private val logger = Logger.withTag("MapViewModel")
 
 sealed interface MapIntent {
     data object LoadData : MapIntent
-    data object CenterOnMyLocation : MapIntent
+    data object CenterOnMyLocationClicked : MapIntent
     data class LocationPermissionResult(val granted: Boolean) : MapIntent
-    data object ShowLocationDisabledSnackbar : MapIntent
     data class SelectAllergen(val index: Int) : MapIntent
     data class ToggleHashtag(val index: Int) : MapIntent
     data object ToggleAllergenDropdown : MapIntent
     data object DismissAllergenDropdown : MapIntent
+}
+
+sealed interface MapUiEffects {
+    object ShowLocationNeededForThisFeature : MapUiEffects
+    object RequestLocationPermission : MapUiEffects
+    object CenterOnMyLocation : MapUiEffects
+
+    data class ShowError(val message: StringDesc) : MapUiEffects
 }
 
 class MapViewModel(
@@ -69,11 +76,12 @@ class MapViewModel(
     private val pollenRepository: PollenRepository,
     private val deviceLocationProvider: DeviceLocationProvider,
     private val locationRepository: LocationRepository,
-) : MviViewModel<MapUiState, MapIntent, UiEvent>(MapUiState()) {
+) : MviViewModel<MapUiState, MapIntent, MapUiEffects>(MapUiState()) {
 
     private val _pins = MutableStateFlow<LoadState<ImmutableList<MapPinDomain>>>(LoadState.Loading)
     private val _tileIndex = MutableStateFlow<LoadState<TileRingIndex>>(LoadState.Loading)
-    private val _hashtags = MutableStateFlow<LoadState<ImmutableList<HashTagDomain>>>(LoadState.Loading)
+    private val _hashtags =
+        MutableStateFlow<LoadState<ImmutableList<HashTagDomain>>>(LoadState.Loading)
 
     init {
         viewModelScope.launch {
@@ -109,9 +117,8 @@ class MapViewModel(
     override fun handleIntent(intent: MapIntent) {
         when (intent) {
             MapIntent.LoadData -> loadData()
-            MapIntent.CenterOnMyLocation -> centerOnMyLocation()
+            MapIntent.CenterOnMyLocationClicked -> centerOnMyLocation()
             is MapIntent.LocationPermissionResult -> onLocationPermissionResult(intent.granted)
-            MapIntent.ShowLocationDisabledSnackbar -> emitEffect(UiEvent.ShowError(MR.strings.error_location_disabled.desc()))
             is MapIntent.SelectAllergen -> selectAllergen(intent.index)
             is MapIntent.ToggleHashtag -> toggleHashtag(intent.index)
             MapIntent.ToggleAllergenDropdown -> updateState { copy(showAllergenDropdown = !showAllergenDropdown) }
@@ -164,7 +171,7 @@ class MapViewModel(
                         ringQuery = LoadState.Failed,
                     )
                 }
-                emitEffect(UiEvent.ShowError(MR.strings.error_something_went_wrong.desc()))
+                emitEffect(MapUiEffects.ShowError(MR.strings.error_something_went_wrong.desc()))
             }
         }
     }
@@ -178,17 +185,18 @@ class MapViewModel(
                     _pins.value = LoadState.Loaded(result.data.toImmutableList())
                     refilterPins()
                 }
+
                 is ApiResult.Error -> {
                     _pins.value = LoadState.Failed
                     updateState { copy(pins = LoadState.Failed) }
-                    emitEffect(UiEvent.ShowError(MR.strings.error_load_map_pins.desc()))
+                    emitEffect(MapUiEffects.ShowError(MR.strings.error_load_map_pins.desc()))
                 }
             }
         }.onFailure {
             logger.e(it) { "Failed to load map pins" }
             _pins.value = LoadState.Failed
             updateState { copy(pins = LoadState.Failed) }
-            emitEffect(UiEvent.ShowError(MR.strings.error_load_map_pins.desc()))
+            emitEffect(MapUiEffects.ShowError(MR.strings.error_load_map_pins.desc()))
         }
     }
 
@@ -197,24 +205,44 @@ class MapViewModel(
             mapRepository.getHashTags()
         }.onSuccess { result ->
             when (result) {
-                is ApiResult.Success -> _hashtags.value = LoadState.Loaded(result.data.toImmutableList())
+                is ApiResult.Success -> _hashtags.value =
+                    LoadState.Loaded(result.data.toImmutableList())
+
                 is ApiResult.Error -> {
                     _hashtags.value = LoadState.Failed
-                    emitEffect(UiEvent.ShowError(MR.strings.error_load_hashtags.desc()))
+                    emitEffect(MapUiEffects.ShowError(MR.strings.error_load_hashtags.desc()))
                 }
             }
         }.onFailure {
             logger.e(it) { "Failed to load hashtags" }
             _hashtags.value = LoadState.Failed
-            emitEffect(UiEvent.ShowError(MR.strings.error_load_hashtags.desc()))
+            emitEffect(MapUiEffects.ShowError(MR.strings.error_load_hashtags.desc()))
         }
     }
 
     private fun centerOnMyLocation() {
+        when (state.value.locationAvailability) {
+            LocationAvailability.Available -> {
+                emitEffect(MapUiEffects.CenterOnMyLocation)
+            }
+
+            LocationAvailability.PermissionDenied -> {
+                emitEffect(MapUiEffects.ShowLocationNeededForThisFeature)
+            }
+
+            LocationAvailability.Unknown -> {
+                emitEffect(MapUiEffects.RequestLocationPermission)
+            }
+
+            LocationAvailability.LocationDisabled -> {
+                emitEffect(MapUiEffects.ShowError(MR.strings.error_location_disabled.desc()))
+            }
+        }
         if (deviceLocationProvider.availability.value != LocationAvailability.Available) return
         viewModelScope.launch {
             runCatchingCancellable {
-                val coords = deviceLocationProvider.getCurrentLocation() ?: return@runCatchingCancellable
+                val coords =
+                    deviceLocationProvider.getCurrentLocation() ?: return@runCatchingCancellable
                 updateState {
                     copy(
                         userLatitude = coords.latitude,
@@ -224,7 +252,7 @@ class MapViewModel(
                 }
             }.onFailure {
                 logger.w(it) { "Failed to get current location" }
-                emitEffect(UiEvent.ShowError(MR.strings.error_location_disabled.desc()))
+                emitEffect(MapUiEffects.ShowError(MR.strings.error_location_disabled.desc()))
             }
         }
     }
@@ -249,7 +277,8 @@ class MapViewModel(
 
     private fun toggleHashtag(index: Int) {
         val current = currentState.activeHashtagIndices
-        val updated = if (index in current) (current - index).toPersistentSet() else (current + index).toPersistentSet()
+        val updated =
+            if (index in current) (current - index).toPersistentSet() else (current + index).toPersistentSet()
         updateState { copy(activeHashtagIndices = updated) }
         refilterPins()
     }
@@ -278,16 +307,18 @@ class MapViewModel(
             mapRepository.getPolygonForecast(pollenId)
         }.onSuccess { result ->
             when (result) {
-                is ApiResult.Success -> _tileIndex.value = LoadState.Loaded(TileRingIndex.build(result.data))
+                is ApiResult.Success -> _tileIndex.value =
+                    LoadState.Loaded(TileRingIndex.build(result.data))
+
                 is ApiResult.Error -> {
                     _tileIndex.value = LoadState.Failed
-                    emitEffect(UiEvent.ShowError(MR.strings.error_load_pollen_forecast.desc()))
+                    emitEffect(MapUiEffects.ShowError(MR.strings.error_load_pollen_forecast.desc()))
                 }
             }
         }.onFailure {
             logger.e(it) { "Failed to load polygon forecast" }
             _tileIndex.value = LoadState.Failed
-            emitEffect(UiEvent.ShowError(MR.strings.error_load_pollen_forecast.desc()))
+            emitEffect(MapUiEffects.ShowError(MR.strings.error_load_pollen_forecast.desc()))
         }
     }
 }
@@ -298,5 +329,5 @@ private fun filterPins(
     activeHashtags: Set<String>,
 ): List<MapPinDomain> = pins.filter { pin ->
     (pollenId == null || pin.pollenType == pollenId) &&
-        (activeHashtags.isEmpty() || pin.tags.any { it in activeHashtags })
+            (activeHashtags.isEmpty() || pin.tags.any { it in activeHashtags })
 }

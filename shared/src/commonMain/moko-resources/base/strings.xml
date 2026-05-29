@@ -233,6 +233,7 @@
     <string name="region_search_placeholder">Поиск региона…</string>
     <string name="error_update_region">Не удалось обновить регион</string>
     <string name="error_location_disabled">Включите геолокацию в настройках устройства</string>
+    <string name="error_location_permission_needed">Для этой функции нужен доступ к геолокации</string>
 
     <!-- Feed -->
     <string name="feed_tab_news">Новости</string>

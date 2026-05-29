@@ -233,6 +233,7 @@
     <string name="region_search_placeholder">Search region…</string>
     <string name="error_update_region">Failed to update region</string>
     <string name="error_location_disabled">Enable location in device settings</string>
+    <string name="error_location_permission_needed">Location access is needed for this feature</string>
 
     <!-- Feed -->
     <string name="feed_tab_news">News</string>

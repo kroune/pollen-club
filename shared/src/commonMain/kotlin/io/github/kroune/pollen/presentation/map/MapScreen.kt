@@ -26,12 +26,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,11 +58,10 @@ import io.github.kroune.pollen.domain.model.LocationAvailability
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.TileRingQuery
 import io.github.kroune.pollen.domain.model.dataOrNull
-import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.MapAreaSkeleton
-import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.rememberLocationPermissionLauncher
+import io.github.kroune.pollen.presentation.common.rememberStringDescResolver
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
@@ -70,14 +72,42 @@ import kotlin.math.absoluteValue
 @Composable
 fun MapScreen(
     state: MapUiState,
-    effects: Flow<UiEvent> = emptyFlow(),
+    effects: Flow<MapUiEffects> = emptyFlow(),
     onIntent: (MapIntent) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    CollectEffects(effects, snackbarHostState, onRetry = { onIntent(MapIntent.LoadData) })
 
     val requestPermission = rememberLocationPermissionLauncher { granted ->
         onIntent(MapIntent.LocationPermissionResult(granted))
+    }
+
+    val resolveDesc = rememberStringDescResolver()
+    val retryLabel = stringResource(MR.strings.retry)
+    val locationNeededMessage = stringResource(MR.strings.error_location_permission_needed)
+    LaunchedEffect(Unit) {
+        effects.collect { effect ->
+            when (effect) {
+                MapUiEffects.RequestLocationPermission -> requestPermission()
+                // The map recenters reactively via state.centerOnUserTrigger.
+                MapUiEffects.CenterOnMyLocation -> Unit
+                MapUiEffects.ShowLocationNeededForThisFeature ->
+                    snackbarHostState.showSnackbar(
+                        message = locationNeededMessage,
+                        duration = SnackbarDuration.Short,
+                    )
+
+                is MapUiEffects.ShowError -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = resolveDesc(effect.message),
+                        actionLabel = retryLabel,
+                        duration = SnackbarDuration.Short,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        onIntent(MapIntent.LoadData)
+                    }
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -161,12 +191,7 @@ fun MapScreen(
 
             Surface(
                 onClick = {
-                    when (state.locationAvailability) {
-                        LocationAvailability.Available -> onIntent(MapIntent.CenterOnMyLocation)
-                        LocationAvailability.PermissionDenied,
-                        LocationAvailability.Unknown -> requestPermission()
-                        LocationAvailability.LocationDisabled -> onIntent(MapIntent.ShowLocationDisabledSnackbar)
-                    }
+                    onIntent(MapIntent.CenterOnMyLocationClicked)
                 },
                 shape = RoundedCornerShape(14.dp),
                 color = Color.White,
