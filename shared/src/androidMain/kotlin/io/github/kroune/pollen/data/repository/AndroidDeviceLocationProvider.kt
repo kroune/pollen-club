@@ -52,7 +52,7 @@ class AndroidDeviceLocationProvider(
         _availability.value = checkAvailability()
     }
 
-    override fun getCurrentLocation(): DeviceCoordinates? {
+    override suspend fun getCurrentLocation(): DeviceCoordinates? {
         if (_availability.value != LocationAvailability.Available) return null
         return try {
             getFromFused() ?: getLastKnown()
