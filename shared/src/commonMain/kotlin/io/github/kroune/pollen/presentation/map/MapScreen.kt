@@ -161,12 +161,7 @@ fun MapScreen(
 
             Surface(
                 onClick = {
-                    when (state.locationAvailability) {
-                        LocationAvailability.Available -> onIntent(MapIntent.CenterOnMyLocation)
-                        LocationAvailability.PermissionDenied,
-                        LocationAvailability.Unknown -> requestPermission()
-                        LocationAvailability.LocationDisabled -> onIntent(MapIntent.ShowLocationDisabledSnackbar)
-                    }
+                    onIntent(MapIntent.CenterOnMyLocationClicked)
                 },
                 shape = RoundedCornerShape(14.dp),
                 color = Color.White,

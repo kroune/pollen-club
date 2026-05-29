@@ -26,6 +26,7 @@ import io.github.kroune.pollen.util.normalizeSeverity
 import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
@@ -69,33 +70,29 @@ class ForecastDetailViewModel(
     private fun loadData() {
         viewModelScope.launch {
             runCatchingCancellable {
-                val pollens = pollenRepository.observePollens().first()
-                val pollen = pollens.firstOrNull { it.id == pollenId }
-                if (pollen == null) {
-                    updateState { copy(pollen = LoadState.Failed) }
-                    emitEffect(UiEvent.ShowError(MR.strings.error_allergen_not_found.desc()))
-                    return@runCatchingCancellable
+                val locationIdAsync = async {
+                    val user = userRepository.getLocalUser()
+                    val locationId = if (user != null && user.location > 0) {
+                        user.location
+                    } else {
+                        locationRepository.getAll().first().id
+                    }
+                    locationId
                 }
-                updateState {
-                    copy(
-                        pollen = LoadState.Loaded(pollen.toDetailUi()),
-                        aboutText = pollen.description,
-                        pollenIconRes = PollenIconRegistry.iconFor(pollen.id),
-                    )
+                val pollenAsync = async {
+                    val pollens = pollenRepository.observePollens().first()
+                    val pollen = pollens.first { it.id == pollenId }
+                    updateState {
+                        copy(
+                            pollen = LoadState.Loaded(pollen.toDetailUi()),
+                            aboutText = pollen.description,
+                            pollenIconRes = PollenIconRegistry.iconFor(pollen.id),
+                        )
+                    }
+                    pollen
                 }
-
-                val user = userRepository.getLocalUser()
-                val locationId = if (user != null && user.location > 0) {
-                    user.location
-                } else {
-                    locationRepository.getAll().firstOrNull()?.id
-                }
-
-                if (locationId == null) {
-                    updateState { copy(timeline = LoadState.Failed) }
-                    emitEffect(UiEvent.ShowError(MR.strings.error_load_data.desc()))
-                    return@launch
-                }
+                val locationId = locationIdAsync.await()
+                val pollen = pollenAsync.await()
                 loadForecast(locationId, pollen)
             }.onFailure {
                 updateState { copy(pollen = LoadState.Failed) }

@@ -1,6 +1,7 @@
 package io.github.kroune.pollen.data.repository
 
-import android.Manifest
+import android.Manifest.permission.ACCESS_COARSE_LOCATION
+import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,17 +10,17 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import co.touchlab.kermit.Logger
-import io.github.kroune.pollen.domain.model.DeviceCoordinates
-import io.github.kroune.pollen.domain.model.LocationAvailability
-import io.github.kroune.pollen.domain.repository.DeviceLocationProvider
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import kotlin.coroutines.resume
+import io.github.kroune.pollen.domain.model.DeviceCoordinates
+import io.github.kroune.pollen.domain.model.LocationAvailability
+import io.github.kroune.pollen.domain.repository.DeviceLocationProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class AndroidDeviceLocationProvider(
     private val context: Context,
@@ -27,7 +28,8 @@ class AndroidDeviceLocationProvider(
 
     private val logger = Logger.withTag("DeviceLocation")
     private val fusedClient = LocationServices.getFusedLocationProviderClient(context)
-    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val locationManager =
+        context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     private val _availability = MutableStateFlow(checkAvailability())
     override val availability: StateFlow<LocationAvailability> = _availability.asStateFlow()
@@ -50,7 +52,7 @@ class AndroidDeviceLocationProvider(
         _availability.value = checkAvailability()
     }
 
-    override suspend fun getCurrentLocation(): DeviceCoordinates? {
+    override fun getCurrentLocation(): DeviceCoordinates? {
         if (_availability.value != LocationAvailability.Available) return null
         return try {
             getFromFused() ?: getLastKnown()
@@ -63,45 +65,42 @@ class AndroidDeviceLocationProvider(
     private suspend fun getFromFused(): DeviceCoordinates? = suspendCancellableCoroutine { cont ->
         val tokenSource = CancellationTokenSource()
         cont.invokeOnCancellation { tokenSource.cancel() }
-        try {
-            fusedClient.getCurrentLocation(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                tokenSource.token,
-            ).addOnSuccessListener { location ->
-                if (location != null) {
-                    cont.resume(DeviceCoordinates(location.latitude, location.longitude))
-                } else {
-                    cont.resume(null)
-                }
-            }.addOnFailureListener { e ->
+        fusedClient.getCurrentLocation(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            tokenSource.token,
+        )
+            .addOnSuccessListener { location ->
+                cont.resume(
+                    location?.let {
+                        DeviceCoordinates(
+                            location.latitude,
+                            location.longitude,
+                        )
+                    },
+                )
+            }
+            .addOnFailureListener { e ->
                 logger.w(e) { "getCurrentLocation failed" }
                 cont.resume(null)
             }
-        } catch (e: SecurityException) {
-            cont.resume(null)
-        }
     }
 
     private suspend fun getLastKnown(): DeviceCoordinates? = suspendCancellableCoroutine { cont ->
-        try {
-            fusedClient.lastLocation
-                .addOnSuccessListener { location ->
-                    cont.resume(location?.let { DeviceCoordinates(it.latitude, it.longitude) })
-                }
-                .addOnFailureListener {
-                    cont.resume(null)
-                }
-        } catch (e: SecurityException) {
-            cont.resume(null)
-        }
+        fusedClient.lastLocation
+            .addOnSuccessListener { location ->
+                cont.resume(location?.let { DeviceCoordinates(it.latitude, it.longitude) })
+            }
+            .addOnFailureListener {
+                cont.resume(null)
+            }
     }
 
     private fun checkAvailability(): LocationAvailability {
         val hasFinePermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION,
+            context, ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
         val hasCoarsePermission = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_COARSE_LOCATION,
+            context, ACCESS_COARSE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
 
         if (!hasFinePermission && !hasCoarsePermission) return LocationAvailability.PermissionDenied
