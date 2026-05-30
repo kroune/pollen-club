@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.friends
+package io.github.kroune.pollen.presentation.friends.list
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,6 +59,7 @@ import io.github.kroune.pollen.presentation.common.FullScreenError
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.formatDateLocalized
 import io.github.kroune.pollen.presentation.common.rememberCopyToClipboard
+import io.github.kroune.pollen.presentation.friends.YourCodeForFriends
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf

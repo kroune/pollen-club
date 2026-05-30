@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.detail.viewmodel
+package io.github.kroune.pollen.presentation.detail
 
 sealed interface ForecastDetailIntent {
     data object ReloadData : ForecastDetailIntent

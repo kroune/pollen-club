@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.friends
+package io.github.kroune.pollen.presentation.friends.list
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable

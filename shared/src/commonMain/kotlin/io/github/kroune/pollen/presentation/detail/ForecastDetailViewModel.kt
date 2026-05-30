@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.detail.viewmodel
+package io.github.kroune.pollen.presentation.detail
 
 import androidx.lifecycle.viewModelScope
 import dev.icerock.moko.resources.desc.desc
@@ -18,10 +18,6 @@ import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.PollenIconRegistry
 import io.github.kroune.pollen.presentation.common.UiEvent
-import io.github.kroune.pollen.presentation.detail.DetailStatsUi
-import io.github.kroune.pollen.presentation.detail.ForecastDetailPollenUi
-import io.github.kroune.pollen.presentation.detail.ForecastDetailUiState
-import io.github.kroune.pollen.presentation.detail.SCORE_DISPLAY_MAX
 import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList

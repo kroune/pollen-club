@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.friends
+package io.github.kroune.pollen.presentation.friends.addfriend
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
