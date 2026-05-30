@@ -5,11 +5,12 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import okio.Path.Companion.toPath
 
-fun createDataStore(producePath: () -> String): DataStore<Preferences> =
+/** Absolute path for a DataStore file in the platform's app-private storage directory. */
+expect fun platformFilePath(fileName: String): String
+
+fun createPlatformDataStore(): DataStore<Preferences> =
     PreferenceDataStoreFactory.createWithPath(
-        produceFile = { producePath().toPath() },
+        produceFile = { platformFilePath(PREFS_FILE_NAME).toPath() },
     )
 
-expect fun createPlatformDataStore(): DataStore<Preferences>
-
-const val DATASTORE_FILE_NAME = "pollen_prefs.preferences_pb"
+const val PREFS_FILE_NAME = "pollen_prefs.preferences_pb"

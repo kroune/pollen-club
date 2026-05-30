@@ -23,7 +23,7 @@ data class HealthEntryEntity(
     @ColumnInfo(name = "tags") val tags: String = "",
     @ColumnInfo(name = "latitude") val latitude: Double = 0.0,
     @ColumnInfo(name = "longitude") val longitude: Double = 0.0,
-    @ColumnInfo(name = "location_id") val locationId: Int = 0,
+    @ColumnInfo(name = "location_id") val locationId: Int? = null,
     @ColumnInfo(name = "default_pollen") val defaultPollen: Int = 0,
     @ColumnInfo(name = "symptom_tags") val symptomTags: String = "",
 )

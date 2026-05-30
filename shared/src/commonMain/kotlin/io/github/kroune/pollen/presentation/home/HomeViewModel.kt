@@ -14,14 +14,13 @@ import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.model.TodayProvider
-import io.github.kroune.pollen.domain.model.UserDomain
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.domain.repository.WeatherRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.startOfWeek
@@ -59,7 +58,7 @@ sealed interface HomeIntent {
 }
 
 class HomeViewModel(
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val pollenRepository: PollenRepository,
     private val locationRepository: LocationRepository,
     private val weatherRepository: WeatherRepository,
@@ -73,11 +72,11 @@ class HomeViewModel(
 
     private val selectedLocationFlow = combine(
         _selectedLocationIdOverride,
-        userRepository.observeUser(),
+        userSession.user,
         locationRepository.observeLocations(),
     ) { overrideId, user, locations ->
         overrideId?.let { id -> locations.firstOrNull { it.id == id } }
-            ?: locations.firstOrNull { it.id == user?.location?.takeIf { id -> id > 0 } }
+            ?: locations.firstOrNull { it.id == user.location }
             ?: locations.firstOrNull()
     }.distinctUntilChanged()
 
@@ -350,17 +349,6 @@ class HomeViewModel(
                         .onFailure { logger.w(it) { "Failed to reset sync state" } }
                 }
                 val anyFailure = coroutineScope {
-                    launch {
-                        runCatchingCancellable {
-                            val user = userRepository.getLocalUser()
-                            if (user == null || user.serverId == 0L) {
-                                val result = userRepository.registerOrUpdateUser(user ?: UserDomain())
-                                if (result !is ApiResult.Success) {
-                                    logger.w { "User registration returned error" }
-                                }
-                            }
-                        }.onFailure { logger.w(it) { "Failed to register/update user" } }
-                    }
                     listOf(
                         async { runCatchingCancellable { pollenRepository.syncPollens() } },
                         async { runCatchingCancellable { pollenRepository.syncLevels() } },

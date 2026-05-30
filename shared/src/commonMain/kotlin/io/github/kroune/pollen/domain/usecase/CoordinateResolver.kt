@@ -3,17 +3,16 @@ package io.github.kroune.pollen.domain.usecase
 import io.github.kroune.pollen.domain.model.ResolvedLocation
 import io.github.kroune.pollen.domain.repository.DeviceLocationProvider
 import io.github.kroune.pollen.domain.repository.LocationRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 
 class CoordinateResolver(
     private val deviceLocationProvider: DeviceLocationProvider,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val locationRepository: LocationRepository,
 ) {
     suspend fun resolve(): ResolvedLocation? {
-        val user = userRepository.getLocalUser()
-        val regionId = user?.location ?: 0
-        val region = if (regionId > 0) locationRepository.getById(regionId) else null
+        val regionId = userSession.currentUser().location
+        val region = regionId?.let { locationRepository.getById(it) }
 
         val gps = deviceLocationProvider.getCurrentLocation()
 

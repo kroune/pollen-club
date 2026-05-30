@@ -17,7 +17,7 @@ import io.github.kroune.pollen.data.repository.PollenRepositoryImpl
 import io.github.kroune.pollen.data.repository.SettingsRepositoryImpl
 import io.github.kroune.pollen.data.repository.StatisticsRepositoryImpl
 import io.github.kroune.pollen.data.repository.UserForecastRepositoryImpl
-import io.github.kroune.pollen.data.repository.UserRepositoryImpl
+import io.github.kroune.pollen.data.session.UserSessionImpl
 import io.github.kroune.pollen.data.repository.PersonalIndexRepositoryImpl
 import io.github.kroune.pollen.data.repository.SensitivityRepositoryImpl
 import io.github.kroune.pollen.data.repository.WeatherRepositoryImpl
@@ -34,7 +34,7 @@ import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SettingsRepository
 import io.github.kroune.pollen.domain.repository.StatisticsRepository
 import io.github.kroune.pollen.domain.repository.UserForecastRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.repository.WeatherRepository
@@ -46,19 +46,19 @@ val sharedModule = module {
     single<LocaleProvider> { LocaleProviderImpl(get()) }
     single<TodayProvider> { TodayProviderImpl(get<CoroutineScope>()) }
 
-    single<UserRepository> { UserRepositoryImpl(get(), get()) }
+    single<UserSession> { UserSessionImpl(get(), get(), get()) }
     single<PollenRepository> { PollenRepositoryImpl(get(), get(), get(), get(), get()) }
     single<LocationRepository> { LocationRepositoryImpl(get(), get(), get()) }
-    single<HealthRepository> { HealthRepositoryImpl(get(), get()) }
+    single<HealthRepository> { HealthRepositoryImpl(get(), get(), get()) }
     single<StatisticsRepository> { StatisticsRepositoryImpl(get(), get(), get()) }
-    single<FeedRepository> { FeedRepositoryImpl(get(), get()) }
-    single<MapRepository> { MapRepositoryImpl(get(), get(), get()) }
-    single<FriendsRepository> { FriendsRepositoryImpl(get(), get()) }
-    single<MedicationRepository> { MedicationRepositoryImpl(get(), get(), get(), get()) }
-    single<PhenologyRepository> { PhenologyRepositoryImpl(get(), get()) }
+    single<FeedRepository> { FeedRepositoryImpl(get(), get(), get()) }
+    single<MapRepository> { MapRepositoryImpl(get(), get(), get(), get()) }
+    single<FriendsRepository> { FriendsRepositoryImpl(get(), get(), get()) }
+    single<MedicationRepository> { MedicationRepositoryImpl(get(), get(), get(), get(), get()) }
+    single<PhenologyRepository> { PhenologyRepositoryImpl(get(), get(), get()) }
     single<WeatherRepository> { WeatherRepositoryImpl(get()) }
     single<SettingsRepository> { SettingsRepositoryImpl(get(), get()) }
-    single<UserForecastRepository> { UserForecastRepositoryImpl(get(), get()) }
+    single<UserForecastRepository> { UserForecastRepositoryImpl(get(), get(), get()) }
     single<SensitivityRepository> { SensitivityRepositoryImpl(get()) }
     single<PersonalIndexRepository> { PersonalIndexRepositoryImpl(get()) }
     factory { CoordinateResolver(get(), get(), get()) }

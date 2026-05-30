@@ -8,11 +8,14 @@ import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.LoadState
+import io.github.kroune.pollen.domain.model.SensitivityLevel
+import io.github.kroune.pollen.domain.model.serverIdOrNull
 import io.github.kroune.pollen.domain.repository.FriendsRepository
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
+import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.repository.SettingsRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlinx.coroutines.Job
@@ -39,9 +42,10 @@ sealed interface SettingsIntent {
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val locationRepository: LocationRepository,
     private val pollenRepository: PollenRepository,
+    private val sensitivityRepository: SensitivityRepository,
     private val friendsRepository: FriendsRepository,
 ) : MviViewModel<SettingsUiState, SettingsIntent, UiEvent>(SettingsUiState()) {
 
@@ -60,32 +64,34 @@ class SettingsViewModel(
     private fun loadData() {
         loadJob?.cancel()
         updateState { SettingsUiState(data = LoadState.Loading) }
+        // The user's primary allergen is their most-sensitive pollen (from the sensitivity table).
+        val mainAllergenLabel = combine(
+            pollenRepository.observePollens(),
+            sensitivityRepository.observeAll(),
+        ) { pollens, sensitivities ->
+            sensitivities
+                .filter { it.level != SensitivityLevel.NONE }
+                .maxByOrNull { it.level.value }
+                ?.let { top -> pollens.firstOrNull { it.id == top.pollenId }?.name }
+        }
+
         loadJob = viewModelScope.launch {
             combine(
-                userRepository.observeUser(),
+                userSession.user,
                 settingsRepository.locale,
                 locationRepository.observeLocations(),
-                pollenRepository.observePollens(),
+                mainAllergenLabel,
                 friendsRepository.observeFriends(),
-            ) { user, locale, locations, pollens, friends ->
-                val participantCode = user?.serverId?.takeIf { it > 0 }?.toString()
+            ) { user, locale, locations, allergenLabel, friends ->
+                val participantCode = user.identity.serverIdOrNull?.toString()
 
                 val languageLabel: StringDesc = when (locale) {
                     AppLocale.RU -> MR.strings.language_russian.desc()
                     AppLocale.EN -> MR.strings.language_english.desc()
                 }
 
-                val regionLabel = if (user != null && user.location > 0) {
-                    locations.firstOrNull { it.id == user.location }?.name
-                } else {
-                    null
-                }
-
-                val mainAllergenLabel = if (user != null && user.selectedAllergens.isNotEmpty()) {
-                    val primaryId = user.selectedAllergens.first()
-                    pollens.firstOrNull { it.id == primaryId }?.name
-                } else {
-                    null
+                val regionLabel = user.location?.let { locationId ->
+                    locations.firstOrNull { it.id == locationId }?.name
                 }
 
                 val friendsCount = friends.size
@@ -99,7 +105,7 @@ class SettingsViewModel(
                     participantCode = participantCode,
                     languageLabel = languageLabel,
                     regionLabel = regionLabel,
-                    mainAllergenLabel = mainAllergenLabel,
+                    mainAllergenLabel = allergenLabel,
                     friendsLabel = friendsLabel,
                 )
             }.collect { data ->

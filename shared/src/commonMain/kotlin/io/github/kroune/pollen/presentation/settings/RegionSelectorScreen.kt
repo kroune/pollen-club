@@ -197,7 +197,7 @@ private fun PreviewRegionSelectorFailed() {
 @Composable
 private fun RegionList(
     locations: ImmutableList<LocationDomain>,
-    selectedLocationId: Int,
+    selectedLocationId: Int?,
     onSelect: (Int) -> Unit,
 ) {
     Card(

@@ -252,7 +252,7 @@ class DiaryViewModel(
                     lungs = SymptomTagRegistry.deriveZoneSeverity(tags, BodyZone.CHEST),
                     latitude = location?.latitude ?: 0.0,
                     longitude = location?.longitude ?: 0.0,
-                    locationId = location?.regionId ?: 0,
+                    locationId = location?.regionId,
                     locationName = location?.regionName ?: "",
                 )
                 healthRepository.saveEntry(entry)

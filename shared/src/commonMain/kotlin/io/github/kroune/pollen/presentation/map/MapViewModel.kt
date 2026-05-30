@@ -21,7 +21,7 @@ import io.github.kroune.pollen.domain.repository.DeviceLocationProvider
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.MapRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
@@ -69,7 +69,7 @@ sealed interface MapUiEffects {
 
 class MapViewModel(
     private val mapRepository: MapRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val pollenRepository: PollenRepository,
     private val deviceLocationProvider: DeviceLocationProvider,
     private val locationRepository: LocationRepository,
@@ -139,21 +139,17 @@ class MapViewModel(
         }
         viewModelScope.launch {
             runCatchingCancellable {
-                val user = userRepository.getLocalUser()
-                val userId = user?.serverId ?: 0L
-                val regionId = user?.location ?: 0
-                if (regionId > 0) {
-                    val region = locationRepository.getById(regionId)
-                    if (region != null) {
-                        updateState {
-                            copy(
-                                centerLatitude = region.latitude,
-                                centerLongitude = region.longitude,
-                            )
-                        }
+                val region = userSession.currentUser().location
+                    ?.let { locationRepository.getById(it) }
+                if (region != null) {
+                    updateState {
+                        copy(
+                            centerLatitude = region.latitude,
+                            centerLongitude = region.longitude,
+                        )
                     }
                 }
-                launch { loadPins(userId) }
+                launch { loadPins() }
                 launch { loadHashtags() }
                 launch { loadPolygonsForCurrentAllergen() }
             }.onFailure {
@@ -173,9 +169,9 @@ class MapViewModel(
         }
     }
 
-    private suspend fun loadPins(userId: Long) {
+    private suspend fun loadPins() {
         runCatchingCancellable {
-            mapRepository.getPins(userId)
+            mapRepository.getPins()
         }.onSuccess { result ->
             when (result) {
                 is ApiResult.Success -> {

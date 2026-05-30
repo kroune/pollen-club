@@ -6,8 +6,9 @@ import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import co.touchlab.kermit.Logger
 import io.github.kroune.pollen.domain.model.ApiResult
+import io.github.kroune.pollen.domain.model.serverIdOrNull
 import io.github.kroune.pollen.domain.repository.FriendsRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.qr.QrScanResult
@@ -38,15 +39,14 @@ sealed interface AddFriendIntent {
 
 class AddFriendViewModel(
     private val friendsRepository: FriendsRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
 ) : MviViewModel<AddFriendUiState, AddFriendIntent, UiEvent>(AddFriendUiState()) {
 
     init {
         viewModelScope.launch {
             runCatchingCancellable {
-                val user = userRepository.getLocalUser()
-                val serverId = user?.serverId?.takeIf { it > 0 }?.toString() ?: ""
-                updateState { copy(myServerId = serverId) }
+                val serverId = userSession.currentUser().identity.serverIdOrNull
+                updateState { copy(myServerId = serverId?.toString() ?: "") }
             }.onFailure {
                 emitEffect(UiEvent.ShowError(MR.strings.error_load_friends.desc()))
             }
@@ -89,9 +89,7 @@ class AddFriendViewModel(
         viewModelScope.launch {
             updateState { copy(isSubmitting = true) }
             runCatchingCancellable {
-                val user = userRepository.getLocalUser()
-                val userId = user?.serverId ?: 0
-                friendsRepository.addFriend(userId, friendId, name)
+                friendsRepository.addFriend(friendId, name)
             }.onSuccess { result ->
                 if (result is ApiResult.Success) {
                     updateState { copy(isSubmitting = false, isSuccess = true) }

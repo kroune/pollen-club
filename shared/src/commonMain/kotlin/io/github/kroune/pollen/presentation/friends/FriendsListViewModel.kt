@@ -12,7 +12,8 @@ import io.github.kroune.pollen.domain.model.FriendLastPinDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.repository.FriendsRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.model.serverIdOrNull
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.util.runCatchingCancellable
@@ -48,7 +49,7 @@ sealed interface FriendsListIntent {
 
 class FriendsListViewModel(
     private val friendsRepository: FriendsRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val pollenRepository: PollenRepository,
 ) : MviViewModel<FriendsListUiState, FriendsListIntent, UiEvent>(FriendsListUiState()) {
 
@@ -73,9 +74,8 @@ class FriendsListViewModel(
 
         viewModelScope.launch {
             runCatchingCancellable {
-                val user = userRepository.getLocalUser()
-                val userId = user?.serverId ?: 0
-                updateState { copy(myServerId = if (userId > 0) userId.toString() else "") }
+                val serverId = userSession.currentUser().identity.serverIdOrNull
+                updateState { copy(myServerId = serverId?.toString() ?: "") }
             }.onFailure { logger.w(it) { "Failed to load user" } }
         }
 
@@ -103,10 +103,7 @@ class FriendsListViewModel(
 
         syncJob = viewModelScope.launch {
             runCatchingCancellable {
-                val user = userRepository.getLocalUser()
-                val userId = user?.serverId ?: 0
-
-                val syncResult = friendsRepository.syncFriends(userId)
+                val syncResult = friendsRepository.syncFriends()
                 if (syncResult is ApiResult.Error) {
                     logger.w { "Failed to sync friends" }
                     if (currentState.friends is LoadState.Loading) {
@@ -115,7 +112,7 @@ class FriendsListViewModel(
                     }
                 }
 
-                val pinsResult = friendsRepository.getLastPinsForFriends(userId)
+                val pinsResult = friendsRepository.getLastPinsForFriends()
                 if (pinsResult is ApiResult.Success) {
                     lastPins.value = pinsResult.data
                 } else {
@@ -134,8 +131,7 @@ class FriendsListViewModel(
     private fun deleteFriend(friendId: Int) {
         viewModelScope.launch {
             runCatchingCancellable {
-                val user = userRepository.getLocalUser()
-                val result = friendsRepository.deleteFriend(user?.serverId ?: 0, friendId)
+                val result = friendsRepository.deleteFriend(friendId)
                 if (result is ApiResult.Error) {
                     emitEffect(UiEvent.ShowError(MR.strings.error_delete_friend.desc()))
                 }

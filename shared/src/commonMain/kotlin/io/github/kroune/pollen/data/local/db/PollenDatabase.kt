@@ -15,7 +15,6 @@ import io.github.kroune.pollen.data.local.db.dao.PollenDao
 import io.github.kroune.pollen.data.local.db.dao.StatisticsDao
 import io.github.kroune.pollen.data.local.db.dao.SyncStateDao
 import io.github.kroune.pollen.data.local.db.dao.TherapyDao
-import io.github.kroune.pollen.data.local.db.dao.UserDao
 import io.github.kroune.pollen.data.local.db.dao.AllergenSensitivityDao
 import io.github.kroune.pollen.data.local.db.dao.MedicationIntakeDao
 import io.github.kroune.pollen.data.local.db.entity.AllergenSensitivityEntity
@@ -32,11 +31,9 @@ import io.github.kroune.pollen.data.local.db.entity.StatisticsEntity
 import io.github.kroune.pollen.data.local.db.entity.SyncStateEntity
 import io.github.kroune.pollen.data.local.db.entity.TherapyEntity
 import io.github.kroune.pollen.data.local.db.entity.MedicationIntakeEntity
-import io.github.kroune.pollen.data.local.db.entity.UserEntity
 
 @Database(
     entities = [
-        UserEntity::class,
         SyncStateEntity::class,
         HealthEntryEntity::class,
         PollenEntity::class,
@@ -52,13 +49,12 @@ import io.github.kroune.pollen.data.local.db.entity.UserEntity
         AllergenSensitivityEntity::class,
         MedicationIntakeEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(LocalDateConverter::class)
 @ConstructedBy(PollenDatabaseConstructor::class)
 abstract class PollenDatabase : RoomDatabase() {
-    abstract fun userDao(): UserDao
     abstract fun syncStateDao(): SyncStateDao
     abstract fun healthDao(): HealthDao
     abstract fun pollenDao(): PollenDao

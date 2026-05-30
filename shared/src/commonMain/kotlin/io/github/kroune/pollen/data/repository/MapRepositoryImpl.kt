@@ -12,6 +12,7 @@ import io.github.kroune.pollen.domain.model.MapPinDomain
 import io.github.kroune.pollen.domain.model.MapRingDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.MapRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -22,11 +23,12 @@ class MapRepositoryImpl(
     private val api: PollenApiService,
     private val forecastApi: PollenForecastApiService,
     private val pollenDao: PollenDao,
+    private val session: UserSession,
 ) : MapRepository {
 
-    override suspend fun getPins(userId: Long): ApiResult<List<MapPinDomain>> =
-        safeApiCall(logger, "get pins for user=$userId") {
-            val response = api.getPinsWithFriends(GetUserRequest(userId))
+    override suspend fun getPins(): ApiResult<List<MapPinDomain>> =
+        safeApiCall(logger, "get pins") {
+            val response = api.getPinsWithFriends(GetUserRequest(session.requireUserId()))
             logger.i { "Loaded ${response.pins.size} pins" }
             response.pins.map { it.toDomain() }
         }

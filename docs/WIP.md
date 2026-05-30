@@ -20,3 +20,9 @@ Tracked unfinished UI sections where the ViewModel layer is already wired but th
 - Marker: `presentation/medications/MedicationsScreen.kt` — `.clickable { /* TODO: navigate to category detail */ }` on the category list rows.
 - Currently the rows look interactive (ripple on tap) but do nothing on click.
 - Acceptance: define a `CategoryDetailRoute(categoryId)` in `presentation/Routes.kt`, build a screen + VM listing cures filtered by the chosen action type using `MedicationRepository.getCureCatalog()`, and wire the click handler in `App.kt` `entry<MedicationsRoute>`.
+
+## Selected location — GPS-driven resolution
+
+- Today the selected monitoring station (`User.location`, owned by `UserSession`) is set **only** by manual pick in `RegionSelectorViewModel` → `UserSession.setLocation(id)`.
+- Deferred: derive the station from the device's location permission — permission granted → `DeviceLocationProvider.getCurrentLocation()` → resolve nearest station (build on `domain/usecase/CoordinateResolver`) → `UserSession.setLocation(nearestId)`.
+- Acceptance: on first launch (or via a "use my location" control), if location permission is granted, auto-select the nearest station; otherwise fall back to manual selection. Must not block app start; identity bootstrap is independent of this.

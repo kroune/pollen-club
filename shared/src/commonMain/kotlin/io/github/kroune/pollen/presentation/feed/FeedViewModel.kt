@@ -8,7 +8,6 @@ import io.github.kroune.pollen.domain.model.FeedDataDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.repository.FeedRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.util.runCatchingCancellable
@@ -27,7 +26,6 @@ sealed interface FeedIntent {
 
 class FeedViewModel(
     private val feedRepository: FeedRepository,
-    private val userRepository: UserRepository,
     localeProvider: LocaleProvider,
 ) : MviViewModel<FeedUiState, FeedIntent, UiEvent>(FeedUiState()) {
 
@@ -60,8 +58,7 @@ class FeedViewModel(
         viewModelScope.launch {
             try {
                 runCatchingCancellable {
-                    val user = userRepository.getLocalUser()
-                    val data = feedRepository.getFeed(user?.serverId ?: 0)
+                    val data = feedRepository.getFeed()
                     updateState { copy(feed = LoadState.Loaded(data)) }
                 }.onFailure {
                     updateState { copy(feed = LoadState.Failed) }

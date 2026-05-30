@@ -4,5 +4,5 @@ import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.UserForecastDomain
 
 interface UserForecastRepository {
-    suspend fun getUserForecast(userId: Long): ApiResult<UserForecastDomain>
+    suspend fun getUserForecast(): ApiResult<UserForecastDomain>
 }

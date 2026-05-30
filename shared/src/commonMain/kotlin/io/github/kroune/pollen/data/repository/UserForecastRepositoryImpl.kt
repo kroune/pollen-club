@@ -8,15 +8,17 @@ import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.model.UserForecastDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.UserForecastRepository
+import io.github.kroune.pollen.domain.session.UserSession
 
 class UserForecastRepositoryImpl(
     private val api: PollenApiService,
     private val localeProvider: LocaleProvider,
+    private val session: UserSession,
 ) : UserForecastRepository {
 
-    override suspend fun getUserForecast(userId: Long): ApiResult<UserForecastDomain> = safeApiCall {
+    override suspend fun getUserForecast(): ApiResult<UserForecastDomain> = safeApiCall {
         val locale = localeProvider.current()
-        val response = api.getUserForecast(GetUserRequest(userId))
+        val response = api.getUserForecast(GetUserRequest(session.requireUserId()))
         val result = response.result
             ?: return@safeApiCall UserForecastDomain(info = emptyList(), forecasts = emptyList())
         UserForecastDomain(
