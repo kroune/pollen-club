@@ -9,6 +9,7 @@ import io.github.kroune.pollen.data.local.prefs.AppPreferences
 import io.github.kroune.pollen.data.local.prefs.UserLocalDataSource
 import io.github.kroune.pollen.data.local.prefs.createPlatformDataStore
 import io.github.kroune.pollen.data.local.prefs.createUserDataStore
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -117,9 +118,12 @@ val databaseModule = module {
     single { get<PollenDatabase>().allergenSensitivityDao() }
     single { get<PollenDatabase>().medicationIntakeDao() }
 
-    single { createPlatformDataStore() }
-    single { AppPreferences(get()) }
+    // Both stores erase to DataStore::class at runtime, so they must be
+    // qualified — otherwise Koin keys them under the same type and the
+    // last-registered one shadows the other (ClassCastException at use site).
+    single(named("app_prefs")) { createPlatformDataStore() }
+    single { AppPreferences(get(named("app_prefs"))) }
 
-    single { createUserDataStore() }
-    single { UserLocalDataSource(get()) }
+    single(named("user_data")) { createUserDataStore() }
+    single { UserLocalDataSource(get(named("user_data"))) }
 }
