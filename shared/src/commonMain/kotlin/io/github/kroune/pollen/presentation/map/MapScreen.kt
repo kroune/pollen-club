@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.GeoPoint
 import io.github.kroune.pollen.domain.model.HashTagDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocationAvailability
@@ -65,7 +66,9 @@ import io.github.kroune.pollen.presentation.common.rememberStringDescResolver
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlin.math.absoluteValue
 
@@ -76,6 +79,16 @@ fun MapScreen(
     onIntent: (MapIntent) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // One-shot recenter commands: a transient signal that must not replay on
+    // recomposition, so it lives in a SharedFlow rather than in MapUiState.
+    // DROP_OLDEST keeps emit non-suspending and lets the newest target win.
+    val centerOnUser = remember {
+        MutableSharedFlow<GeoPoint>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    }
 
     val requestPermission = rememberLocationPermissionLauncher { granted ->
         onIntent(MapIntent.LocationPermissionResult(granted))
@@ -88,8 +101,8 @@ fun MapScreen(
         effects.collect { effect ->
             when (effect) {
                 MapUiEffects.RequestLocationPermission -> requestPermission()
-                // The map recenters reactively via state.centerOnUserTrigger.
-                MapUiEffects.CenterOnMyLocation -> Unit
+                is MapUiEffects.CenterOnMyLocation ->
+                    centerOnUser.emit(GeoPoint(effect.latitude, effect.longitude))
                 MapUiEffects.ShowLocationNeededForThisFeature ->
                     snackbarHostState.showSnackbar(
                         message = locationNeededMessage,
@@ -114,10 +127,16 @@ fun MapScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent,
     ) { _ ->
-        val density = LocalDensity.current
         var overlayBottom by remember { mutableStateOf(0.dp) }
         var bearing by remember { mutableStateOf(0f) }
-        var resetTrigger by remember { mutableStateOf(0) }
+        // One-shot compass-reset command (animate bearing back to north). UI-local
+        // and transient, so it lives in a SharedFlow rather than a counter in state.
+        val resetBearing = remember {
+            MutableSharedFlow<Unit>(
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             when (val pins = state.pins) {
@@ -135,12 +154,10 @@ fun MapScreen(
                         modifier = Modifier.fillMaxSize(),
                         overlayBottomY = overlayBottom,
                         onBearingChanged = { bearing = it },
-                        resetBearingTrigger = resetTrigger,
+                        resetBearing = resetBearing,
                         initialLatitude = state.centerLatitude,
                         initialLongitude = state.centerLongitude,
-                        userLatitude = state.userLatitude,
-                        userLongitude = state.userLongitude,
-                        centerOnUserTrigger = state.centerOnUserTrigger,
+                        centerOnUser = centerOnUser,
                     )
                 }
             }
@@ -157,6 +174,7 @@ fun MapScreen(
                         state = state,
                         onToggle = { onIntent(MapIntent.ToggleHashtag(it)) },
                     )
+                    val density = LocalDensity.current
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -174,7 +192,7 @@ fun MapScreen(
                         )
                         MapCompass(
                             bearingProvider = { bearing },
-                            onClick = { resetTrigger++ },
+                            onClick = { resetBearing.tryEmit(Unit) },
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
                                 .padding(start = 12.dp),

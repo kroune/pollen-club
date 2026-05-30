@@ -42,11 +42,13 @@ import com.google.maps.android.compose.clustering.Clustering
 import com.google.maps.android.compose.clustering.rememberClusterManager
 import com.google.maps.android.compose.rememberCameraPositionState
 import io.github.kroune.pollen.domain.model.Feeling
+import io.github.kroune.pollen.domain.model.GeoPoint
 import io.github.kroune.pollen.domain.model.MapPinDomain
 import io.github.kroune.pollen.domain.model.MapRingDomain
 import io.github.kroune.pollen.domain.model.TileRingIndex
 import io.github.kroune.pollen.domain.model.TileRingQuery
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.Flow
 import java.io.ByteArrayOutputStream
 import kotlin.math.PI
 import kotlin.math.atan
@@ -198,12 +200,10 @@ actual fun PlatformMapView(
     modifier: Modifier,
     overlayBottomY: Dp,
     onBearingChanged: (Float) -> Unit,
-    resetBearingTrigger: Int,
+    resetBearing: Flow<Unit>,
     initialLatitude: Double,
     initialLongitude: Double,
-    userLatitude: Double?,
-    userLongitude: Double?,
-    centerOnUserTrigger: Int,
+    centerOnUser: Flow<GeoPoint>,
 ) {
     val defaultPosition = LatLng(initialLatitude, initialLongitude)
 
@@ -222,8 +222,8 @@ actual fun PlatformMapView(
             .collect { onBearingChanged(it) }
     }
 
-    LaunchedEffect(resetBearingTrigger) {
-        if (resetBearingTrigger > 0) {
+    LaunchedEffect(resetBearing) {
+        resetBearing.collect {
             cameraPositionState.animate(
                 CameraUpdateFactory.newCameraPosition(
                     CameraPosition.Builder(cameraPositionState.position)
@@ -234,11 +234,11 @@ actual fun PlatformMapView(
         }
     }
 
-    LaunchedEffect(centerOnUserTrigger) {
-        if (centerOnUserTrigger > 0 && userLatitude != null && userLongitude != null) {
+    LaunchedEffect(centerOnUser) {
+        centerOnUser.collect { target ->
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngZoom(
-                    LatLng(userLatitude, userLongitude),
+                    LatLng(target.latitude, target.longitude),
                     cameraPositionState.position.zoom.coerceAtLeast(DEFAULT_ZOOM),
                 ),
             )
