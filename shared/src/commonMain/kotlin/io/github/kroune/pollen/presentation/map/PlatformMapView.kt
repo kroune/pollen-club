@@ -6,8 +6,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.kroune.pollen.domain.model.DEFAULT_CENTER_LATITUDE
 import io.github.kroune.pollen.domain.model.DEFAULT_CENTER_LONGITUDE
+import io.github.kroune.pollen.domain.model.GeoPoint
 import io.github.kroune.pollen.domain.model.MapPinDomain
 import io.github.kroune.pollen.domain.model.TileRingQuery
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 expect fun PlatformMapView(
@@ -17,10 +20,8 @@ expect fun PlatformMapView(
     modifier: Modifier,
     overlayBottomY: Dp = 0.dp,
     onBearingChanged: (Float) -> Unit = {},
-    resetBearingTrigger: Int = 0,
+    resetBearing: Flow<Unit> = emptyFlow(),
     initialLatitude: Double = DEFAULT_CENTER_LATITUDE,
     initialLongitude: Double = DEFAULT_CENTER_LONGITUDE,
-    userLatitude: Double? = null,
-    userLongitude: Double? = null,
-    centerOnUserTrigger: Int = 0,
+    centerOnUser: Flow<GeoPoint> = emptyFlow(),
 )

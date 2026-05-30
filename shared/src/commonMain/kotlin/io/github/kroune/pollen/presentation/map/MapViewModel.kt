@@ -44,9 +44,6 @@ data class MapUiState(
     val showAllergenDropdown: Boolean = false,
     val centerLatitude: Double = DEFAULT_CENTER_LATITUDE,
     val centerLongitude: Double = DEFAULT_CENTER_LONGITUDE,
-    val userLatitude: Double? = null,
-    val userLongitude: Double? = null,
-    val centerOnUserTrigger: Int = 0,
     val locationAvailability: LocationAvailability = LocationAvailability.Unknown,
 )
 
@@ -65,7 +62,7 @@ sealed interface MapIntent {
 sealed interface MapUiEffects {
     object ShowLocationNeededForThisFeature : MapUiEffects
     object RequestLocationPermission : MapUiEffects
-    object CenterOnMyLocation : MapUiEffects
+    data class CenterOnMyLocation(val latitude: Double, val longitude: Double) : MapUiEffects
 
     data class ShowError(val message: StringDesc) : MapUiEffects
 }
@@ -221,35 +218,25 @@ class MapViewModel(
     }
 
     private fun centerOnMyLocation() {
-        when (state.value.locationAvailability) {
-            LocationAvailability.Available -> {
-                emitEffect(MapUiEffects.CenterOnMyLocation)
-            }
-
-            LocationAvailability.PermissionDenied -> {
+        when (currentState.locationAvailability) {
+            LocationAvailability.Available -> fetchLocationAndCenter()
+            LocationAvailability.PermissionDenied ->
                 emitEffect(MapUiEffects.ShowLocationNeededForThisFeature)
-            }
 
-            LocationAvailability.Unknown -> {
+            LocationAvailability.Unknown ->
                 emitEffect(MapUiEffects.RequestLocationPermission)
-            }
 
-            LocationAvailability.LocationDisabled -> {
+            LocationAvailability.LocationDisabled ->
                 emitEffect(MapUiEffects.ShowError(MR.strings.error_location_disabled.desc()))
-            }
         }
-        if (deviceLocationProvider.availability.value != LocationAvailability.Available) return
+    }
+
+    private fun fetchLocationAndCenter() {
         viewModelScope.launch {
             runCatchingCancellable {
                 val coords =
                     deviceLocationProvider.getCurrentLocation() ?: return@runCatchingCancellable
-                updateState {
-                    copy(
-                        userLatitude = coords.latitude,
-                        userLongitude = coords.longitude,
-                        centerOnUserTrigger = centerOnUserTrigger + 1,
-                    )
-                }
+                emitEffect(MapUiEffects.CenterOnMyLocation(coords.latitude, coords.longitude))
             }.onFailure {
                 logger.w(it) { "Failed to get current location" }
                 emitEffect(MapUiEffects.ShowError(MR.strings.error_location_disabled.desc()))
