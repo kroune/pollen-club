@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.friends
+package io.github.kroune.pollen.presentation.friends.addfriend
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -48,6 +48,8 @@ import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.UiEvent
+import io.github.kroune.pollen.presentation.friends.QrScanTabContent
+import io.github.kroune.pollen.presentation.friends.YourCodeForFriends
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import io.github.kroune.pollen.qr.QrScanResult
 import kotlinx.coroutines.flow.Flow

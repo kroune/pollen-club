@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.settings
+package io.github.kroune.pollen.presentation.settings.main
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column

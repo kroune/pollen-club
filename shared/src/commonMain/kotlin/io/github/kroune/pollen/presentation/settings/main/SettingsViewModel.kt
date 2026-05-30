@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.settings
+package io.github.kroune.pollen.presentation.settings.main
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope

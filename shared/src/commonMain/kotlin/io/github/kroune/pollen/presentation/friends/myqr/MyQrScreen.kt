@@ -1,4 +1,4 @@
-package io.github.kroune.pollen.presentation.friends
+package io.github.kroune.pollen.presentation.friends.myqr
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -52,6 +52,7 @@ import io.github.kroune.pollen.presentation.common.MaxBrightnessEffect
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.rememberCopyToClipboard
 import io.github.kroune.pollen.presentation.common.rememberShareTextLauncher
+import io.github.kroune.pollen.presentation.friends.CopyableId
 import io.github.kroune.pollen.presentation.theme.PollenTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
