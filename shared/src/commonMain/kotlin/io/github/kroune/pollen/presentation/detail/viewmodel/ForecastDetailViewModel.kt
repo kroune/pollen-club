@@ -14,7 +14,7 @@ import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.repository.HealthRepository
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.PollenIconRegistry
 import io.github.kroune.pollen.presentation.common.UiEvent
@@ -39,7 +39,7 @@ private const val TIMELINE_LOOKAHEAD_DAYS = 5
 class ForecastDetailViewModel(
     private val pollenId: Int,
     private val pollenRepository: PollenRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val locationRepository: LocationRepository,
     private val healthRepository: HealthRepository,
     private val todayProvider: TodayProvider,
@@ -71,13 +71,8 @@ class ForecastDetailViewModel(
         viewModelScope.launch {
             runCatchingCancellable {
                 val locationIdAsync = async {
-                    val user = userRepository.getLocalUser()
-                    val locationId = if (user != null && user.location > 0) {
-                        user.location
-                    } else {
-                        locationRepository.getAll().first().id
-                    }
-                    locationId
+                    userSession.currentUser().location
+                        ?: locationRepository.getAll().first().id
                 }
                 val pollenAsync = async {
                     val pollens = pollenRepository.observePollens().first()

@@ -6,5 +6,5 @@ import kotlinx.coroutines.flow.Flow
 
 interface PhenologyRepository {
     fun observeObservations(): Flow<List<PhenologyObservationDomain>>
-    suspend fun submitObservation(observation: PhenologyObservationDomain, userId: Long): ApiResult<Unit>
+    suspend fun submitObservation(observation: PhenologyObservationDomain): ApiResult<Unit>
 }

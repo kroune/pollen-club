@@ -1,6 +1,7 @@
 package io.github.kroune.pollen.di
 
 import io.github.kroune.pollen.domain.model.LocaleProvider
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.util.applyMokoLocale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -24,4 +25,9 @@ fun initKoin(platformModules: List<Module> = emptyList()) {
     appScope.launch {
         localeProvider.currentLocale.collect { applyMokoLocale(it) }
     }
+
+    // Warm up identity at startup: register with the server on first launch so a user id is ready
+    // before any screen needs it. Best-effort — requireUserId() registers on demand if this fails.
+    val userSession: UserSession = koin.get()
+    appScope.launch { userSession.bootstrap() }
 }

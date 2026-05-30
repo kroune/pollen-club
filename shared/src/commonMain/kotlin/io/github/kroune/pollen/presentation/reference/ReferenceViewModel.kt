@@ -9,7 +9,7 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.repository.PollenRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.PollenIconRegistry
@@ -45,7 +45,7 @@ sealed interface ReferenceIntent {
 
 class ReferenceViewModel(
     private val pollenRepository: PollenRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val todayProvider: TodayProvider,
 ) : MviViewModel<ReferenceUiState, ReferenceIntent, UiEvent>(ReferenceUiState()) {
 
@@ -72,8 +72,8 @@ class ReferenceViewModel(
                 combine(
                     pollenRepository.observePollens(),
                     pollenRepository.observeEnglishNames(),
-                    userRepository.observeUser().flatMapLatest { user ->
-                        val locationId = user?.location?.takeIf { it > 0 }
+                    userSession.user.flatMapLatest { user ->
+                        val locationId = user.location
                         if (locationId != null) {
                             combine(
                                 pollenRepository.observeLevelsForLocation(locationId),

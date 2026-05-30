@@ -15,12 +15,14 @@ PolenClub/
 │       │       │   │   └── weather/      # Open-Meteo client
 │       │       │   ├── local/
 │       │       │   │   ├── db/           # Room database, entities, DAOs
-│       │       │   │   └── prefs/        # DataStore preferences
+│       │       │   │   └── prefs/        # DataStore: AppPreferences + typed UserData store
 │       │       │   ├── repository/       # Repository implementations
+│       │       │   ├── session/          # UserSessionImpl (identity authority)
 │       │       │   └── mapper/           # DTO <-> Domain mappers
 │       │       ├── domain/
-│       │       │   ├── model/            # Domain models (UI-ready)
+│       │       │   ├── model/            # Domain models (UI-ready); Identity + User live here
 │       │       │   ├── repository/       # Repository interfaces
+│       │       │   ├── session/          # UserSession interface
 │       │       │   └── usecase/          # Use cases (only where logic warrants it)
 │       │       ├── presentation/
 │       │       │   ├── home/             # Dashboard screen
@@ -151,13 +153,12 @@ actual fun PlatformMapView(...) { /* Text("Map not implemented") */
 
 ## Room Database
 
-Database name: `"pollen_db"`, current version: **5**.
+Database name: `"pollen_db"`, current version: **6** (v6 dropped the `users` table — user identity + location moved to a typed `DataStore<UserData>` owned by `UserSession`; see DECISIONS "Identity & user state").
 
 `LocalDateConverter` (`@TypeConverter`) is registered on the database so every `date: LocalDate` field on every entity stores as TEXT (`yyyy-MM-dd`) and reads back as `LocalDate`. Do not bridge `LocalDate ↔ String` in mappers, repos, or DAOs — the converter does it once at the persistence boundary.
 
 Entities in `PollenDatabase` (match exactly — do not add or assume others exist):
 
-- `UserEntity` — local user profile + server_id
 - `SyncStateEntity` — last sync IDs (replaces `update_info`)
 - `HealthEntryEntity` — health diary entries
 - `PollenEntity` + `PollenLevelInfoEntity` — pollen type catalog (note: `PollenLevelInfoEntity`, not
@@ -213,9 +214,9 @@ For reactive `observe*()` flows from repos, defensive `.catch` is **only** neede
 ## Koin Module Organization
 
 ```
-sharedModule        — repositories, locale provider (defined in shared commonMain)
+sharedModule        — repositories, UserSession, locale provider (defined in shared commonMain)
 networkModule       — Ktor HttpClient, API services
-databaseModule      — Room database, DAOs, DataStore
+databaseModule      — Room database, DAOs, DataStores (prefs + typed UserData), UserLocalDataSource
 viewModelModule     — all ViewModels
 platformModule      — expect/actual platform bindings (defined per platform in androidMain/iosMain)
 ```

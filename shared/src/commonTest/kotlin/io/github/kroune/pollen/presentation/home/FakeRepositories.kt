@@ -7,15 +7,16 @@ import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PersonalPollenIndexDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
+import io.github.kroune.pollen.domain.model.Identity
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.model.TodayProvider
-import io.github.kroune.pollen.domain.model.UserDomain
+import io.github.kroune.pollen.domain.model.User
 import io.github.kroune.pollen.domain.model.WeatherDomain
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.domain.repository.WeatherRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
@@ -24,20 +25,33 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 
-class FakeUserRepository : UserRepository {
-    val userFlow = MutableStateFlow<UserDomain?>(null)
-    var localUser: UserDomain? = null
+class FakeUserSession(
+    serverId: Long? = 1L,
+    location: Int? = null,
+) : UserSession {
+    val userFlow = MutableStateFlow(
+        User(
+            identity = serverId?.let { Identity.Registered(it) } ?: Identity.Anonymous,
+            location = location,
+        ),
+    )
 
-    override fun observeUser(): Flow<UserDomain?> = userFlow
-    override suspend fun getLocalUser(): UserDomain? = localUser ?: userFlow.value
-    override suspend fun registerOrUpdateUser(user: UserDomain): ApiResult<Long> {
-        userFlow.value = user.copy(serverId = 1L)
-        localUser = userFlow.value
-        return ApiResult.Success(1L)
+    override val user: StateFlow<User> = userFlow
+    override suspend fun currentUser(): User = userFlow.value
+
+    override suspend fun requireUserId(): Long =
+        (userFlow.value.identity as? Identity.Registered)?.serverId ?: run {
+            userFlow.value = userFlow.value.copy(identity = Identity.Registered(1L))
+            1L
+        }
+
+    override suspend fun bootstrap() {
+        requireUserId()
     }
 
-    override suspend fun updateAllergens(allergenIds: List<Int>) {}
-    override suspend fun updateLocation(locationId: Int) {}
+    override suspend fun setLocation(locationId: Int) {
+        userFlow.value = userFlow.value.copy(location = locationId)
+    }
 }
 
 class FakePollenRepository : PollenRepository {

@@ -12,7 +12,7 @@ sealed interface LocationAvailability {
 data class ResolvedLocation(
     val latitude: Double,
     val longitude: Double,
-    val regionId: Int,
+    val regionId: Int?,
     val regionName: String,
 )
 

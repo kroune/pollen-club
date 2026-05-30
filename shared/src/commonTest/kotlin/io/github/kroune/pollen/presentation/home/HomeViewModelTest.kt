@@ -8,7 +8,8 @@ import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.SensitivityLevel
-import io.github.kroune.pollen.domain.model.UserDomain
+import io.github.kroune.pollen.domain.model.Identity
+import io.github.kroune.pollen.domain.model.User
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlinx.coroutines.CompletableDeferred
@@ -41,7 +42,7 @@ class HomeViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val today = LocalDate(2026, 5, 18) // Monday
 
-    private lateinit var userRepo: FakeUserRepository
+    private lateinit var userRepo: FakeUserSession
     private lateinit var pollenRepo: FakePollenRepository
     private lateinit var locationRepo: FakeLocationRepository
     private lateinit var weatherRepo: FakeWeatherRepository
@@ -52,7 +53,7 @@ class HomeViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        userRepo = FakeUserRepository()
+        userRepo = FakeUserSession(serverId = 1L, location = null)
         pollenRepo = FakePollenRepository()
         locationRepo = FakeLocationRepository()
         weatherRepo = FakeWeatherRepository()
@@ -67,7 +68,7 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel() = HomeViewModel(
-        userRepository = userRepo,
+        userSession = userRepo,
         pollenRepository = pollenRepo,
         locationRepository = locationRepo,
         weatherRepository = weatherRepo,
@@ -278,7 +279,7 @@ class HomeViewModelTest {
     fun userPreferredLocation_isSelected() = runTest(testDispatcher) {
         locationRepo.locationsFlow.value = listOf(moscow, spb)
         pollenRepo.pollensFlow.value = listOf(birch)
-        userRepo.userFlow.value = UserDomain(id = 1, location = 2, serverId = 1)
+        userRepo.userFlow.value = User(identity = Identity.Registered(1), location = 2)
         personalIndexRepo.dayForecastSummaries = emptyList()
         val vm = createViewModel()
         collectState(vm)

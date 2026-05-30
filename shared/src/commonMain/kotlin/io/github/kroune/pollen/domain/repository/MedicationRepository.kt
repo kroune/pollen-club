@@ -14,7 +14,7 @@ import kotlinx.datetime.LocalDate
 interface MedicationRepository {
     suspend fun getCureCatalog(): ApiResult<CureCatalog>
     fun observeTherapies(): Flow<List<TherapyDomain>>
-    suspend fun saveTherapy(therapy: TherapyDomain, userId: Long): ApiResult<Unit>
+    suspend fun saveTherapy(therapy: TherapyDomain): ApiResult<Unit>
     suspend fun deleteTherapy(therapy: TherapyDomain)
     suspend fun recordIntake(therapyId: Long, date: LocalDate, taken: Boolean)
     fun observeIntakesForDate(date: LocalDate): Flow<List<MedicationIntakeDomain>>

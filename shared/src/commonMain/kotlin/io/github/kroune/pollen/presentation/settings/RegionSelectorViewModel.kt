@@ -7,7 +7,7 @@ import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.repository.LocationRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.util.runCatchingCancellable
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 @Stable
 data class RegionSelectorUiState(
     val locations: LoadState<ImmutableList<LocationDomain>> = LoadState.Loading,
-    val selectedLocationId: Int = 0,
+    val selectedLocationId: Int? = null,
     val searchQuery: String = "",
 )
 
@@ -33,7 +33,7 @@ sealed interface RegionSelectorIntent {
 
 class RegionSelectorViewModel(
     private val locationRepository: LocationRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
 ) : MviViewModel<RegionSelectorUiState, RegionSelectorIntent, UiEvent>(RegionSelectorUiState()) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -56,7 +56,7 @@ class RegionSelectorViewModel(
 
     private data class RegionSlice(
         val locations: ImmutableList<LocationDomain>,
-        val selectedLocationId: Int,
+        val selectedLocationId: Int?,
     )
 
     private fun loadData() {
@@ -65,14 +65,14 @@ class RegionSelectorViewModel(
         loadJob = viewModelScope.launch {
             combine(
                 locationRepository.observeLocations(),
-                userRepository.observeUser(),
+                userSession.user,
                 _searchQuery,
             ) { locations, user, query ->
                 val filtered = if (query.isBlank()) locations
                 else locations.filter { it.name.contains(query, ignoreCase = true) }
                 RegionSlice(
                     locations = filtered.toImmutableList(),
-                    selectedLocationId = user?.location ?: 0,
+                    selectedLocationId = user.location,
                 )
             }.collect { slice ->
                 updateState {
@@ -88,7 +88,7 @@ class RegionSelectorViewModel(
     private fun selectLocation(locationId: Int) {
         viewModelScope.launch {
             runCatchingCancellable {
-                userRepository.updateLocation(locationId)
+                userSession.setLocation(locationId)
             }.onFailure {
                 emitEffect(UiEvent.ShowError(MR.strings.error_update_region.desc()))
             }

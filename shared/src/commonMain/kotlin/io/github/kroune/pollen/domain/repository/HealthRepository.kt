@@ -10,5 +10,5 @@ interface HealthRepository {
     fun observeEntries(): Flow<List<HealthEntryDomain>>
     suspend fun getEntryByDate(date: LocalDate): HealthEntryDomain?
     fun observeEntryByDate(date: LocalDate): Flow<HealthEntryDomain?>
-    suspend fun syncToServer(userId: Long): ApiResult<Unit>
+    suspend fun syncToServer(): ApiResult<Unit>
 }

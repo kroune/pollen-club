@@ -9,12 +9,14 @@ import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.PhenologyObservationDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.PhenologyRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class PhenologyRepositoryImpl(
     private val api: PollenApiService,
     private val phenologyDao: PhenologyDao,
+    private val session: UserSession,
 ) : PhenologyRepository {
 
     override fun observeObservations(): Flow<List<PhenologyObservationDomain>> {
@@ -23,11 +25,10 @@ class PhenologyRepositoryImpl(
 
     override suspend fun submitObservation(
         observation: PhenologyObservationDomain,
-        userId: Long,
     ): ApiResult<Unit> = safeApiCall {
         api.addFenology(
             AddFenologyRequest(
-                userId = userId,
+                userId = session.requireUserId(),
                 date = observation.date.toString(),
                 time = observation.time,
                 comment = observation.comment,

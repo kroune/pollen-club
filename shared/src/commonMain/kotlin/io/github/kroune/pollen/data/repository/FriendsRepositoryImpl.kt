@@ -13,6 +13,7 @@ import io.github.kroune.pollen.domain.model.FriendDomain
 import io.github.kroune.pollen.domain.model.FriendLastPinDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.FriendsRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -21,17 +22,19 @@ import kotlinx.datetime.LocalDate
 class FriendsRepositoryImpl(
     private val api: PollenApiService,
     private val friendDao: FriendDao,
+    private val session: UserSession,
 ) : FriendsRepository {
 
     override fun observeFriends(): Flow<List<FriendDomain>> {
         return friendDao.observeAll().map { list -> list.map { it.toDomain() } }
     }
 
-    override suspend fun syncFriends(userId: Long): ApiResult<Unit> = safeApiCall {
-        refreshLocalFriends(userId)
+    override suspend fun syncFriends(): ApiResult<Unit> = safeApiCall {
+        refreshLocalFriends(session.requireUserId())
     }
 
-    override suspend fun addFriend(userId: Long, friendId: Int, localName: String): ApiResult<Unit> = safeApiCall {
+    override suspend fun addFriend(friendId: Int, localName: String): ApiResult<Unit> = safeApiCall {
+        val userId = session.requireUserId()
         val httpResponse = api.addFriend(AddFriendRequest(userId, friendId))
         check(httpResponse.status.value in 200..299) { "Server returned ${httpResponse.status}" }
         refreshLocalFriends(userId)
@@ -40,8 +43,8 @@ class FriendsRepositoryImpl(
         }
     }
 
-    override suspend fun deleteFriend(userId: Long, friendId: Int): ApiResult<Unit> = safeApiCall {
-        val httpResponse = api.deleteFriend(DeleteFriendRequest(userId, friendId))
+    override suspend fun deleteFriend(friendId: Int): ApiResult<Unit> = safeApiCall {
+        val httpResponse = api.deleteFriend(DeleteFriendRequest(session.requireUserId(), friendId))
         check(httpResponse.status.value in 200..299) { "Server returned ${httpResponse.status}" }
         friendDao.deleteByFriendId(friendId)
     }
@@ -50,8 +53,8 @@ class FriendsRepositoryImpl(
         friendDao.updateName(friendId, name)
     }
 
-    override suspend fun getLastPinsForFriends(userId: Long): ApiResult<Map<Int, FriendLastPinDomain>> = safeApiCall {
-        val response = api.getPinsWithFriends(GetUserRequest(userId))
+    override suspend fun getLastPinsForFriends(): ApiResult<Map<Int, FriendLastPinDomain>> = safeApiCall {
+        val response = api.getPinsWithFriends(GetUserRequest(session.requireUserId()))
         response.pins
             .filter { it.friendId > 0 }
             .groupBy { it.friendId }

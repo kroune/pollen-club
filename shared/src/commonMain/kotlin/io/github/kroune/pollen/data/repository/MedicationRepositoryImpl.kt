@@ -14,6 +14,7 @@ import io.github.kroune.pollen.domain.model.TherapyDomain
 import io.github.kroune.pollen.domain.model.safeApiCall
 import io.github.kroune.pollen.domain.repository.CureCatalog
 import io.github.kroune.pollen.domain.repository.MedicationRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -25,6 +26,7 @@ class MedicationRepositoryImpl(
     private val therapyDao: TherapyDao,
     private val medicationIntakeDao: MedicationIntakeDao,
     private val localeProvider: LocaleProvider,
+    private val session: UserSession,
 ) : MedicationRepository {
 
     private val cacheMutex = Mutex()
@@ -63,10 +65,10 @@ class MedicationRepositoryImpl(
     override fun observeTherapies(): Flow<List<TherapyDomain>> =
         therapyDao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun saveTherapy(therapy: TherapyDomain, userId: Long): ApiResult<Unit> = safeApiCall {
+    override suspend fun saveTherapy(therapy: TherapyDomain): ApiResult<Unit> = safeApiCall {
         api.addUserCure(
             AddUserCureRequest(
-                userId = userId,
+                userId = session.requireUserId(),
                 date = therapy.date.toString(),
                 cureId = therapy.cureId,
                 cureName = therapy.cureName,

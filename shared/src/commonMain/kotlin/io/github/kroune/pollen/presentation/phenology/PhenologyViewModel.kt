@@ -10,12 +10,12 @@ import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.model.LocationDomain
 import io.github.kroune.pollen.domain.model.PhenologyObservationDomain
 import io.github.kroune.pollen.domain.model.TodayProvider
-import io.github.kroune.pollen.domain.model.UserDomain
+import io.github.kroune.pollen.domain.model.User
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.repository.LocationRepository
 import io.github.kroune.pollen.domain.repository.PhenologyRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
-import io.github.kroune.pollen.domain.repository.UserRepository
+import io.github.kroune.pollen.domain.session.UserSession
 import io.github.kroune.pollen.domain.usecase.CoordinateResolver
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
@@ -52,7 +52,7 @@ sealed interface PhenologyIntent {
 
 class PhenologyViewModel(
     private val phenologyRepository: PhenologyRepository,
-    private val userRepository: UserRepository,
+    private val userSession: UserSession,
     private val localeProvider: LocaleProvider,
     private val pollenRepository: PollenRepository,
     private val coordinateResolver: CoordinateResolver,
@@ -125,7 +125,7 @@ class PhenologyViewModel(
     private fun observeLocationLabel() {
         viewModelScope.launch {
             combine(
-                userRepository.observeUser(),
+                userSession.user,
                 locationRepository.observeLocations(),
                 ::resolveLocationName,
             ).collect { label ->
@@ -134,8 +134,8 @@ class PhenologyViewModel(
         }
     }
 
-    private fun resolveLocationName(user: UserDomain?, locations: List<LocationDomain>): String {
-        val locationId = user?.location?.takeIf { it > 0 } ?: return ""
+    private fun resolveLocationName(user: User, locations: List<LocationDomain>): String {
+        val locationId = user.location ?: return ""
         return locations.firstOrNull { it.id == locationId }?.name ?: ""
     }
 
@@ -162,7 +162,6 @@ class PhenologyViewModel(
             runCatchingCancellable {
                 val now = kotlin.time.Clock.System.now()
                 val local = now.toLocalDateTime(TimeZone.currentSystemDefault())
-                val user = userRepository.getLocalUser()
                 val location = coordinateResolver.resolve()
                 val form = currentState.form
                 phenologyRepository.submitObservation(
@@ -174,7 +173,6 @@ class PhenologyViewModel(
                         longitude = location?.longitude ?: 0.0,
                         comment = form.comment,
                     ),
-                    userId = user?.serverId ?: 0,
                 )
                 updateState { copy(form = PhenologyFormState()) }
             }.onFailure {
