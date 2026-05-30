@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +30,7 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Tile
 import com.google.android.gms.maps.model.TileOverlayOptions
@@ -35,6 +40,7 @@ import com.google.maps.android.clustering.ClusterManager
 import com.google.maps.android.clustering.algo.NonHierarchicalViewBasedAlgorithm
 import com.google.maps.android.clustering.view.DefaultClusterRenderer
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.GoogleMapComposable
 import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.MapsComposeExperimentalApi
@@ -364,7 +370,7 @@ private class CanvasClusterRenderer(
 
     override fun onClusterItemUpdated(
         item: PinClusterItem,
-        marker: com.google.android.gms.maps.model.Marker,
+        marker: Marker,
     ) {
         marker.setIcon(pinDescriptor(item.pin.feeling))
         marker.setAnchor(0.5f, 0.5f)
@@ -380,7 +386,7 @@ private class CanvasClusterRenderer(
 
     override fun onClusterUpdated(
         cluster: Cluster<PinClusterItem>,
-        marker: com.google.android.gms.maps.model.Marker,
+        marker: Marker,
     ) {
         marker.setIcon(clusterDescriptor(cluster))
         marker.setAnchor(0.5f, 0.5f)
@@ -392,7 +398,7 @@ private class CanvasClusterRenderer(
 
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
-@com.google.maps.android.compose.GoogleMapComposable
+@GoogleMapComposable
 private fun MapClustering(
     pins: PlatformMapPins,
     onPinClick: (MapPinDomain) -> Unit,
@@ -404,24 +410,31 @@ private fun MapClustering(
 
     clusterManager ?: return
 
+    // The custom renderer is assigned inside MapEffect, which runs after composition.
+    // We must gate Clustering on an observable flag (not a plain read of
+    // clusterManager.renderer) so that composition is re-triggered once the renderer
+    // is ready — otherwise the first set of pins never renders until some unrelated
+    // recomposition happens to occur.
+    var rendererReady by remember(clusterManager) { mutableStateOf(false) }
+
     MapEffect(context, mapWidthPx, mapHeightPx) { map ->
         if (mapWidthPx > 0 && mapHeightPx > 0) {
             clusterManager.setAlgorithm(
                 NonHierarchicalViewBasedAlgorithm(mapWidthPx, mapHeightPx),
             )
         }
-        clusterManager.setAnimation(false)
         clusterManager.renderer = CanvasClusterRenderer(context, map, clusterManager)
+        rendererReady = true
     }
 
-    androidx.compose.runtime.SideEffect {
+    SideEffect {
         clusterManager.setOnClusterItemClickListener { item ->
             onPinClick(item.pin)
             true
         }
     }
 
-    if (clusterManager.renderer is CanvasClusterRenderer) {
+    if (rendererReady) {
         Clustering(
             items = pins.items,
             clusterManager = clusterManager,
