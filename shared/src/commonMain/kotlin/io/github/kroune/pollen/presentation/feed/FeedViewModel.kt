@@ -50,12 +50,7 @@ class FeedViewModel(
                     updateState { copy(feed = LoadState.Loaded(result.data), isRefreshing = false) }
 
                 is ApiResult.Error -> {
-                    updateState {
-                        copy(
-                            feed = if (feed is LoadState.Loaded) feed else LoadState.Failed,
-                            isRefreshing = false,
-                        )
-                    }
+                    updateState { copy(feed = LoadState.Failed, isRefreshing = false) }
                     emitEffect(UiEvent.ShowError(MR.strings.error_load_feed.desc()))
                 }
             }
