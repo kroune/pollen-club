@@ -6,13 +6,17 @@ A Kotlin Multiplatform rebuild of Pollen Club, a pollen monitoring app for aller
 
 Package: `io.github.kroune.pollen`
 
-## Before You Start
+## How We Work
+
+The project is past its initial build-out. Work now comes as specific change/fix/update requests from the user — implement exactly what is asked, don't go scope-hunting. `docs/WIP.md` holds the running list of deferred work (UI sections whose ViewModel is wired but screen isn't built yet); pick from it only when asked to.
+
+Before touching code:
 
 1. Read `docs/DECISIONS.md` — all tech stack and feature decisions
 2. Read `docs/ARCHITECTURE.md` — module structure, data flow, patterns
-3. Read `docs/PLAN.md` — phased implementation plan with checkboxes
-4. Check which phases are already complete (look for `[x]` in `PLAN.md`)
-5. Read the relevant `memorybank/` files listed in your phase's "Context files"
+3. Read `docs/WIP.md` — list of deferred/future work
+4. Read `docs/SCREENS.md` — per-screen feature and layout breakdown (consult when touching a screen)
+5. Read the relevant `memorybank/` files for the area you're working in
 
 ## Tech Stack
 
@@ -49,8 +53,12 @@ shared/src/commonMain/kotlin/io/github/kroune/pollen/
 └── util/                # Utilities
 androidApp/         # Android entry point (MainActivity, manifest, resources)
 iosApp/             # iOS entry point (stub for now)
+theme/              # Shared theme module (PollenColors, Material 3 theme)
+qr-api/             # Common QR scanner API (QrScannerUi, ViewfinderOverlay, QrScanResult)
+qr-gms/             # QR scanner impl backed by Google ML Kit (default)
+qr-foss/            # QR scanner impl, bundled FOSS (no Google deps)
 memorybank/         # Original app analysis (10 reference docs, read-only)
-docs/               # Planning docs (DECISIONS.md, ARCHITECTURE.md, PLAN.md)
+docs/               # Planning docs (DECISIONS.md, ARCHITECTURE.md, SCREENS.md, WIP.md)
 ```
 
 ## Key Patterns
@@ -67,6 +75,16 @@ docs/               # Planning docs (DECISIONS.md, ARCHITECTURE.md, PLAN.md)
 ## MVI ViewModel Pattern
 
 Every ViewModel extends `MviViewModel<State, Intent, Effect>`. Do not roll your own `_state` / `_events` plumbing.
+
+### State vs Intent vs Effect — pick the right one
+
+Three channels, three jobs. Misusing them is the most common mistake here — when in doubt, it's State.
+
+- **State** (`StateFlow`) — the single source of truth for anything the UI renders or that must survive recomposition/rotation. Dialog visibility, selected tab, expanded row, bottom-sheet state, the loading/loaded/failed status of a section: **all State**. If you're tempted to emit an effect to "make the UI show X", X belongs in State.
+- **Intent** — input flowing UI → VM only: user actions and screen lifecycle (`LoadData`, `SearchQueryChanged`, `ToggleAllergenExpanded`). The VM must **never** send itself an intent to trigger internal logic — call a private function. Intents are not an internal event bus.
+- **Effect** (`UiEvent`) — a one-shot, fire-and-forget signal VM → UI that is deliberately *not* state, because replaying it on recomposition would be wrong: a transient snackbar. `ShowError` is the **only** intended effect; don't add new `UiEvent` types for things that are really state.
+
+**Navigation is not an effect.** It's done with `onNavigate*` lambdas wired in `App.kt`'s `entry` blocks (see Navigation Pattern). Never add a `UiEvent.NavigateTo`.
 
 ### Base class (do not change without good reason)
 
@@ -282,8 +300,8 @@ Before writing any new common component, check this directory first.
 - Always compare implementation against the design on a real device
 - Do not declare UI work done without visual verification via screenshot
 
-## When You Complete a Phase
+## When You Finish a Task
 
-1. Mark all completed tasks as `[x]` in `docs/PLAN.md`
+1. If you implemented a deferred item from `docs/WIP.md`, remove it; if you deferred something new, add it (keep the file in sync)
 2. If you made architectural decisions not covered in `docs/DECISIONS.md`, add them
 3. If the actual structure diverged from `docs/ARCHITECTURE.md`, update it
