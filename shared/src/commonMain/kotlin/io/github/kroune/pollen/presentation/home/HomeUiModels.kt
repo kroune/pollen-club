@@ -68,6 +68,6 @@ data class HomePersonalIndexUi(
 @Immutable
 data class AllergenRowData(
     val pollen: PollenDomain,
-    val severity: Int,
-    val maxLevel: Int,
+    /** Current level on the universal 0..5 scale (= the raw server value). */
+    val level: Int,
 )

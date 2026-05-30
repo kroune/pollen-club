@@ -22,7 +22,6 @@ import io.github.kroune.pollen.presentation.detail.DetailStatsUi
 import io.github.kroune.pollen.presentation.detail.ForecastDetailPollenUi
 import io.github.kroune.pollen.presentation.detail.ForecastDetailUiState
 import io.github.kroune.pollen.presentation.detail.SCORE_DISPLAY_MAX
-import io.github.kroune.pollen.util.normalizeSeverity
 import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -112,11 +111,15 @@ class ForecastDetailViewModel(
                 .toImmutableList()
 
             val todayLevel = timeline.firstOrNull { it.date == today }
-            val maxLevel = pollen.maxLevel.takeIf { it > 0 } ?: KnownPollens.DEFAULT_MAX_LEVEL
+            // maxLevel is the pollen's own ceiling, used only to scale the chart's Y axis.
+            val maxLevel = pollen.maxLevel.takeIf { it > 0 } ?: KnownPollens.MAX_LEVEL
             val currentValue = todayLevel?.value ?: 0
-            val scoreRatio = if (maxLevel > 0) currentValue.toDouble() / maxLevel * 10 else 0.0
 
-            val severityLevel = computeSeverityLevel(currentValue, maxLevel)
+            // The level value is already a severity bucket on the universal 0..5 scale.
+            val severityLevel = currentValue.coerceIn(0, KnownPollens.MAX_LEVEL)
+            // Score is the level as a fraction of the universal max (not the pollen's own ceiling),
+            // shown out of 10 — so it agrees with the severity dots above.
+            val scoreRatio = currentValue.toDouble() / KnownPollens.MAX_LEVEL * 10
             val pollenUi = currentState.pollen.dataOrNull
             val severityLabel = pollenUi?.severityLabels?.get(currentValue) ?: ""
 
@@ -141,9 +144,6 @@ class ForecastDetailViewModel(
             emitEffect(UiEvent.ShowError(MR.strings.error_load_forecast.desc()))
         }
     }
-
-    private fun computeSeverityLevel(value: Int, maxLevel: Int): Int =
-        normalizeSeverity(value, maxLevel)
 
     private fun mapFeelingValues(
         timeline: List<LevelDomain>,

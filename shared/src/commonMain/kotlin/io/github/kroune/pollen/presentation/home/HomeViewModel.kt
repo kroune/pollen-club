@@ -6,33 +6,30 @@ import dev.icerock.moko.resources.desc.ResourceFormatted
 import dev.icerock.moko.resources.desc.StringDesc
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
-import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.ApiResult
-import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.LocationDomain
-import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.model.TodayProvider
+import io.github.kroune.pollen.domain.model.UserAllergenProfile
 import io.github.kroune.pollen.domain.model.dataOrNull
 import io.github.kroune.pollen.domain.repository.LocationRepository
-import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.repository.WeatherRepository
 import io.github.kroune.pollen.domain.session.UserSession
+import io.github.kroune.pollen.domain.usecase.DayForecastSummaryUseCase
+import io.github.kroune.pollen.domain.usecase.ObserveUserAllergensUseCase
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import io.github.kroune.pollen.presentation.common.startOfWeek
 import io.github.kroune.pollen.presentation.diary.monthShortStringDesc
-import io.github.kroune.pollen.util.normalizeSeverity
 import io.github.kroune.pollen.util.runCatchingCancellable
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -45,6 +42,11 @@ import kotlinx.datetime.plus
 
 private val logger = Logger.withTag("HomeViewModel")
 private const val DAYS_PER_WEEK = 7
+private val EMPTY_PROFILE = UserAllergenProfile(
+    allergens = emptyList(),
+    otherPollens = emptyList(),
+    index = null,
+)
 
 sealed interface HomeIntent {
     data object LoadData : HomeIntent
@@ -62,13 +64,14 @@ class HomeViewModel(
     private val pollenRepository: PollenRepository,
     private val locationRepository: LocationRepository,
     private val weatherRepository: WeatherRepository,
-    private val personalIndexRepository: PersonalIndexRepository,
+    private val observeUserAllergensUseCase: ObserveUserAllergensUseCase,
+    private val dayForecastSummaryUseCase: DayForecastSummaryUseCase,
     private val sensitivityRepository: SensitivityRepository,
     private val todayProvider: TodayProvider,
 ) : MviViewModel<HomeUiState, HomeIntent, UiEvent>(HomeUiState()) {
 
     private val _selectedLocationIdOverride = MutableStateFlow<Int?>(null)
-    private val _selectedDayLevels = MutableStateFlow<List<LevelDomain>?>(null)
+    private val _selectedDate = MutableStateFlow<LocalDate?>(null)
 
     private val selectedLocationFlow = combine(
         _selectedLocationIdOverride,
@@ -80,31 +83,13 @@ class HomeViewModel(
             ?: locations.firstOrNull()
     }.distinctUntilChanged()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val todayLevelsFlow: Flow<List<LevelDomain>> = combine(
-        selectedLocationFlow,
-        todayProvider.today,
-    ) { location, today -> location to today }
-        .flatMapLatest { (location, today) ->
-            if (location == null) return@flatMapLatest flowOf(emptyList())
-            combine(
-                pollenRepository.observeLevelsForLocation(location.id),
-                pollenRepository.observeForecastsForLocation(location.id),
-            ) { levels, forecasts ->
-                val todayLevels = levels.filter { it.date == today }
-                todayLevels.ifEmpty { forecasts.filter { it.date == today } }
-            }
-        }
-
     init {
         observePollens()
         observeLocations()
         observeToday()
         observeSelectedLocation()
         observeUserAllergens()
-        observeOtherAllergens()
         observeLocationChanges()
-        observePersonalIndexOnLevels()
         syncData(forceRefresh = false)
     }
 
@@ -161,40 +146,40 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * Single reactive source for the user's allergens, the non-sensitive complement and the
+     * personal index. Re-subscribes whenever the location or the selected day changes; otherwise
+     * the use case pushes updates on its own as sensitivities or levels change.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeUserAllergens() {
         viewModelScope.launch {
             combine(
-                pollenRepository.observePollens(),
-                sensitivityRepository.observeAll(),
-                todayLevelsFlow,
-                _selectedDayLevels,
-            ) { pollens, sensitivities, todayLevels, selectedDayLevels ->
-                computeUserAllergens(pollens, sensitivities, selectedDayLevels ?: todayLevels)
-                    .toImmutableList()
-            }.collect { rows ->
-                updateState { copy(userAllergens = rows) }
+                selectedLocationFlow,
+                todayProvider.today,
+                _selectedDate,
+            ) { location, today, selectedDate ->
+                location?.let { AllergenQuery(locationId = it.id, date = selectedDate ?: today) }
+            }.distinctUntilChanged().flatMapLatest { query ->
+                if (query == null) flowOf(EMPTY_PROFILE)
+                else observeUserAllergensUseCase(query.locationId, query.date)
+            }.collect { profile ->
+                updateState {
+                    copy(
+                        userAllergens = profile.allergens
+                            .map { it.toRowData() }
+                            .toImmutableList(),
+                        otherAllergens = profile.otherPollens
+                            .map { HomeOtherAllergenUi(it.id, it.name) }
+                            .toImmutableList(),
+                        personalIndex = LoadState.Loaded(profile.index?.toUi()),
+                    )
+                }
             }
         }
     }
 
-    private fun observeOtherAllergens() {
-        viewModelScope.launch {
-            combine(
-                pollenRepository.observePollens(),
-                sensitivityRepository.observeAll(),
-            ) { pollens, sensitivities ->
-                val sensitiveIds = sensitivities
-                    .filter { it.level != SensitivityLevel.NONE }
-                    .map { it.pollenId }
-                    .toSet()
-                val filtered = if (sensitiveIds.isEmpty()) pollens
-                else pollens.filter { it.id !in sensitiveIds }
-                filtered.map { HomeOtherAllergenUi(it.id, it.name) }
-            }.collect { others ->
-                updateState { copy(otherAllergens = others.toImmutableList()) }
-            }
-        }
-    }
+    private data class AllergenQuery(val locationId: Int, val date: LocalDate)
 
     private fun observeLocationChanges() {
         viewModelScope.launch {
@@ -206,7 +191,7 @@ class HomeViewModel(
                             dayForecasts = LoadState.Loading,
                         )
                     }
-                    _selectedDayLevels.value = null
+                    _selectedDate.value = null
                     launch { loadWeather(location) }
                     // Avoid duplicate forecast loads if a sync is already in progress;
                     // syncData will call loadDayForecasts after it finishes.
@@ -218,52 +203,9 @@ class HomeViewModel(
         }
     }
 
-    private fun observePersonalIndexOnLevels() {
-        viewModelScope.launch {
-            combine(
-                todayLevelsFlow,
-                _selectedDayLevels,
-                sensitivityRepository.observeAll(),
-                pollenRepository.observePollens(),
-            ) { todayLevels, selectedDayLevels, sensitivities, pollens ->
-                PersonalIndexInputs(selectedDayLevels ?: todayLevels, sensitivities, pollens)
-            }.collect { inputs ->
-                val hasActiveSensitivities = inputs.sensitivities.any { it.level != SensitivityLevel.NONE }
-                if (inputs.levels.isNotEmpty() && hasActiveSensitivities) {
-                    loadPersonalIndex(inputs.levels, inputs.sensitivities, inputs.pollens)
-                } else {
-                    updateState { copy(personalIndex = LoadState.Loaded(null)) }
-                }
-            }
-        }
-    }
-
-    private data class PersonalIndexInputs(
-        val levels: List<LevelDomain>,
-        val sensitivities: List<AllergenSensitivityDomain>,
-        val pollens: List<PollenDomain>,
-    )
-
-    private fun computeUserAllergens(
-        pollens: List<PollenDomain>,
-        sensitivities: List<AllergenSensitivityDomain>,
-        levels: List<LevelDomain>,
-    ): List<AllergenRowData> {
-        val sensitiveIds = sensitivities
-            .filter { it.level != SensitivityLevel.NONE }
-            .map { it.pollenId }
-            .toSet()
-        if (sensitiveIds.isEmpty()) return emptyList()
-        val levelsMap = levels.associateBy { it.pollenId }
-        return pollens.filter { it.id in sensitiveIds }.map { pollen ->
-            val rawValue = levelsMap[pollen.id]?.value ?: 0
-            AllergenRowData(pollen, normalizeSeverity(rawValue, pollen.maxLevel), pollen.maxLevel)
-        }
-    }
-
     private fun selectLocation(locationId: Int) {
         _selectedLocationIdOverride.value = locationId
-        _selectedDayLevels.value = null
+        _selectedDate.value = null
         updateState {
             copy(
                 showLocationPicker = false,
@@ -278,21 +220,9 @@ class HomeViewModel(
     private fun selectDay(index: Int) {
         val forecasts = currentState.dayForecasts.dataOrNull ?: return
         if (index < 0 || index >= forecasts.size) return
+        // The allergen observer reacts to _selectedDate and re-emits the profile for the new day.
         updateState { copy(activeDayIndex = index, personalIndex = LoadState.Loading) }
-
-        viewModelScope.launch {
-            val location = currentState.selectedLocation ?: return@launch
-            val selectedDate = forecasts[index].date
-            runCatchingCancellable {
-                val live = pollenRepository.getLevelsForLocation(location.id, selectedDate)
-                _selectedDayLevels.value = live.ifEmpty {
-                    pollenRepository.getForecastsForLocation(location.id, selectedDate)
-                }
-            }.onFailure {
-                updateState { copy(personalIndex = LoadState.Failed) }
-                emitEffect(UiEvent.ShowError(MR.strings.error_load_day_data.desc()))
-            }
-        }
+        _selectedDate.value = forecasts[index].date
     }
 
     private fun shiftWeek(delta: Int) {
@@ -305,7 +235,7 @@ class HomeViewModel(
                 personalIndex = LoadState.Loading,
             )
         }
-        _selectedDayLevels.value = null
+        _selectedDate.value = null
 
         viewModelScope.launch {
             val location = currentState.selectedLocation ?: return@launch
@@ -391,9 +321,7 @@ class HomeViewModel(
             val weekLabel = computeWeekLabel(weekStart)
             updateState { copy(weekLabel = weekLabel) }
 
-            val summaries = personalIndexRepository.computeDayForecastSummariesForAllPollens(
-                locationId, weekStart, DAYS_PER_WEEK,
-            )
+            val summaries = dayForecastSummaryUseCase(locationId, weekStart, DAYS_PER_WEEK)
             val dayOfWeekNames = listOf(
                 MR.strings.dow_mon.desc(),
                 MR.strings.dow_tue.desc(),
@@ -419,32 +347,6 @@ class HomeViewModel(
         }.onFailure {
             updateState { copy(dayForecasts = LoadState.Failed) }
             emitEffect(UiEvent.ShowError(MR.strings.error_load_pollen_forecast.desc()))
-        }
-    }
-
-    private suspend fun loadPersonalIndex(
-        levels: List<LevelDomain>,
-        sensitivities: List<AllergenSensitivityDomain>,
-        pollens: List<PollenDomain>,
-    ) {
-        runCatchingCancellable {
-            val index = personalIndexRepository.computePersonalIndex(
-                levels.toImmutableList(),
-                sensitivities,
-                pollens.toImmutableList(),
-            )
-            val severityLabels = listOf(
-                MR.strings.severity_none.desc(),
-                MR.strings.severity_low.desc(),
-                MR.strings.severity_medium.desc(),
-                MR.strings.severity_high.desc(),
-                MR.strings.severity_very_high.desc(),
-                MR.strings.severity_extra.desc(),
-            )
-            updateState { copy(personalIndex = LoadState.Loaded(index.toUi(severityLabels))) }
-        }.onFailure {
-            updateState { copy(personalIndex = LoadState.Failed) }
-            emitEffect(UiEvent.ShowError(MR.strings.error_load_data.desc()))
         }
     }
 
