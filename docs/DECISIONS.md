@@ -59,6 +59,12 @@ The original app had no real user profile: `set_user.php` only ever sent `id` (+
 - Deleted in this refactor: `UserDomain`, `UserEntity`, `UserDao`, `UserRepository`/`Impl`, `registerOrUpdateUser`, and the dead `name`/`lastName`/`age`/`activity`/`selectedAllergens` fields. `SettingsViewModel`'s "main allergen" label now reads the real `allergen_sensitivity` data instead of the perpetually-empty `selectedAllergens`.
 - GPS-driven location selection is deferred — see `docs/WIP.md`.
 
+## Severity & the personal index
+
+- **A level `value` is already a severity bucket on a universal 0..5 scale — not a raw concentration.** `get_pollens.php` gives every pollen a `levels` array (`level` 0..max_level, each with a localized `name` and `color`); the `value` in `get_levels.php`/`get_forecasts.php` is an index into it. Level numbers mean the same severity for every pollen (3 = "High" everywhere); a pollen's `max_level` only caps how high it can go (Oak tops out at 4 "Very high", Birch reaches 5 "Extra"). Confirmed against the live API and the original app, which did a direct `levels[].level == value` lookup with no arithmetic. So there is **no `normalizeSeverity`** — per-pollen severity *is* the value (`KnownPollens.MAX_LEVEL == 5` is the universal ceiling, matching the app's 6-step severity palette).
+- **The personal index is ours (the original had none) and normalizes against the universal max, not each pollen's own ceiling.** Per active sensitivity: `value / KnownPollens.MAX_LEVEL` (0..1) × sensitivity weight, summed ÷ total weight, ×10 → a 0..10 score plus a 0..5 severity bucket. Normalizing per-pollen would wrongly score Oak-at-its-own-max as a perfect 10.
+- **User allergens + index live in `ObserveUserAllergensUseCase`** (reactive, repo-driven): given a location and day it emits a `UserAllergenProfile` — the sensitive allergens with current level, the non-sensitive complement, and the index (null when no active sensitivities or no levels). The home week-strip is `DayForecastSummaryUseCase`. The former `PersonalIndexRepository` was deleted — it was pure computation masquerading as a repository.
+
 ## Server API
 
 - Base URL: `https://data.pollen.club/api_2/`

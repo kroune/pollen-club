@@ -8,7 +8,7 @@ import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.AppLocale
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.SensitivityLevel
+import io.github.kroune.pollen.domain.model.primaryPollenId
 import io.github.kroune.pollen.domain.model.serverIdOrNull
 import io.github.kroune.pollen.domain.repository.FriendsRepository
 import io.github.kroune.pollen.domain.repository.LocationRepository
@@ -69,10 +69,8 @@ class SettingsViewModel(
             pollenRepository.observePollens(),
             sensitivityRepository.observeAll(),
         ) { pollens, sensitivities ->
-            sensitivities
-                .filter { it.level != SensitivityLevel.NONE }
-                .maxByOrNull { it.level.value }
-                ?.let { top -> pollens.firstOrNull { it.id == top.pollenId }?.name }
+            sensitivities.primaryPollenId()
+                ?.let { pollenId -> pollens.firstOrNull { it.id == pollenId }?.name }
         }
 
         loadJob = viewModelScope.launch {

@@ -3,6 +3,8 @@ package io.github.kroune.pollen.di
 import io.github.kroune.pollen.data.repository.TodayProviderImpl
 import io.github.kroune.pollen.data.repository.FeedRepositoryImpl
 import io.github.kroune.pollen.domain.usecase.CoordinateResolver
+import io.github.kroune.pollen.domain.usecase.DayForecastSummaryUseCase
+import io.github.kroune.pollen.domain.usecase.ObserveUserAllergensUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,7 +20,6 @@ import io.github.kroune.pollen.data.repository.SettingsRepositoryImpl
 import io.github.kroune.pollen.data.repository.StatisticsRepositoryImpl
 import io.github.kroune.pollen.data.repository.UserForecastRepositoryImpl
 import io.github.kroune.pollen.data.session.UserSessionImpl
-import io.github.kroune.pollen.data.repository.PersonalIndexRepositoryImpl
 import io.github.kroune.pollen.data.repository.SensitivityRepositoryImpl
 import io.github.kroune.pollen.data.repository.WeatherRepositoryImpl
 import io.github.kroune.pollen.domain.model.LocaleProvider
@@ -35,7 +36,6 @@ import io.github.kroune.pollen.domain.repository.SettingsRepository
 import io.github.kroune.pollen.domain.repository.StatisticsRepository
 import io.github.kroune.pollen.domain.repository.UserForecastRepository
 import io.github.kroune.pollen.domain.session.UserSession
-import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.repository.WeatherRepository
 import org.koin.dsl.module
@@ -60,6 +60,7 @@ val sharedModule = module {
     single<SettingsRepository> { SettingsRepositoryImpl(get(), get()) }
     single<UserForecastRepository> { UserForecastRepositoryImpl(get(), get(), get()) }
     single<SensitivityRepository> { SensitivityRepositoryImpl(get()) }
-    single<PersonalIndexRepository> { PersonalIndexRepositoryImpl(get()) }
-    factory { CoordinateResolver(get(), get(), get()) }
+    single { CoordinateResolver(get(), get(), get()) }
+    single { ObserveUserAllergensUseCase(get(), get()) }
+    single { DayForecastSummaryUseCase(get()) }
 }

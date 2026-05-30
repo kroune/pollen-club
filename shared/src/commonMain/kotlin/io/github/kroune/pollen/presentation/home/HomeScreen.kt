@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import dev.icerock.moko.resources.compose.localized
 import dev.icerock.moko.resources.compose.stringResource
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.KnownPollens
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.presentation.common.CollectEffects
 import io.github.kroune.pollen.presentation.common.DayStripSkeleton
@@ -409,7 +410,7 @@ fun PersonalIndexCard(
     score: Double,
     severityLevel: Int,
     label: String,
-    maxLevel: Int = 5,
+    maxLevel: Int = KnownPollens.MAX_LEVEL,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -525,7 +526,7 @@ fun SectionHeader(
 @Composable
 fun SeverityDotsRow(
     level: Int,
-    maxDots: Int = 5,
+    maxDots: Int = KnownPollens.MAX_LEVEL,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -576,7 +577,7 @@ fun AllergenListCard(
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f),
                     )
-                    SeverityDotsRow(level = allergen.severity)
+                    SeverityDotsRow(level = allergen.level)
                     Spacer(Modifier.width(8.dp))
                     Icon(
                         Icons.Default.ChevronRight,

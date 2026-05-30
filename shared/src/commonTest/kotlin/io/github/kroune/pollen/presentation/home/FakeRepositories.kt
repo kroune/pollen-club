@@ -2,10 +2,8 @@ package io.github.kroune.pollen.presentation.home
 
 import io.github.kroune.pollen.domain.model.AllergenSensitivityDomain
 import io.github.kroune.pollen.domain.model.ApiResult
-import io.github.kroune.pollen.domain.model.DayForecastSummaryDomain
 import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LocationDomain
-import io.github.kroune.pollen.domain.model.PersonalPollenIndexDomain
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.Identity
 import io.github.kroune.pollen.domain.model.SensitivityLevel
@@ -13,7 +11,6 @@ import io.github.kroune.pollen.domain.model.TodayProvider
 import io.github.kroune.pollen.domain.model.User
 import io.github.kroune.pollen.domain.model.WeatherDomain
 import io.github.kroune.pollen.domain.repository.LocationRepository
-import io.github.kroune.pollen.domain.repository.PersonalIndexRepository
 import io.github.kroune.pollen.domain.repository.PollenRepository
 import io.github.kroune.pollen.domain.repository.SensitivityRepository
 import io.github.kroune.pollen.domain.session.UserSession
@@ -137,36 +134,6 @@ class FakeWeatherRepository : WeatherRepository {
     )
 
     override suspend fun getCurrentWeather(latitude: Double, longitude: Double): ApiResult<WeatherDomain> = result
-}
-
-class FakePersonalIndexRepository : PersonalIndexRepository {
-    var indexResult = PersonalPollenIndexDomain(value = 3.5, maxPossible = 10.0, dominantAllergenName = "Birch")
-    var dayForecastSummaries: List<DayForecastSummaryDomain> = emptyList()
-
-    override suspend fun computePersonalIndex(
-        levels: List<LevelDomain>,
-        sensitivities: List<AllergenSensitivityDomain>,
-        pollens: List<PollenDomain>,
-    ): PersonalPollenIndexDomain = indexResult
-
-    override suspend fun computeDayForecastSummaries(
-        locationId: Int,
-        sensitivities: List<AllergenSensitivityDomain>,
-        days: Int,
-    ): List<DayForecastSummaryDomain> = dayForecastSummaries
-
-    override suspend fun computeDayForecastSummaries(
-        locationId: Int,
-        sensitivities: List<AllergenSensitivityDomain>,
-        startDate: LocalDate,
-        days: Int,
-    ): List<DayForecastSummaryDomain> = dayForecastSummaries
-
-    override suspend fun computeDayForecastSummariesForAllPollens(
-        locationId: Int,
-        startDate: LocalDate,
-        days: Int,
-    ): List<DayForecastSummaryDomain> = dayForecastSummaries
 }
 
 class FakeSensitivityRepository : SensitivityRepository {

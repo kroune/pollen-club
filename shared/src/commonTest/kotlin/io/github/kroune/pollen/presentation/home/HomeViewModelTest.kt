@@ -11,6 +11,8 @@ import io.github.kroune.pollen.domain.model.SensitivityLevel
 import io.github.kroune.pollen.domain.model.Identity
 import io.github.kroune.pollen.domain.model.User
 import io.github.kroune.pollen.domain.model.dataOrNull
+import io.github.kroune.pollen.domain.usecase.DayForecastSummaryUseCase
+import io.github.kroune.pollen.domain.usecase.ObserveUserAllergensUseCase
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +48,6 @@ class HomeViewModelTest {
     private lateinit var pollenRepo: FakePollenRepository
     private lateinit var locationRepo: FakeLocationRepository
     private lateinit var weatherRepo: FakeWeatherRepository
-    private lateinit var personalIndexRepo: FakePersonalIndexRepository
     private lateinit var sensitivityRepo: FakeSensitivityRepository
     private lateinit var todayProvider: FakeTodayProvider
 
@@ -57,7 +58,6 @@ class HomeViewModelTest {
         pollenRepo = FakePollenRepository()
         locationRepo = FakeLocationRepository()
         weatherRepo = FakeWeatherRepository()
-        personalIndexRepo = FakePersonalIndexRepository()
         sensitivityRepo = FakeSensitivityRepository()
         todayProvider = FakeTodayProvider(today)
     }
@@ -72,7 +72,8 @@ class HomeViewModelTest {
         pollenRepository = pollenRepo,
         locationRepository = locationRepo,
         weatherRepository = weatherRepo,
-        personalIndexRepository = personalIndexRepo,
+        observeUserAllergensUseCase = ObserveUserAllergensUseCase(pollenRepo, sensitivityRepo),
+        dayForecastSummaryUseCase = DayForecastSummaryUseCase(pollenRepo),
         sensitivityRepository = sensitivityRepo,
         todayProvider = todayProvider,
     )
@@ -89,16 +90,17 @@ class HomeViewModelTest {
 
     private val birch = PollenDomain(
         id = 10, name = "Birch", description = "Birch tree",
-        maxLevel = 1000, levels = emptyList(),
+        maxLevel = 5, levels = emptyList(),
     )
 
     private val alder = PollenDomain(
         id = 20, name = "Alder", description = "Alder tree",
-        maxLevel = 800, levels = emptyList(),
+        maxLevel = 4, levels = emptyList(),
     )
 
+    // value is a severity bucket on the universal 0..5 scale, not a raw concentration.
     private val birchLevel = LevelDomain(
-        id = 1, date = today, pollenId = 10, locationId = 1, value = 500,
+        id = 1, date = today, pollenId = 10, locationId = 1, value = 2,
     )
 
     private fun weekDaySummaries(): List<DayForecastSummaryDomain> {
@@ -114,7 +116,6 @@ class HomeViewModelTest {
         locationRepo.locationsFlow.value = listOf(moscow)
         pollenRepo.pollensFlow.value = listOf(birch, alder)
         pollenRepo.emitLevels(listOf(birchLevel))
-        personalIndexRepo.dayForecastSummaries = weekDaySummaries()
     }
 
     private fun TestScope.collectState(vm: HomeViewModel) {
@@ -170,7 +171,6 @@ class HomeViewModelTest {
 
     @Test
     fun afterSyncCompletes_emptyDataShowsLoaded() = runTest(testDispatcher) {
-        personalIndexRepo.dayForecastSummaries = emptyList()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
@@ -280,7 +280,6 @@ class HomeViewModelTest {
         locationRepo.locationsFlow.value = listOf(moscow, spb)
         pollenRepo.pollensFlow.value = listOf(birch)
         userRepo.userFlow.value = User(identity = Identity.Registered(1), location = 2)
-        personalIndexRepo.dayForecastSummaries = emptyList()
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
@@ -357,7 +356,7 @@ class HomeViewModelTest {
 
         val allergen = vm.state.value.userAllergens.first()
         assertEquals(birch.id, allergen.pollen.id)
-        assertEquals(2, allergen.severity)
+        assertEquals(2, allergen.level)
     }
 
     @Test
@@ -469,8 +468,8 @@ class HomeViewModelTest {
         sensitivityRepo.emit(listOf(AllergenSensitivityDomain(birch.id, SensitivityLevel.MODERATE)))
         val summaries = weekDaySummaries()
         val tuesdayDate = summaries[1].date
-        val tuesdayLevel = LevelDomain(id = 99, date = tuesdayDate, pollenId = 10, locationId = 1, value = 800)
-        pollenRepo.levelsForDate[1 to tuesdayDate] = listOf(tuesdayLevel)
+        val tuesdayLevel = LevelDomain(id = 99, date = tuesdayDate, pollenId = 10, locationId = 1, value = 4)
+        pollenRepo.emitLevels(listOf(birchLevel, tuesdayLevel))
         val vm = createViewModel()
         collectState(vm)
         advanceUntilIdle()
@@ -479,8 +478,8 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val allergen = vm.state.value.userAllergens.first()
-        // 800/1000 * 5 = 4
-        assertEquals(4, allergen.severity)
+        // The level value IS the severity bucket on the 0..5 scale.
+        assertEquals(4, allergen.level)
     }
 
     @Test

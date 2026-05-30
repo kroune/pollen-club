@@ -10,7 +10,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.desc.Raw
 import dev.icerock.moko.resources.desc.StringDesc
-import io.github.kroune.pollen.domain.model.LevelDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.model.PollenDomain
 import io.github.kroune.pollen.domain.model.PollenLevelDomain
@@ -31,14 +30,6 @@ private val previewPollen = PollenDomain(
         PollenLevelDomain(level = 3, name = "Высокий", info = "", color = 0xFFD4713A.toInt()),
         PollenLevelDomain(level = 4, name = "Очень высокий", info = "", color = 0xFFC43D3D.toInt()),
     ),
-)
-
-private val previewLevel = LevelDomain(
-    id = 1,
-    date = LocalDate(2026, 5, 5),
-    pollenId = 1,
-    locationId = 1,
-    value = 2,
 )
 
 private val previewWeather = HomeWeatherUi(
@@ -117,9 +108,9 @@ private fun PreviewSeverityDotsRow() {
 @Composable
 private fun PreviewAllergenListCard() {
     val allergens = persistentListOf(
-        AllergenRowData(previewPollen, 2, 4),
-        AllergenRowData(previewPollen.copy(id = 2, name = "Орешник"), 0, 4),
-        AllergenRowData(previewPollen.copy(id = 3, name = "Ольха"), 0, 4),
+        AllergenRowData(previewPollen, level = 2),
+        AllergenRowData(previewPollen.copy(id = 2, name = "Орешник"), level = 0),
+        AllergenRowData(previewPollen.copy(id = 3, name = "Ольха"), level = 0),
     )
     PollenTheme {
         Box(Modifier.background(MaterialTheme.colorScheme.background).padding(16.dp)) {
@@ -191,9 +182,9 @@ private fun PreviewHomeScreenLoaded() {
         HomeDayForecastUi(29, StringDesc.Raw("вт"), 1, LocalDate(2026, 4, 29)),
     )
     val allergens = persistentListOf(
-        AllergenRowData(previewPollen, 2, 4),
-        AllergenRowData(previewPollen.copy(id = 2, name = "Орешник"), 0, 4),
-        AllergenRowData(previewPollen.copy(id = 3, name = "Ольха"), 0, 4),
+        AllergenRowData(previewPollen, level = 2),
+        AllergenRowData(previewPollen.copy(id = 2, name = "Орешник"), level = 0),
+        AllergenRowData(previewPollen.copy(id = 3, name = "Ольха"), level = 0),
     )
     val others = persistentListOf(
         previewPollen.copy(id = 4, name = "Дуб"),
