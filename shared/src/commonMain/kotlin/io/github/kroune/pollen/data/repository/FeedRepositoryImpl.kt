@@ -7,6 +7,10 @@ import io.github.kroune.pollen.domain.model.FeedDataDomain
 import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.repository.FeedRepository
 import io.github.kroune.pollen.domain.session.UserSession
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 class FeedRepositoryImpl(
     private val api: PollenApiService,
@@ -14,14 +18,17 @@ class FeedRepositoryImpl(
     private val session: UserSession,
 ) : FeedRepository {
 
-    override suspend fun getFeed(): FeedDataDomain {
-        val locale = localeProvider.current()
+    override fun getFeed(): Flow<FeedDataDomain> = flow {
         val response = api.getCommentsAndLenta(GetUserRequest(session.requireUserId()))
-        return FeedDataDomain(
-            comments = response.comments.map { it.toDomain(locale) },
-            vkPosts = response.lentaVk.map { it.toDomain() },
-            media = response.lentaMedia.map { it.toDomain(locale) },
-            friendFeels = response.friends.map { it.toDomain() },
+        emitAll(
+            localeProvider.currentLocale.map { locale ->
+                FeedDataDomain(
+                    comments = response.comments.map { it.toDomain(locale) },
+                    vkPosts = response.lentaVk.map { it.toDomain() },
+                    media = response.lentaMedia.map { it.toDomain(locale) },
+                    friendFeels = response.friends.map { it.toDomain() },
+                )
+            },
         )
     }
 }

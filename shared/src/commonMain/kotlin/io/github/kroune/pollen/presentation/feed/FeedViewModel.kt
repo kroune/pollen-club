@@ -6,12 +6,11 @@ import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
 import io.github.kroune.pollen.domain.model.FeedDataDomain
 import io.github.kroune.pollen.domain.model.LoadState
-import io.github.kroune.pollen.domain.model.LocaleProvider
 import io.github.kroune.pollen.domain.repository.FeedRepository
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
-import io.github.kroune.pollen.util.runCatchingCancellable
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 @Stable
@@ -26,47 +25,37 @@ sealed interface FeedIntent {
 
 class FeedViewModel(
     private val feedRepository: FeedRepository,
-    localeProvider: LocaleProvider,
 ) : MviViewModel<FeedUiState, FeedIntent, UiEvent>(FeedUiState()) {
 
-    init {
-        onIntent(FeedIntent.Refresh)
-        observeLocaleChanges(localeProvider)
-    }
+    private var feedJob: Job? = null
 
-    private fun observeLocaleChanges(localeProvider: LocaleProvider) {
-        viewModelScope.launch {
-            localeProvider.currentLocale.drop(1).collect {
-                onIntent(FeedIntent.Refresh)
-            }
-        }
+    init {
+        feedJob = launchFeed()
     }
 
     override fun handleIntent(intent: FeedIntent) {
         when (intent) {
-            FeedIntent.Refresh -> refresh()
+            FeedIntent.Refresh -> {
+                updateState { copy(isRefreshing = true) }
+                feedJob?.cancel()
+                feedJob = launchFeed()
+            }
         }
     }
 
-    private fun refresh() {
-        val isFirstLoad = currentState.feed !is LoadState.Loaded
-        if (isFirstLoad) {
-            updateState { copy(feed = LoadState.Loading) }
-        } else {
-            updateState { copy(isRefreshing = true) }
-        }
-        viewModelScope.launch {
-            try {
-                runCatchingCancellable {
-                    val data = feedRepository.getFeed()
-                    updateState { copy(feed = LoadState.Loaded(data)) }
-                }.onFailure {
-                    updateState { copy(feed = LoadState.Failed) }
-                    emitEffect(UiEvent.ShowError(MR.strings.error_load_feed.desc()))
+    private fun launchFeed(): Job = viewModelScope.launch {
+        feedRepository.getFeed()
+            .catch {
+                updateState {
+                    copy(
+                        feed = if (feed is LoadState.Loaded) feed else LoadState.Failed,
+                        isRefreshing = false,
+                    )
                 }
-            } finally {
-                updateState { copy(isRefreshing = false) }
+                emitEffect(UiEvent.ShowError(MR.strings.error_load_feed.desc()))
             }
-        }
+            .collect { data ->
+                updateState { copy(feed = LoadState.Loaded(data), isRefreshing = false) }
+            }
     }
 }
