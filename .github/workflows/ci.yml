@@ -39,6 +39,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
+      # :shared:allTests builds native test targets, which use the Kotlin/Native
+      # toolchain in ~/.konan (not covered by setup-gradle). See build-ios for details.
+      - name: Cache Kotlin/Native (~/.konan)
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-kotlin-2.3.20
+          restore-keys: konan-${{ runner.os }}-
       - name: Run shared module tests
         run: ./gradlew :shared:allTests --no-daemon
 
@@ -91,8 +99,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
-      - name: Compile shared framework (device + simulator)
-        run: ./gradlew :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64 --no-daemon
+      # Kotlin/Native toolchain + prebuilt platform caches live in ~/.konan, which
+      # setup-gradle does NOT cache. Without this they are re-downloaded/rebuilt every
+      # run. Key on the Kotlin version so a bump invalidates cleanly (bump when the
+      # `kotlin` version in gradle/libs.versions.toml changes).
+      - name: Cache Kotlin/Native (~/.konan)
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-kotlin-2.3.20
+          restore-keys: konan-${{ runner.os }}-
+      # Device target only — the simulator framework is compiled by
+      # embedAndSignAppleFrameworkForXcode inside the xcodebuild step below, so
+      # compiling it here too would be redundant. iosArm64 is the one target
+      # xcodebuild does not exercise, so we still verify it links.
+      - name: Compile shared framework (device target)
+        run: ./gradlew :shared:compileKotlinIosArm64 --no-daemon
       - name: Build iOS app (simulator, no signing)
         run: |
           xcodebuild \
@@ -106,4 +128,5 @@ jobs:
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             build
