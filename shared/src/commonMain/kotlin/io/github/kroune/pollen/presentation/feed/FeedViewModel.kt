@@ -4,13 +4,13 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import dev.icerock.moko.resources.desc.desc
 import io.github.kroune.pollen.MR
+import io.github.kroune.pollen.domain.model.ApiResult
 import io.github.kroune.pollen.domain.model.FeedDataDomain
 import io.github.kroune.pollen.domain.model.LoadState
 import io.github.kroune.pollen.domain.repository.FeedRepository
 import io.github.kroune.pollen.presentation.common.MviViewModel
 import io.github.kroune.pollen.presentation.common.UiEvent
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 @Stable
@@ -44,18 +44,21 @@ class FeedViewModel(
     }
 
     private fun launchFeed(): Job = viewModelScope.launch {
-        feedRepository.getFeed()
-            .catch {
-                updateState {
-                    copy(
-                        feed = if (feed is LoadState.Loaded) feed else LoadState.Failed,
-                        isRefreshing = false,
-                    )
+        feedRepository.getFeed().collect { result ->
+            when (result) {
+                is ApiResult.Success ->
+                    updateState { copy(feed = LoadState.Loaded(result.data), isRefreshing = false) }
+
+                is ApiResult.Error -> {
+                    updateState {
+                        copy(
+                            feed = if (feed is LoadState.Loaded) feed else LoadState.Failed,
+                            isRefreshing = false,
+                        )
+                    }
+                    emitEffect(UiEvent.ShowError(MR.strings.error_load_feed.desc()))
                 }
-                emitEffect(UiEvent.ShowError(MR.strings.error_load_feed.desc()))
             }
-            .collect { data ->
-                updateState { copy(feed = LoadState.Loaded(data), isRefreshing = false) }
-            }
+        }
     }
 }
