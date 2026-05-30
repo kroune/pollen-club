@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-kotlin-2.3.20
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
       - name: Run shared module tests
         run: ./gradlew :shared:allTests --no-daemon
@@ -101,13 +101,13 @@ jobs:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
       # Kotlin/Native toolchain + prebuilt platform caches live in ~/.konan, which
       # setup-gradle does NOT cache. Without this they are re-downloaded/rebuilt every
-      # run. Key on the Kotlin version so a bump invalidates cleanly (bump when the
-      # `kotlin` version in gradle/libs.versions.toml changes).
+      # run. Key on a hash of the version catalog so any dependency/Kotlin bump
+      # invalidates it automatically (the Kotlin version lives there).
       - name: Cache Kotlin/Native (~/.konan)
         uses: actions/cache@v4
         with:
           path: ~/.konan
-          key: konan-${{ runner.os }}-kotlin-2.3.20
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
       # Device target only — the simulator framework is compiled by
       # embedAndSignAppleFrameworkForXcode inside the xcodebuild step below, so
